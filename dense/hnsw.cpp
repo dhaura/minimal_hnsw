@@ -20,10 +20,10 @@ int HNSW::getRandomLevel() {
     double r = level_generator_(rng_);
     // Ensure r is not too close to 0 to avoid log(0)
     r = std::max(r, std::numeric_limits<double>::min());
-    return static_cast<int>(-log(r) * (1.0 / log(1.0 * M_)));
+    return static_cast<int>(-log(r) * (1.0 / log(M_)));
 }
 
-std::vector<int> HNSW::searchLayer(const std::vector<float>& query, std::vector<int> entry_points, int ef, int layer) {
+std::vector<int> HNSW::searchLayer(const std::vector<float>& query, const std::vector<int>& entry_points, int ef, int layer) {
     std::unordered_set<int> visited;
     
     auto cmp = [](const std::pair<float, int>& a, const std::pair<float, int>& b) {
@@ -85,46 +85,27 @@ std::vector<int> HNSW::connectNeighbors(int node_id, const std::vector<int>& can
     if (static_cast<int>(nodes_[node_id].neighbors.size()) <= level) {
         nodes_[node_id].neighbors.resize(level + 1);
     }
+
+    auto selected_neighbors = selectNeighbors(node_id, candidates, M);
     
-    // Candidates list is sorted according to distance
-    for (int candidate : candidates) {
-        if (static_cast<int>(nodes_[node_id].neighbors[level].size()) >= M) {
-            break;
-        }
-        nodes_[node_id].neighbors[level].push_back(candidate);
+    // Clear existing neighbors at this level
+    nodes_[node_id].neighbors[level].clear();
+
+    for (int neighbor : selected_neighbors) {
+        nodes_[node_id].neighbors[level].push_back(neighbor);
         
         // Add bidirectional connection
-        if (static_cast<int>(nodes_[candidate].neighbors.size()) <= level) {
-            nodes_[candidate].neighbors.resize(level + 1);
+        if (static_cast<int>(nodes_[neighbor].neighbors.size()) <= level) {
+            nodes_[neighbor].neighbors.resize(level + 1);
         }
-        if (std::find(nodes_[candidate].neighbors[level].begin(), nodes_[candidate].neighbors[level].end(), node_id) == nodes_[candidate].neighbors[level].end()) {
-            nodes_[candidate].neighbors[level].push_back(node_id);
+        if (std::find(nodes_[neighbor].neighbors[level].begin(), nodes_[neighbor].neighbors[level].end(), node_id) == nodes_[neighbor].neighbors[level].end()) {
+            nodes_[neighbor].neighbors[level].push_back(node_id);
         }
     }
     return nodes_[node_id].neighbors[level];
 }
 
-void HNSW::pruneNeighborhood(int node_id, const std::vector<int>& candidates, int level, int M) { 
-    
-    auto sorted_candidates = sortCandidates(node_id, candidates);
-    
-    if (static_cast<int>(nodes_[node_id].neighbors.size()) <= level) {
-        nodes_[node_id].neighbors.resize(level + 1);
-    }
-
-    // Clear existing neighbors at this level
-    nodes_[node_id].neighbors[level].clear();
-    
-    // Candidates list is sorted according to distance
-    for (int candidate : candidates) {
-        if (static_cast<int>(nodes_[node_id].neighbors[level].size()) >= M) {
-            break;
-        }
-        nodes_[node_id].neighbors[level].push_back(candidate);
-    }
-}
-
-std::vector<int> HNSW::sortCandidates(int node_id, const std::vector<int>& candidates) {
+std::vector<int> HNSW::selectNeighbors(int node_id, const std::vector<int>& candidates, int M) {
     std::vector<std::pair<float, int>> dists;
     for (int candidate : candidates) {
         float dist = distance(nodes_[node_id].data, nodes_[candidate].data);
@@ -132,11 +113,14 @@ std::vector<int> HNSW::sortCandidates(int node_id, const std::vector<int>& candi
     }
     std::sort(dists.begin(), dists.end());
     
-    std::vector<int> sorted_candidates;
+    std::vector<int> selected_candidates;
     for (const auto& pair : dists) {
-        sorted_candidates.push_back(pair.second);
+        if (static_cast<int>(selected_candidates.size()) > M) {
+            break;
+        }
+        selected_candidates.push_back(pair.second);
     }
-    return sorted_candidates;
+    return selected_candidates;
 }
 
 void HNSW::addPoint(const std::vector<float>& point, int label) {
@@ -174,14 +158,14 @@ void HNSW::addPoint(const std::vector<float>& point, int label) {
         for (int neighbor : neighbors) {
             int neighborhood_size = static_cast<int>(nodes_[neighbor].neighbors[lc].size());
             if (neighborhood_size > M_max) {
-                std::vector<int> neighbor_candidates;
-                neighbor_candidates.push_back(node_id);
+                std::vector<int> new_neighbor_candidates;
+                new_neighbor_candidates.push_back(node_id);
                 for (int n : nodes_[neighbor].neighbors[lc]) {
                     if (n != node_id) {
-                        neighbor_candidates.push_back(n);
+                        new_neighbor_candidates.push_back(n);
                     }
                 }
-                pruneNeighborhood(neighbor, neighbor_candidates, lc, M_max);
+                connectNeighbors(neighbor, new_neighbor_candidates, lc, M_max);
             }
         }
         if (!candidates.empty()) {
