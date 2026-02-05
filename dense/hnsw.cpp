@@ -17,6 +17,8 @@ float HNSW::distance(const std::vector<float>& a, const std::vector<float>& b) c
 
 int HNSW::getRandomLevel() {
     double r = level_generator_(rng_);
+    // Ensure r is not too close to 0 to avoid log(0)
+    r = std::max(r, std::numeric_limits<double>::min());
     return static_cast<int>(-log(r) * (1.0 / log(2.0)));
 }
 
@@ -49,7 +51,7 @@ std::vector<int> HNSW::searchLayer(const std::vector<float>& query, int entry_po
                     visited.insert(neighbor_id);
                     float dist = distance(query, nodes_[neighbor_id].data);
                     
-                    if (dist < nearest.top().first || nearest.size() < static_cast<size_t>(num_closest)) {
+                    if (nearest.size() < static_cast<size_t>(num_closest) || dist < nearest.top().first) {
                         candidates.push({dist, neighbor_id});
                         nearest.push({dist, neighbor_id});
                         

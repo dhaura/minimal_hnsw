@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.10)
-
 # Create library for HNSW
 add_library(hnsw_lib hnsw.cpp hnsw.h)
 
