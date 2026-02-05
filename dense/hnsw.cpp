@@ -85,9 +85,6 @@ std::vector<int> HNSW::connectNeighbors(int node_id, const std::vector<int>& can
     if (static_cast<int>(nodes_[node_id].neighbors.size()) <= level) {
         nodes_[node_id].neighbors.resize(level + 1);
     }
-
-    // Clear existing neighbors at this level
-    nodes_[node_id].neighbors[level].clear();
     
     // Candidates list is sorted according to distance
     for (int candidate : candidates) {
@@ -105,6 +102,26 @@ std::vector<int> HNSW::connectNeighbors(int node_id, const std::vector<int>& can
         }
     }
     return nodes_[node_id].neighbors[level];
+}
+
+void HNSW::pruneNeighborhood(int node_id, const std::vector<int>& candidates, int level, int M) { 
+    
+    auto sorted_candidates = sortCandidates(node_id, candidates);
+    
+    if (static_cast<int>(nodes_[node_id].neighbors.size()) <= level) {
+        nodes_[node_id].neighbors.resize(level + 1);
+    }
+
+    // Clear existing neighbors at this level
+    nodes_[node_id].neighbors[level].clear();
+    
+    // Candidates list is sorted according to distance
+    for (int candidate : candidates) {
+        if (static_cast<int>(nodes_[node_id].neighbors[level].size()) >= M) {
+            break;
+        }
+        nodes_[node_id].neighbors[level].push_back(candidate);
+    }
 }
 
 std::vector<int> HNSW::sortCandidates(int node_id, const std::vector<int>& candidates) {
@@ -139,20 +156,20 @@ void HNSW::addPoint(const std::vector<float>& point, int label) {
         return;
     }
     
-    std::vector<int> enter_points = {entry_point_};
+    std::vector<int> entry_points = {entry_point_};
     
     // Search from top layer to target layer
     for (int lc = max_level_; lc > level; --lc) {
-        auto nearest = searchLayer(point, enter_points, 1, lc);
+        auto nearest = searchLayer(point, entry_points, 1, lc);
         if (!nearest.empty()) {
-            enter_points = nearest;
+            entry_points = nearest;
         }
     }
     
     // Insert at all layers from level to 0
     for (int lc = level; lc >= 0; --lc) {
         int M_max = (lc == 0) ? M_ * 2 : M_;
-        auto candidates = searchLayer(point, enter_points, ef_construction_, lc);
+        auto candidates = searchLayer(point, entry_points, ef_construction_, lc);
         auto neighbors = connectNeighbors(node_id, candidates, lc, M_);
         for (int neighbor : neighbors) {
             int neighborhood_size = static_cast<int>(nodes_[neighbor].neighbors[lc].size());
@@ -164,12 +181,11 @@ void HNSW::addPoint(const std::vector<float>& point, int label) {
                         neighbor_candidates.push_back(n);
                     }
                 }
-                auto sorted_neighbor_candidates = sortCandidates(neighbor, neighbor_candidates);
-                auto pruned_neighbors = connectNeighbors(neighbor, sorted_neighbor_candidates, lc, M_max);
+                pruneNeighborhood(neighbor, neighbor_candidates, lc, M_max);
             }
         }
         if (!candidates.empty()) {
-            enter_points = candidates;
+            entry_points = candidates;
         }
     }
     
@@ -184,18 +200,18 @@ std::vector<std::pair<int, float>> HNSW::searchKNN(const std::vector<float>& que
         return {};
     }
     
-    std::vector<int> enter_points = {entry_point_};
+    std::vector<int> entry_points = {entry_point_};
     
     // Search from top layer to layer 0
     for (int lc = max_level_; lc > 0; --lc) {
-        auto nearest = searchLayer(query, enter_points, 1, lc);
+        auto nearest = searchLayer(query, entry_points, 1, lc);
         if (!nearest.empty()) {
-            enter_points = nearest;
+            entry_points = nearest;
         }
     }
     
     // Search at layer 0
-    auto candidates = searchLayer(query, enter_points, std::max(ef, k), 0);
+    auto candidates = searchLayer(query, entry_points, std::max(ef, k), 0);
     
     std::vector<std::pair<int, float>> results;
     for (size_t i = 0; i < candidates.size() && i < static_cast<size_t>(k); ++i) {

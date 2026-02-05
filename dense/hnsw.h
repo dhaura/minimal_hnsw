@@ -38,6 +38,7 @@ private:
     int getRandomLevel();
     std::vector<int> searchLayer(const std::vector<float>& query, std::vector<int> entry_points, int ef, int layer);
     std::vector<int> connectNeighbors(int node_id, const std::vector<int>& candidates, int level, int M);
+    void pruneNeighborhood(int node_id, const std::vector<int>& candidates, int level, int M);
     std::vector<int> sortCandidates(int node_id, const std::vector<int>& candidates);
 };
 
