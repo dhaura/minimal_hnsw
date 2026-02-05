@@ -36,8 +36,9 @@ private:
     
     float distance(const std::vector<float>& a, const std::vector<float>& b) const;
     int getRandomLevel();
-    std::vector<int> searchLayer(const std::vector<float>& query, int entry_point, int num_closest, int layer);
-    void connectNeighbors(int node_id, const std::vector<int>& candidates, int level);
+    std::vector<int> searchLayer(const std::vector<float>& query, const std::vector<int>& entry_points, int ef, int layer);
+    std::vector<int> connectNeighbors(int node_id, const std::vector<int>& candidates, int level, int M);
+    std::vector<int> selectNeighbors(int node_id, const std::vector<int>& candidates, int M);
 };
 
 #endif // HNSW_H
