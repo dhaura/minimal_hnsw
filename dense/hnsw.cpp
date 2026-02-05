@@ -115,7 +115,7 @@ std::vector<int> HNSW::selectNeighbors(int node_id, const std::vector<int>& cand
     
     std::vector<int> selected_candidates;
     for (const auto& pair : dists) {
-        if (static_cast<int>(selected_candidates.size()) > M) {
+        if (static_cast<int>(selected_candidates.size()) >= M) {
             break;
         }
         selected_candidates.push_back(pair.second);
