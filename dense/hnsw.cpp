@@ -49,7 +49,7 @@ std::vector<int> HNSW::searchLayer(const std::vector<float>& query, std::vector<
         }
         
         int current_node = current.second;
-        // Ideally this check shouldn't  fail.
+        // Ideally this check shouldn't fail.
         if (layer < static_cast<int>(nodes_[current_node].neighbors.size())) {
             for (int neighbor_id : nodes_[current_node].neighbors[layer]) {
                 if (visited.find(neighbor_id) == visited.end()) {
