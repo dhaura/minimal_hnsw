@@ -32,8 +32,8 @@ cd build
 cmake ..
 make
 
-# Run the demo
-./bin/hnsw_demo
+# Run the demo 
+./bin/hnsw_demo 16 200 150 $SCRATCH/repos/minimal_hnsw/dense/data/siftsmall/siftsmall_base.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/siftsmall/siftsmall_query.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/siftsmall/siftsmall_groundtruth.ivecs
 ```
 
 ## Dense HNSW Implementation
