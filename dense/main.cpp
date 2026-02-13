@@ -51,9 +51,9 @@ int main(int argc, char* argv[]) {
     std::cout << "Minimal HNSW Demo\n";
     std::cout << "=================\n\n";
 
-     if (argc < 7)
+     if (argc < 8)
     {
-        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <input_filepath> <query_filepath> <gt_filepath>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <distance_metric> <input_filepath> <query_filepath> <gt_filepath>" << std::endl;
         return 1;
     }
 
@@ -61,16 +61,17 @@ int main(int argc, char* argv[]) {
     int M = std::stoi(argv[1]);
     int ef_construction = std::stoi(argv[2]);
     int ef = std::stoi(argv[3]);
-    std::string input_filepath = argv[4];
-    std::string query_filepath = argv[5];
-    std::string gt_filepath = argv[6];
+    std::string distance_metric = argv[4];
+    std::string input_filepath = argv[5];
+    std::string query_filepath = argv[6];
+    std::string gt_filepath = argv[7];
 
     // Read a dense dataset from file
     std::vector<std::vector<float>> points;
     int dim = readfvecs(input_filepath, points);
     
     // Create HNSW index with 2D vectors
-    HNSW index(dim, M, ef_construction, points.size());
+    HNSW index(dim, M, ef_construction, points.size(), distance_metric);
     
     // Add points from the dataset to the index
     std::cout << "Adding points to the index...\n";
@@ -99,10 +100,24 @@ int main(int argc, char* argv[]) {
                 correct++;
             }
         }
+
+        // For debugging.
+        if (i == 0) {
+            std::cout << "Query 0: Found neighbors (label, distance):\n";
+            for (const auto& nn : nns) {
+                std::cout << "  Label: " << nn.first << ", Distance: " << nn.second << "\n";
+            }
+            std::cout << "True neighbors: \n";
+            for (int label : true_labels[i]) {
+                std::cout << "  Label: " << label << ", Distance: " << index.distance(query[i], points[label]) << "\n";
+            }
+        }
     }
     
     float recall = static_cast<float>(correct) / (query_count * k) * 100.0f;
-    std::cout << "Recall@100: " << std::fixed << std::setprecision(2) << recall << "%\n";
+    std::cout << "Recall@k: " << std::fixed << std::setprecision(2) << recall << "%\n";
+
+    index.printInfo();
     
     std::cout << "\nDemo completed successfully!\n";
     
