@@ -101,17 +101,17 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        // For debugging.
-        if (i == 0) {
-            std::cout << "Query 0: Found neighbors (label, distance):\n";
-            for (const auto& nn : nns) {
-                std::cout << "  Label: " << nn.first << ", Distance: " << nn.second << "\n";
-            }
-            std::cout << "True neighbors: \n";
-            for (int label : true_labels[i]) {
-                std::cout << "  Label: " << label << ", Distance: " << index.distance(query[i], points[label]) << "\n";
-            }
-        }
+        // // For debugging.
+        // if (i == 0) {
+        //     std::cout << "Query 0: Found neighbors (label, distance):\n";
+        //     for (const auto& nn : nns) {
+        //         std::cout << "  Label: " << nn.first << ", Distance: " << nn.second << "\n";
+        //     }
+        //     std::cout << "True neighbors: \n";
+        //     for (int label : true_labels[i]) {
+        //         std::cout << "  Label: " << label << ", Distance: " << index.distance(query[i], points[label]) << "\n";
+        //     }
+        // }
     }
     
     float recall = static_cast<float>(correct) / (query_count * k) * 100.0f;

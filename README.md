@@ -33,7 +33,9 @@ cmake ..
 make
 
 # Run the demo 
-./bin/hnsw_demo 16 200 150 $SCRATCH/repos/minimal_hnsw/dense/data/siftsmall/siftsmall_base.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/siftsmall/siftsmall_query.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/siftsmall/siftsmall_groundtruth.ivecs
+./bin/hnsw_demo 16 200 150 sqr $SCRATCH/repos/minimal_hnsw/dense/data/siftsmall/siftsmall_base.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/siftsmall/siftsmall_query.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/siftsmall/siftsmall_groundtruth.ivecs
+
+./bin/hnsw_demo 16 200 150 sqr $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_base.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_query.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_groundtruth.ivecs
 ```
 
 ## Dense HNSW Implementation

@@ -46,16 +46,16 @@ int HNSW::getRandomLevel() {
 std::vector<int> HNSW::searchLayer(const std::vector<float>& query, const std::vector<int>& entry_points, int ef, int layer) {
     std::unordered_set<int> visited;
     
-    auto cmp = [](const std::pair<float, int>& a, const std::pair<float, int>& b) {
-        return a.first < b.first;
+    auto more_cmp = [](const std::pair<float, int>& a, const std::pair<float, int>& b) {
+        return a.first > b.first;
     };
-    std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>>, decltype(cmp)> candidates(cmp);
-    std::priority_queue<std::pair<float, int>> nearest;
+    std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>>, decltype(more_cmp)> candidates(more_cmp);
+    std::priority_queue<std::pair<float, int>> top_candidates;
     
     for (int entry_point : entry_points) {
         float d = distance(query, nodes_[entry_point].data);
         candidates.push({d, entry_point});
-        nearest.push({d, entry_point});
+        top_candidates.push({d, entry_point});
         visited.insert(entry_point);
     }
     
@@ -64,7 +64,7 @@ std::vector<int> HNSW::searchLayer(const std::vector<float>& query, const std::v
         candidates.pop();
         
         // Compare with the farthest in nearest neighbors.
-        if (nearest.size() >= static_cast<size_t>(ef) && current.first > nearest.top().first) {
+        if (top_candidates.size() >= static_cast<size_t>(ef) && current.first > top_candidates.top().first) {
             break;
         }
         
@@ -76,12 +76,12 @@ std::vector<int> HNSW::searchLayer(const std::vector<float>& query, const std::v
                     visited.insert(neighbor_id);
                     float dist = distance(query, nodes_[neighbor_id].data);
                     
-                    if (nearest.size() < static_cast<size_t>(ef) || dist < nearest.top().first) {
+                    if (top_candidates.size() < static_cast<size_t>(ef) || dist < top_candidates.top().first) {
                         candidates.push({dist, neighbor_id});
-                        nearest.push({dist, neighbor_id});
+                        top_candidates.push({dist, neighbor_id});
                         
-                        if (nearest.size() > static_cast<size_t>(ef)) {
-                            nearest.pop();
+                        if (top_candidates.size() > static_cast<size_t>(ef)) {
+                            top_candidates.pop();
                         }
                     }
                 }
@@ -90,9 +90,9 @@ std::vector<int> HNSW::searchLayer(const std::vector<float>& query, const std::v
     }
     
     std::vector<int> result;
-    while (!nearest.empty()) {
-        result.push_back(nearest.top().second);
-        nearest.pop();
+    while (!top_candidates.empty()) {
+        result.push_back(top_candidates.top().second);
+        top_candidates.pop();
     }
 
     // Reverse to have closest first in a sorted manner
