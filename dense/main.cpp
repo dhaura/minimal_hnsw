@@ -15,11 +15,11 @@ int readfvecs(const std::string& filename, std::vector<std::vector<float>>& data
     int dim = 0;
     while (file) {
         file.read(reinterpret_cast<char*>(&dim), sizeof(int));
-        if (!file) break; // Check if we reached the end of the file
+        if (!file) break; // Check if we reached the end of the file.
 
         std::vector<float> vec(dim);
         file.read(reinterpret_cast<char*>(vec.data()), dim * sizeof(float));
-        if (!file) break; // Check if we successfully read the vector
+        if (!file) break; // Check if we successfully read the vector.
 
         data.push_back(std::move(vec));
     }
@@ -36,13 +36,35 @@ int readivecs(const std::string& filename, std::vector<std::vector<int>>& data) 
     int dim = 0;
     while (file) {
         file.read(reinterpret_cast<char*>(&dim), sizeof(int));
-        if (!file) break; // Check if we reached the end of the file
+        if (!file) break; // Check if we reached the end of the file.
 
         std::vector<int> vec(dim);
         file.read(reinterpret_cast<char*>(vec.data()), dim * sizeof(int));
-        if (!file) break; // Check if we successfully read the vector
+        if (!file) break; // Check if we successfully read the vector.
 
         data.push_back(std::move(vec));
+    }
+    return dim;
+}
+
+int readbvecs(const std::string& filename, std::vector<std::vector<float>>& data) {
+    std::ifstream file(filename, std::ios::binary);
+    if (!file) {
+        std::cerr << "Error opening file: " << filename << std::endl;
+        return -1;
+    }
+
+    int dim = 0;
+    while (file) {
+        file.read(reinterpret_cast<char*>(&dim), sizeof(int));
+        if (!file) break; // Check if we reached the end of the file    
+        std::vector<unsigned char> vec(dim);
+        file.read(reinterpret_cast<char*>(vec.data()), dim * sizeof(unsigned char));
+        if (!file) break; // Check if we successfully read the vector   
+
+        // Convert unsigned char vector to float vector
+        std::vector<float> float_vec(vec.begin(), vec.end());
+        data.push_back(std::move(float_vec));
     }
     return dim;
 }
@@ -51,9 +73,9 @@ int main(int argc, char* argv[]) {
     std::cout << "Minimal HNSW Demo\n";
     std::cout << "=================\n\n";
 
-     if (argc < 8)
+     if (argc < 9)
     {
-        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <distance_metric> <input_filepath> <query_filepath> <gt_filepath>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <distance_metric> <input_filepath> <query_filepath> <gt_filepath> <file_type>" << std::endl;
         return 1;
     }
 
@@ -65,15 +87,23 @@ int main(int argc, char* argv[]) {
     std::string input_filepath = argv[5];
     std::string query_filepath = argv[6];
     std::string gt_filepath = argv[7];
-
-    // Read a dense dataset from file
+    std::string file_type = argv[8];
+    // Read a dense dataset from file.
     std::vector<std::vector<float>> points;
-    int dim = readfvecs(input_filepath, points);
+    int dim = 0;
+    if (file_type == "fvecs") {
+        dim = readfvecs(input_filepath, points);
+    } else if (file_type == "bvecs") {
+        dim = readbvecs(input_filepath, points);
+    } else {
+        std::cerr << "Unsupported file type: " << file_type << std::endl;
+        return -1;
+    }
     
-    // Create HNSW index with 2D vectors
+    // Create HNSW index with 2D vectors.
     HNSW index(dim, M, ef_construction, points.size(), distance_metric);
     
-    // Add points from the dataset to the index
+    // Add points from the dataset to the index.
     std::cout << "Adding points to the index...\n";
     
     for (size_t i = 0; i < points.size(); ++i) {
@@ -82,11 +112,19 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Added " << points.size() << " points to the index.\n";
     
-    // Search for nearest neighbors
+    // Search for nearest neighbors.
     std::cout << "\nSearching for k-nearest neighbors...\n";
     
     std::vector<std::vector<float>> query;
-    int dim_query = readfvecs(query_filepath, query);
+    int dim_query = 0;
+    if (file_type == "fvecs") {
+        dim_query = readfvecs(query_filepath, query);
+    } else if (file_type == "bvecs") {
+        dim_query = readbvecs(query_filepath, query);
+    } else {
+        std::cerr << "Unsupported file type: " << file_type << std::endl;
+        return -1;
+    }
     int query_count = static_cast<int>(query.size());
 
     std::vector<std::vector<int>> true_labels;
