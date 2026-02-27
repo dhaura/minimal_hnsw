@@ -50,3 +50,9 @@ cmake_install.cmake
 Makefile
 *.cmake
 !CMakeLists.txt
+
+# Large data files
+*/data/*
+
+# Other library files
+dense/hnswlib/*

@@ -1,10 +1,12 @@
-#include "hnsw.h"
+#include "hnswlib/hnswlib/hnswlib.h"
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <cmath>
 #include <iomanip>
-#include <chrono>
+#include <omp.h>
+
+using namespace hnswlib;
 
 int readfvecs(const std::string& filename, std::vector<std::vector<float>>& data) {
     std::ifstream file(filename, std::ios::binary);
@@ -16,11 +18,11 @@ int readfvecs(const std::string& filename, std::vector<std::vector<float>>& data
     int dim = 0;
     while (file) {
         file.read(reinterpret_cast<char*>(&dim), sizeof(int));
-        if (!file) break; // Check if we reached the end of the file.
+        if (!file) break; // Check if we reached the end of the file
 
         std::vector<float> vec(dim);
         file.read(reinterpret_cast<char*>(vec.data()), dim * sizeof(float));
-        if (!file) break; // Check if we successfully read the vector.
+        if (!file) break; // Check if we successfully read the vector
 
         data.push_back(std::move(vec));
     }
@@ -37,11 +39,11 @@ int readivecs(const std::string& filename, std::vector<std::vector<int>>& data) 
     int dim = 0;
     while (file) {
         file.read(reinterpret_cast<char*>(&dim), sizeof(int));
-        if (!file) break; // Check if we reached the end of the file.
+        if (!file) break; // Check if we reached the end of the file
 
         std::vector<int> vec(dim);
         file.read(reinterpret_cast<char*>(vec.data()), dim * sizeof(int));
-        if (!file) break; // Check if we successfully read the vector.
+        if (!file) break; // Check if we successfully read the vector
 
         data.push_back(std::move(vec));
     }
@@ -71,7 +73,7 @@ int readbvecs(const std::string& filename, std::vector<std::vector<float>>& data
 }
 
 int main(int argc, char* argv[]) {
-    std::cout << "Minimal HNSW Demo\n";
+    std::cout << "HNSWLIB HNSW Demo\n";
     std::cout << "=================\n\n";
 
      if (argc < 9)
@@ -89,7 +91,8 @@ int main(int argc, char* argv[]) {
     std::string query_filepath = argv[6];
     std::string gt_filepath = argv[7];
     std::string file_type = argv[8];
-    // Read a dense dataset from file.
+
+    // Read a dense dataset from file
     std::vector<std::vector<float>> points;
     int dim = 0;
     if (file_type == "fvecs") {
@@ -101,24 +104,27 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     
-    auto start_index_time = std::chrono::high_resolution_clock::now();
+    double start_index_time = omp_get_wtime();
+
+    // Create HNSW index with 2D vectors
+    L2Space l2space(dim);
+    HierarchicalNSW<float>* index = new HierarchicalNSW<float>(&l2space, points.size(), M, ef_construction);
+    index->ef_ = ef; // Set ef for search
     
-    // Create HNSW index with 2D vectors.
-    HNSW index(dim, M, ef_construction, points.size(), distance_metric);
-    
-    // Add points from the dataset to the index.
+    // Add points from the dataset to the index
     std::cout << "Adding points to the index...\n";
     
+    #pragma omp parallel for
     for (size_t i = 0; i < points.size(); ++i) {
-        index.addPoint(points[i], i);
+        index->addPoint(points[i].data(), static_cast<labeltype>(i));
     }
 
-    auto end_index_time = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> index_time = end_index_time - start_index_time;
+    double end_index_time = omp_get_wtime();
+    double index_time = end_index_time - start_index_time;
 
-    std::cout << "Added " << points.size() << " points to the index in " << index_time.count() << " seconds.\n";
+    std::cout << "Added " << points.size() << " points to the index in " << index_time << " seconds.\n";
     
-    // Search for nearest neighbors.
+    // Search for nearest neighbors
     std::cout << "\nSearching for k-nearest neighbors...\n";
     
     std::vector<std::vector<float>> query;
@@ -135,39 +141,40 @@ int main(int argc, char* argv[]) {
 
     std::vector<std::vector<int>> true_labels;
     int k = readivecs(gt_filepath, true_labels);
-    
-    auto start_query_time = std::chrono::high_resolution_clock::now();
 
+    // reduce gts to top 10
+    // for (auto& labels : true_labels) {
+    //     if (labels.size() > 10) {
+    //         labels.resize(10);
+    //     }
+    // }
+
+    // k = 10;
+
+    double start_query_time = omp_get_wtime();
+    
     int correct = 0;
+    #pragma omp parallel for reduction(+:correct)
     for (int i = 0; i < query_count; i++) {
-        auto nns = index.searchKNN(query[i], k, ef);
-        for (size_t j = 0; j < nns.size(); j++) {
-            if (std::find(true_labels[i].begin(), true_labels[i].end(), nns[j].first) != true_labels[i].end()) {
+        std::priority_queue<std::pair<float, labeltype>> nns = index->searchKnn(query[i].data(), k);
+        while (!nns.empty()) {
+            int label = nns.top().second;
+            nns.pop();
+            if (std::find(true_labels[i].begin(), true_labels[i].end(), label) != true_labels[i].end()) {
                 correct++;
             }
         }
 
-        // // For debugging.
-        // if (i == 0) {
-        //     std::cout << "Query 0: Found neighbors (label, distance):\n";
-        //     for (const auto& nn : nns) {
-        //         std::cout << "  Label: " << nn.first << ", Distance: " << nn.second << "\n";
-        //     }
-        //     std::cout << "True neighbors: \n";
-        //     for (int label : true_labels[i]) {
-        //         std::cout << "  Label: " << label << ", Distance: " << index.distance(query[i], points[label]) << "\n";
-        //     }
-        // }
     }
 
-    auto end_query_time = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> query_time = end_query_time - start_query_time;
+    double end_query_time = omp_get_wtime();
+    double query_time = end_query_time - start_query_time;
+
+    std::cout << "\nTotal correct neighbors found: " << correct << " out of " << (query_count * k) << "\n";
     
     float recall = static_cast<float>(correct) / (query_count * k) * 100.0f;
     std::cout << "Recall@k: " << std::fixed << std::setprecision(2) << recall << "%\n";
-    std::cout << "Query time: " << query_time.count() << " seconds\n";
-
-    index.printInfo();
+    std::cout << "Query time: " << query_time << " seconds\n";
     
     std::cout << "\nDemo completed successfully!\n";
     
