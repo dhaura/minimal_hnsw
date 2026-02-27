@@ -53,3 +53,6 @@ Makefile
 
 # Large data files
 */data/*
+
+# Other library files
+dense/hnswlib/*

@@ -21,9 +21,12 @@ minimal_hnsw/
 - CMake 3.10 or higher
 - C++11 compatible compiler (GCC, Clang, MSVC)
 
-### Build Instructions
+### Build and Run Instructions
 
 ```bash
+# Clone hnswlib (for benchmarking)
+git clone https://github.com/nmslib/hnswlib.git
+
 # Create build directory
 mkdir build
 cd build
@@ -32,9 +35,15 @@ cd build
 cmake ..
 make
 
-# Run the demo 
-./bin/hnsw_demo 16 200 150 sqr $SCRATCH/repos/minimal_hnsw/dense/data/siftsmall/siftsmall_base.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/siftsmall/siftsmall_query.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/siftsmall/siftsmall_groundtruth.ivecs
+# Download the dataset
+cd ../
+mkdir data
+cd data
+wget ftp://ftp.irisa.fr/local/texmex/corpus/sift.tar.gz
+tar -xzvf sift.tar.gz
 
+# Run the demo 
+cd ../build
 ./bin/hnsw_demo 16 200 150 sqr $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_base.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_query.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_groundtruth.ivecs
 ```
 
