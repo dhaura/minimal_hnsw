@@ -1,8 +1,10 @@
 #include "hnsw.h"
 #include <iostream>
 
-HNSW::HNSW(int dim, int M, int ef_construction, int max_elements, std::string distance_metric)
-    : dim_(dim), M_(M), ef_construction_(ef_construction), max_elements_(max_elements), distance_metric_(distance_metric),
+HNSW::HNSW(int dim, int M, int ef_construction, int max_elements, std::string distance_metric, 
+    bool use_heuristic, bool extend_candidates, bool keep_pruned)
+    : dim_(dim), M_(M), ef_construction_(ef_construction), max_elements_(max_elements), distance_metric_(distance_metric), 
+      use_heuristic_(use_heuristic), extend_candidates_(extend_candidates), keep_pruned_(keep_pruned),
       max_level_(0), entry_point_(-1), rng_(42), level_generator_(0.0, 1.0) {
     nodes_.reserve(max_elements);
 }
@@ -101,6 +103,11 @@ std::vector<int> HNSW::searchLayer(const std::vector<float>& query, const std::v
 }
 
 std::vector<int> HNSW::selectNeighbors(int node_id, const std::vector<int>& candidates, int M) {
+
+    if (candidates.size() <= static_cast<size_t>(M)) {
+        return candidates;
+    }
+    
     std::vector<std::pair<float, int>> dists;
     for (int candidate : candidates) {
         float dist = distance(nodes_[node_id].data, nodes_[candidate].data);
@@ -118,13 +125,79 @@ std::vector<int> HNSW::selectNeighbors(int node_id, const std::vector<int>& cand
     return selected_candidates;
 }
 
+std::vector<int> HNSW::selectNeighborsHeuristic(int node_id, const std::vector<int>& candidates, int M, int level) {
+    
+   if (candidates.size() <= static_cast<size_t>(M)) {
+        return candidates;
+    }
+
+    auto more_cmp = [](const std::pair<float, int>& a, const std::pair<float, int>& b) {
+        return a.first > b.first;
+    };
+    std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>>, decltype(more_cmp)> working_set(more_cmp);
+    std::vector<int> results_set;
+
+    for (int candidate : candidates) {
+        float dist = distance(nodes_[node_id].data, nodes_[candidate].data);
+        working_set.push({dist, candidate});
+    }
+    
+    if (extend_candidates_) {
+        for (int candidate : candidates) {
+            if (static_cast<int>(nodes_[candidate].neighbors.size()) > level) {
+                for (int neighbor : nodes_[candidate].neighbors[level]) {
+                    if (std::find(candidates.begin(), candidates.end(), neighbor) == candidates.end()) {
+                        float dist = distance(nodes_[node_id].data, nodes_[neighbor].data);
+                        working_set.push({dist, neighbor});
+                    }
+                }
+            }
+        }
+    }
+
+    std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>>, decltype(more_cmp)> discarded_set(more_cmp);
+    while (!working_set.empty() && static_cast<int>(results_set.size()) < M) {
+        auto current = working_set.top();
+        working_set.pop();
+        
+        bool good = true;
+        for (int result : results_set) {
+            float dist = distance(nodes_[current.second].data, nodes_[result].data);
+            if (dist < current.first) {
+                good = false;
+                break;
+            }
+        }
+        
+        if (good) {
+            results_set.push_back(current.second);
+        } else if (keep_pruned_) {
+            discarded_set.push(current);
+        }
+    }
+
+    if (keep_pruned_) {
+        while (!discarded_set.empty() && static_cast<int>(results_set.size()) < M) {
+            results_set.push_back(discarded_set.top().second);
+            discarded_set.pop();
+        }
+    }
+
+    return results_set;
+}
+
 std::vector<int> HNSW::connectNeighbors(int node_id, const std::vector<int>& candidates, int level, int M) {    
     
     if (static_cast<int>(nodes_[node_id].neighbors.size()) <= level) {
         nodes_[node_id].neighbors.resize(level + 1);
     }
 
-    auto selected_neighbors = selectNeighbors(node_id, candidates, M);
+    std::vector<int> selected_neighbors;
+    if (use_heuristic_) {
+        selected_neighbors = selectNeighborsHeuristic(node_id, candidates, M, level);
+    } else {
+        selected_neighbors = selectNeighbors(node_id, candidates, M);
+    }
     
     // Clear existing neighbors at this level
     nodes_[node_id].neighbors[level].clear();
