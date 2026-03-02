@@ -74,9 +74,9 @@ int main(int argc, char* argv[]) {
     std::cout << "Minimal HNSW Demo\n";
     std::cout << "=================\n\n";
 
-     if (argc < 9)
+     if (argc < 12)
     {
-        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <distance_metric> <input_filepath> <query_filepath> <gt_filepath> <file_type>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <distance_metric> <use_heuristic> <extend_candidates> <keep_pruned> <input_filepath> <query_filepath> <gt_filepath> <file_type>" << std::endl;
         return 1;
     }
 
@@ -85,10 +85,14 @@ int main(int argc, char* argv[]) {
     int ef_construction = std::stoi(argv[2]);
     int ef = std::stoi(argv[3]);
     std::string distance_metric = argv[4];
-    std::string input_filepath = argv[5];
-    std::string query_filepath = argv[6];
-    std::string gt_filepath = argv[7];
-    std::string file_type = argv[8];
+    bool use_heuristic = (std::stoi(argv[5]) != 0);
+    bool extend_candidates = (std::stoi(argv[6]) != 0);
+    bool keep_pruned = (std::stoi(argv[7]) != 0);
+    std::string input_filepath = argv[8];
+    std::string query_filepath = argv[9];
+    std::string gt_filepath = argv[10];
+    std::string file_type = argv[11];
+
     // Read a dense dataset from file.
     std::vector<std::vector<float>> points;
     int dim = 0;
@@ -104,7 +108,7 @@ int main(int argc, char* argv[]) {
     auto start_index_time = std::chrono::high_resolution_clock::now();
     
     // Create HNSW index with 2D vectors.
-    HNSW index(dim, M, ef_construction, points.size(), distance_metric);
+    HNSW index(dim, M, ef_construction, points.size(), distance_metric, use_heuristic, extend_candidates, keep_pruned);
     
     // Add points from the dataset to the index.
     std::cout << "Adding points to the index...\n";

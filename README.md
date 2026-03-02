@@ -44,7 +44,7 @@ tar -xzvf sift.tar.gz
 
 # Run the demo 
 cd ../build
-./bin/hnsw_demo 16 200 150 sqr $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_base.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_query.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_groundtruth.ivecs
+./bin/hnsw_demo 16 200 150 sqr 1 0 0 $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_base.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_query.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_groundtruth.ivecs fvecs
 ```
 
 ## Dense HNSW Implementation
