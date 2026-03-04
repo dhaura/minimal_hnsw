@@ -1,6 +1,8 @@
 #include "hnsw.h"
 #include <iostream>
 
+using namespace hnsw;
+
 HNSW::HNSW(int dim, int M, int ef_construction, int max_elements, std::string distance_metric, 
     bool use_heuristic, bool extend_candidates, bool keep_pruned)
     : dim_(dim), M_(M), ef_construction_(ef_construction), max_elements_(max_elements), distance_metric_(distance_metric), 
@@ -48,10 +50,7 @@ int HNSW::getRandomLevel() {
 std::vector<int> HNSW::searchLayer(const std::vector<float>& query, const std::vector<int>& entry_points, int ef, int layer) {
     std::unordered_set<int> visited;
     
-    auto more_cmp = [](const std::pair<float, int>& a, const std::pair<float, int>& b) {
-        return a.first > b.first;
-    };
-    std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>>, decltype(more_cmp)> candidates(more_cmp);
+    MinPQ candidates;
     std::priority_queue<std::pair<float, int>> top_candidates;
     
     for (int entry_point : entry_points) {
@@ -131,10 +130,7 @@ std::vector<int> HNSW::selectNeighborsHeuristic(int node_id, const std::vector<i
         return candidates;
     }
 
-    auto more_cmp = [](const std::pair<float, int>& a, const std::pair<float, int>& b) {
-        return a.first > b.first;
-    };
-    std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>>, decltype(more_cmp)> working_set(more_cmp);
+    MinPQ working_set;
     std::vector<int> results_set;
 
     for (int candidate : candidates) {
@@ -155,7 +151,7 @@ std::vector<int> HNSW::selectNeighborsHeuristic(int node_id, const std::vector<i
         }
     }
 
-    std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>>, decltype(more_cmp)> discarded_set(more_cmp);
+    MinPQ discarded_set;
     while (!working_set.empty() && static_cast<int>(results_set.size()) < M) {
         auto current = working_set.top();
         working_set.pop();

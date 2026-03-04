@@ -6,6 +6,8 @@
 #include <iomanip>
 #include <chrono>
 
+using namespace hnsw;
+
 int readfvecs(const std::string& filename, std::vector<std::vector<float>>& data) {
     std::ifstream file(filename, std::ios::binary);
     if (!file) {
