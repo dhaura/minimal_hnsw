@@ -146,9 +146,11 @@ int main(int argc, char* argv[]) {
 
     int correct = 0;
     for (int i = 0; i < query_count; i++) {
-        auto nns = index.searchKNN(query[i], k, ef);
-        for (size_t j = 0; j < nns.size(); j++) {
-            if (std::find(true_labels[i].begin(), true_labels[i].end(), nns[j].first) != true_labels[i].end()) {
+        MinPQ nns = index.searchKNN(query[i], k, ef);
+        while (!nns.empty()) {
+            auto nn = nns.top();
+            nns.pop();
+            if (std::find(true_labels[i].begin(), true_labels[i].end(), nn.second) != true_labels[i].end()) {
                 correct++;
             }
         }

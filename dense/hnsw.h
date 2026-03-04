@@ -29,7 +29,7 @@ namespace hnsw {
         
         float distance(const std::vector<float>& a, const std::vector<float>& b) const;
         void addPoint(const std::vector<float>& point, int label);
-        std::vector<std::pair<int, float>> searchKNN(const std::vector<float>& query, int k, int ef = 50);
+        MinPQ searchKNN(const std::vector<float>& query, int k, int ef = 50);
         void printInfo() const;
         
     private:
@@ -52,10 +52,10 @@ namespace hnsw {
         float l2_distance(const std::vector<float>& a, const std::vector<float>& b) const;
         float sqr_distance(const std::vector<float>& a, const std::vector<float>& b) const;
         int getRandomLevel();
-        std::vector<int> searchLayer(const std::vector<float>& query, const std::vector<int>& entry_points, int ef, int layer);
-        std::vector<int> connectNeighbors(int node_id, const std::vector<int>& candidates, int level, int M);
-        std::vector<int> selectNeighbors(int node_id, const std::vector<int>& candidates, int M);
-        std::vector<int> selectNeighborsHeuristic(int node_id, const std::vector<int>& candidates, int M, int level);
+        MinPQ searchLayer(const std::vector<float>& query, const std::vector<int>& entry_points, int ef, int layer);
+        std::vector<int> connectNeighbors(int node_id, const MinPQ& candidates, int level, int M);
+        std::vector<int> selectNeighbors(int node_id, const MinPQ& candidates, int M);
+        std::vector<int> selectNeighborsHeuristic(int node_id, const MinPQ& candidates, int M, int level);
     };
 }
 
