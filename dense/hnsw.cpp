@@ -1,43 +1,44 @@
 #include "hnsw.h"
 #include <iostream>
+#include <immintrin.h>
 
 using namespace hnsw;
 
-HNSW::HNSW(int dim, int M, int ef_construction, int max_elements, std::string distance_metric, 
+HNSW::HNSW(int dim, int M, int ef_construction, int max_elements, 
     bool use_heuristic, bool extend_candidates, bool keep_pruned)
-    : dim_(dim), M_(M), ef_construction_(ef_construction), max_elements_(max_elements), distance_metric_(distance_metric), 
+    : dim_(dim), M_(M), ef_construction_(ef_construction), max_elements_(max_elements), 
       use_heuristic_(use_heuristic), extend_candidates_(extend_candidates), keep_pruned_(keep_pruned),
       max_level_(0), entry_point_(-1), rng_(42), level_generator_(0.0, 1.0) {
     nodes_.reserve(max_elements);
 }
 
-// L2 distance
-float HNSW::l2_distance(const std::vector<float>& a, const std::vector<float>& b) const {
+// L2 Euclidean distance
+float HNSW::distance(const std::vector<float>& a, const std::vector<float>& b) const {
     float dist = 0.0f;
-    for (size_t i = 0; i < a.size(); ++i) {
-        float diff = a[i] - b[i];
-        dist += diff * diff;
+    size_t size = a.size();
+    size_t i = 0;
+    
+    // Process 8 floats at a time with AVX
+    #ifdef __AVX__
+    __m256 sum_v = _mm256_setzero_ps();
+    for (; i + 7 < size; i += 8) {
+        __m256 va = _mm256_loadu_ps(&a[i]);
+        __m256 vb = _mm256_loadu_ps(&b[i]);
+        __m256 diff = _mm256_sub_ps(va, vb);
+        sum_v = _mm256_fmadd_ps(diff, diff, sum_v);  // fused multiply-add
     }
-    return std::sqrt(dist);
-}
-
-// Squared Euclidean distance
-float HNSW::sqr_distance(const std::vector<float>& a, const std::vector<float>& b) const {
-    float dist = 0.0f;
-    for (size_t i = 0; i < a.size(); ++i) {
+    // Horizontal sum
+    float tmp[8];
+    _mm256_storeu_ps(tmp, sum_v);
+    for (int j = 0; j < 8; ++j) dist += tmp[j];
+    #endif
+    
+    // Remaining elements
+    for (; i < size; ++i) {
         float diff = a[i] - b[i];
         dist += diff * diff;
     }
     return dist;
-}
-
-float HNSW::distance(const std::vector<float>& a, const std::vector<float>& b) const {
-    if (distance_metric_ == "l2") {
-        return l2_distance(a, b);
-    } else if (distance_metric_ == "sqr") {
-        return sqr_distance(a, b);
-    }
-    return l2_distance(a, b); // Default to L2 distance.
 }
 
 int HNSW::getRandomLevel() {

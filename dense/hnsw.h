@@ -24,7 +24,7 @@ namespace hnsw {
             std::vector<std::vector<int>> neighbors; // neighbors at each layer
         };
 
-        HNSW(int dim, int M = 16, int ef_construction = 200, int max_elements = 1000, std::string distance_metric = "l2", 
+        HNSW(int dim, int M = 16, int ef_construction = 200, int max_elements = 1000, 
             bool use_heuristic = false, bool extend_candidates = false, bool keep_pruned = false);
         
         float distance(const std::vector<float>& a, const std::vector<float>& b) const;
@@ -40,7 +40,6 @@ namespace hnsw {
         int max_level_;
         std::vector<Node> nodes_;
         int entry_point_;
-        std::string distance_metric_;
 
         bool use_heuristic_;
         bool extend_candidates_;
@@ -49,8 +48,6 @@ namespace hnsw {
         std::mt19937 rng_;
         std::uniform_real_distribution<double> level_generator_;
         
-        float l2_distance(const std::vector<float>& a, const std::vector<float>& b) const;
-        float sqr_distance(const std::vector<float>& a, const std::vector<float>& b) const;
         int getRandomLevel();
         MinPQ searchLayer(const std::vector<float>& query, const std::vector<int>& entry_points, int ef, int layer);
         std::vector<int> connectNeighbors(int node_id, const MinPQ& candidates, int level, int M);

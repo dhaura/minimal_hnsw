@@ -76,9 +76,9 @@ int main(int argc, char* argv[]) {
     std::cout << "Minimal HNSW Demo\n";
     std::cout << "=================\n\n";
 
-     if (argc < 12)
+     if (argc < 11)
     {
-        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <distance_metric> <use_heuristic> <extend_candidates> <keep_pruned> <input_filepath> <query_filepath> <gt_filepath> <file_type>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <input_filepath> <query_filepath> <gt_filepath> <file_type>" << std::endl;
         return 1;
     }
 
@@ -86,14 +86,13 @@ int main(int argc, char* argv[]) {
     int M = std::stoi(argv[1]);
     int ef_construction = std::stoi(argv[2]);
     int ef = std::stoi(argv[3]);
-    std::string distance_metric = argv[4];
-    bool use_heuristic = (std::stoi(argv[5]) != 0);
-    bool extend_candidates = (std::stoi(argv[6]) != 0);
-    bool keep_pruned = (std::stoi(argv[7]) != 0);
-    std::string input_filepath = argv[8];
-    std::string query_filepath = argv[9];
-    std::string gt_filepath = argv[10];
-    std::string file_type = argv[11];
+    bool use_heuristic = (std::stoi(argv[4]) != 0);
+    bool extend_candidates = (std::stoi(argv[5]) != 0);
+    bool keep_pruned = (std::stoi(argv[6]) != 0);
+    std::string input_filepath = argv[7];
+    std::string query_filepath = argv[8];
+    std::string gt_filepath = argv[9];
+    std::string file_type = argv[10];
 
     // Read a dense dataset from file.
     std::vector<std::vector<float>> points;
@@ -107,10 +106,10 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     
-    auto start_index_time = std::chrono::high_resolution_clock::now();
+    auto start_index_time = std::chrono::steady_clock::now();
     
     // Create HNSW index with 2D vectors.
-    HNSW index(dim, M, ef_construction, points.size(), distance_metric, use_heuristic, extend_candidates, keep_pruned);
+    HNSW index(dim, M, ef_construction, points.size(), use_heuristic, extend_candidates, keep_pruned);
     
     // Add points from the dataset to the index.
     std::cout << "Adding points to the index...\n";
@@ -119,10 +118,11 @@ int main(int argc, char* argv[]) {
         index.addPoint(points[i], i);
     }
 
-    auto end_index_time = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> index_time = end_index_time - start_index_time;
+    auto end_index_time = std::chrono::steady_clock::now();
+    auto index_time = std::chrono::duration_cast<std::chrono::microseconds>(end_index_time - start_index_time);
 
-    std::cout << "Added " << points.size() << " points to the index in " << index_time.count() << " seconds.\n";
+    std::cout << "Added " << points.size() << " points to the index in " << index_time.count() << " microseconds.\n";
+    std::cout << "Average insertion time: " << index_time.count() / points.size() << " microseconds\n";
     
     // Search for nearest neighbors.
     std::cout << "\nSearching for k-nearest neighbors...\n";
@@ -142,7 +142,7 @@ int main(int argc, char* argv[]) {
     std::vector<std::vector<int>> true_labels;
     int k = readivecs(gt_filepath, true_labels);
     
-    auto start_query_time = std::chrono::high_resolution_clock::now();
+    auto start_query_time = std::chrono::steady_clock::now();
 
     int correct = 0;
     for (int i = 0; i < query_count; i++) {
@@ -168,12 +168,13 @@ int main(int argc, char* argv[]) {
         // }
     }
 
-    auto end_query_time = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> query_time = end_query_time - start_query_time;
+    auto end_query_time = std::chrono::steady_clock::now();
+    auto query_time = std::chrono::duration_cast<std::chrono::microseconds>(end_query_time - start_query_time);
     
     float recall = static_cast<float>(correct) / (query_count * k) * 100.0f;
     std::cout << "Recall@k: " << std::fixed << std::setprecision(2) << recall << "%\n";
-    std::cout << "Query time: " << query_time.count() << " seconds\n";
+    std::cout << "Total Query time: " << query_time.count() << " microseconds\n";
+    std::cout << "Average Query time: " << query_time.count() / query_count << " microseconds\n";
 
     index.printInfo();
     
