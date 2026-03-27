@@ -29,7 +29,7 @@ int readfvecs(const std::string& filename, std::vector<std::vector<float>>& data
     return dim;
 }
 
-int readivecs(const std::string& filename, std::vector<std::vector<int>>& data) {
+int readivecs(const std::string& filename, std::vector<std::vector<uint32_t>>& data) {
     std::ifstream file(filename, std::ios::binary);
     if (!file) {
         std::cerr << "Error opening file: " << filename << std::endl;
@@ -41,8 +41,8 @@ int readivecs(const std::string& filename, std::vector<std::vector<int>>& data) 
         file.read(reinterpret_cast<char*>(&dim), sizeof(int));
         if (!file) break; // Check if we reached the end of the file.
 
-        std::vector<int> vec(dim);
-        file.read(reinterpret_cast<char*>(vec.data()), dim * sizeof(int));
+        std::vector<uint32_t> vec(dim);
+        file.read(reinterpret_cast<char*>(vec.data()), dim * sizeof(uint32_t));
         if (!file) break; // Check if we successfully read the vector.
 
         data.push_back(std::move(vec));
@@ -139,14 +139,14 @@ int main(int argc, char* argv[]) {
     }
     int query_count = static_cast<int>(query.size());
 
-    std::vector<std::vector<int>> true_labels;
+    std::vector<std::vector<uint32_t>> true_labels;
     int k = readivecs(gt_filepath, true_labels);
     
     auto start_query_time = std::chrono::steady_clock::now();
 
     int correct = 0;
     for (int i = 0; i < query_count; i++) {
-        std::priority_queue<std::pair<float, int>> nns = index.searchKNN(query[i], k, ef);
+        std::priority_queue<std::pair<float, uint32_t>> nns = index.searchKNN(query[i], k, ef);
         while (!nns.empty()) {
             auto nn = nns.top();
             nns.pop();

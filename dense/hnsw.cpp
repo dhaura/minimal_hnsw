@@ -61,13 +61,13 @@ int HNSW::getRandomLevel() {
     return static_cast<int>(-log(r) * (1.0 / log(M_)));
 }
 
-std::priority_queue<std::pair<float, int>> HNSW::searchLayer(std::vector<float> query, std::vector<int> entry_points, int ef, int layer) {
+std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<float> query, std::vector<uint32_t> entry_points, int ef, int layer) {
     std::vector<bool> visited(max_elements_, false);
     
     MinPQ candidates;
-    std::priority_queue<std::pair<float, int>> top_candidates;
+    std::priority_queue<std::pair<float, uint32_t>> top_candidates;
     
-    for (int entry_point : entry_points) {
+    for (uint32_t entry_point : entry_points) {
         float d = distance(query.data(), data_.data() + entry_point * dim_);
         candidates.push({d, entry_point});
         top_candidates.push({d, entry_point});
@@ -83,10 +83,10 @@ std::priority_queue<std::pair<float, int>> HNSW::searchLayer(std::vector<float> 
             break;
         }
         
-        int current_node = current.second;
+        uint32_t current_node = current.second;
         // Ideally this check shouldn't fail.
         if (layer < static_cast<int>(neighbors_[current_node].size())) {
-            for (int neighbor_id : neighbors_[current_node][layer]) {
+            for (uint32_t neighbor_id : neighbors_[current_node][layer]) {
                 if (!visited[neighbor_id]) {
                     visited[neighbor_id] = true;
                     float dist = distance(query.data(), data_.data() + neighbor_id * dim_);
@@ -107,10 +107,10 @@ std::priority_queue<std::pair<float, int>> HNSW::searchLayer(std::vector<float> 
     return top_candidates;
 }
 
-std::vector<int> HNSW::selectNeighbors(int node_id, std::priority_queue<std::pair<float, int>> candidates, int M) {
+std::vector<uint32_t> HNSW::selectNeighbors(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int M) {
 
     if (candidates.size() <= static_cast<size_t>(M)) {
-        std::vector<int> result;
+        std::vector<uint32_t> result;
         while (!candidates.empty()) {
             result.push_back(candidates.top().second);
             candidates.pop();
@@ -118,24 +118,24 @@ std::vector<int> HNSW::selectNeighbors(int node_id, std::priority_queue<std::pai
         return result;
     }
 
-    std::vector<int> selected_candidates;
+    std::vector<uint32_t> selected_candidates;
     while (!candidates.empty()) {
         if (static_cast<int>(candidates.size()) > M) {
             candidates.pop();
             continue;
         }
-        int candidate = candidates.top().second;
+        uint32_t candidate = candidates.top().second;
         candidates.pop();
         selected_candidates.push_back(candidate);
     }
     return selected_candidates;
 }
 
-std::vector<int> HNSW::selectNeighborsHeuristic(int node_id, std::priority_queue<std::pair<float, int>> candidates, int M, int level) {
+std::vector<uint32_t> HNSW::selectNeighborsHeuristic(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int M, int level) {
     
    if (candidates.size() <= static_cast<size_t>(M)) {
-        std::priority_queue<std::pair<float, int>> temp = candidates;
-        std::vector<int> result;
+        std::priority_queue<std::pair<float, uint32_t>> temp = candidates;
+        std::vector<uint32_t> result;
         while (!temp.empty()) {
             result.push_back(temp.top().second);
             temp.pop();
@@ -148,15 +148,15 @@ std::vector<int> HNSW::selectNeighborsHeuristic(int node_id, std::priority_queue
         working_set.push(candidates.top());
         candidates.pop();
     }
-    std::vector<int> results_set;
+    std::vector<uint32_t> results_set;
     
     if (extend_candidates_) {
         MinPQ temp = working_set;
         while (!temp.empty()) {
-            int candidate = temp.top().second;
+            uint32_t candidate = temp.top().second;
             temp.pop();
             if (static_cast<int>(neighbors_[candidate].size()) > level) {
-                for (int neighbor : neighbors_[candidate][level]) {
+                for (uint32_t neighbor : neighbors_[candidate][level]) {
                     if (neighbor != node_id) { // Ideally should check in working_set if the neighbor is already there.
                         float dist = distance(data_.data() + node_id * dim_, data_.data() + neighbor * dim_);
                         working_set.push({dist, neighbor});
@@ -197,13 +197,13 @@ std::vector<int> HNSW::selectNeighborsHeuristic(int node_id, std::priority_queue
     return results_set;
 }
 
-std::vector<int> HNSW::connectNeighbors(int node_id, std::priority_queue<std::pair<float, int>> candidates, int level, int M) {    
+std::vector<uint32_t> HNSW::connectNeighbors(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int level, int M) {    
     
     if (static_cast<int>(neighbors_[node_id].size()) <= level) {
         neighbors_[node_id].resize(level + 1);
     }
 
-    std::vector<int> selected_neighbors;
+    std::vector<uint32_t> selected_neighbors;
     if (use_heuristic_) {
         selected_neighbors = selectNeighborsHeuristic(node_id, candidates, M, level);
     } else {
@@ -213,7 +213,7 @@ std::vector<int> HNSW::connectNeighbors(int node_id, std::priority_queue<std::pa
     // Clear existing neighbors at this level
     neighbors_[node_id][level].clear();
 
-    for (int neighbor : selected_neighbors) {
+    for (uint32_t neighbor : selected_neighbors) {
         neighbors_[node_id][level].push_back(neighbor);
         
         // Add bidirectional connection
@@ -227,7 +227,7 @@ std::vector<int> HNSW::connectNeighbors(int node_id, std::priority_queue<std::pa
     return neighbors_[node_id][level];
 }
 
-void HNSW::addPoint(std::vector<float> point, int label) {
+void HNSW::addPoint(std::vector<float> point, uint32_t label) {
     int level = getRandomLevel();
     
     neighbors_.emplace_back();
@@ -239,11 +239,11 @@ void HNSW::addPoint(std::vector<float> point, int label) {
         return;
     }
     
-    std::vector<int> entry_points = {entry_point_};
+    std::vector<uint32_t> entry_points = {entry_point_};
     
     // Search from top layer to target layer
     for (int lc = max_level_; lc > level; --lc) {
-        std::priority_queue<std::pair<float, int>> nearest = searchLayer(point, entry_points, 1, lc);
+        std::priority_queue<std::pair<float, uint32_t>> nearest = searchLayer(point, entry_points, 1, lc);
         if (!nearest.empty()) {
             entry_points.clear();
             while (!nearest.empty()) {
@@ -256,10 +256,10 @@ void HNSW::addPoint(std::vector<float> point, int label) {
     // Insert at all layers from level to 0
     for (int lc = level; lc >= 0; --lc) {
         int M_max = (lc == 0) ? M_ * 2 : M_;
-        std::priority_queue<std::pair<float, int>> candidates = searchLayer(point, entry_points, ef_construction_, lc);
+        std::priority_queue<std::pair<float, uint32_t>> candidates = searchLayer(point, entry_points, ef_construction_, lc);
         if (!candidates.empty()) {
             entry_points.clear();
-            std::priority_queue<std::pair<float, int>> temp = candidates;
+            std::priority_queue<std::pair<float, uint32_t>> temp = candidates;
             while (!temp.empty()) {
                 entry_points.push_back(temp.top().second);
                 temp.pop();
@@ -267,12 +267,12 @@ void HNSW::addPoint(std::vector<float> point, int label) {
         }
 
         auto neighbors = connectNeighbors(label, candidates, lc, M_);
-        for (int neighbor : neighbors) {
-            std::vector<int> econn = neighbors_[neighbor][lc];
+        for (uint32_t neighbor : neighbors) {
+            std::vector<uint32_t> econn = neighbors_[neighbor][lc];
             int neighborhood_size = static_cast<int>(econn.size());
             if (neighborhood_size > M_max) {
-                std::priority_queue<std::pair<float, int>> econn_candidates;
-                for (int econn_neighbor : econn) {
+                std::priority_queue<std::pair<float, uint32_t>> econn_candidates;
+                for (uint32_t econn_neighbor : econn) {
                     float dist = distance(data_.data() + neighbor * dim_, data_.data() + econn_neighbor * dim_);
                     econn_candidates.push({dist, econn_neighbor});
                 }
@@ -287,16 +287,16 @@ void HNSW::addPoint(std::vector<float> point, int label) {
     }
 }
 
-std::priority_queue<std::pair<float, int>> HNSW::searchKNN(std::vector<float> query, int k, int ef) {
+std::priority_queue<std::pair<float, uint32_t>> HNSW::searchKNN(std::vector<float> query, int k, int ef) {
     if (entry_point_ == -1) {
         return {};
     }
-    
-    std::vector<int> entry_points = {entry_point_};
-    
+
+    std::vector<uint32_t> entry_points = {entry_point_};
+
     // Search from top layer to layer 0
     for (int lc = max_level_; lc > 0; --lc) {
-        std::priority_queue<std::pair<float, int>> nearest = searchLayer(query, entry_points, 1, lc);
+        std::priority_queue<std::pair<float, uint32_t>> nearest = searchLayer(query, entry_points, 1, lc);
         if (!nearest.empty()) {
             entry_points.clear();
             while (!nearest.empty()) {
