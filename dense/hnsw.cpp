@@ -11,13 +11,14 @@ HNSW::HNSW(int dim, int M, int ef_construction, int max_elements,
     : dim_(dim), M_(M), ef_construction_(ef_construction), max_elements_(max_elements), 
       use_heuristic_(use_heuristic), extend_candidates_(extend_candidates), keep_pruned_(keep_pruned),
       max_level_(0), entry_point_(-1), rng_(42), level_generator_(0.0, 1.0) {
-    nodes_.reserve(max_elements);
+    data_.reserve(max_elements * dim);
+    neighbors_.resize(max_elements);
 }
 
 // L2 Euclidean distance
-float HNSW::distance(const std::vector<float>& a, const std::vector<float>& b) const {
+float HNSW::distance(float * a, float * b) const {
     float dist = 0.0f;
-    size_t size = a.size();
+    size_t size = dim_;
     size_t i = 0;
     
     // Process 8 floats at a time with AVX
@@ -60,14 +61,14 @@ int HNSW::getRandomLevel() {
     return static_cast<int>(-log(r) * (1.0 / log(M_)));
 }
 
-std::priority_queue<std::pair<float, int>> HNSW::searchLayer(const std::vector<float>& query, const std::vector<int>& entry_points, int ef, int layer) {
-    std::vector<bool> visited(nodes_.size(), false);
+std::priority_queue<std::pair<float, int>> HNSW::searchLayer(std::vector<float> query, std::vector<int> entry_points, int ef, int layer) {
+    std::vector<bool> visited(max_elements_, false);
     
     MinPQ candidates;
     std::priority_queue<std::pair<float, int>> top_candidates;
     
     for (int entry_point : entry_points) {
-        float d = distance(query, nodes_[entry_point].data);
+        float d = distance(query.data(), data_.data() + entry_point * dim_);
         candidates.push({d, entry_point});
         top_candidates.push({d, entry_point});
         visited[entry_point] = true;
@@ -84,11 +85,11 @@ std::priority_queue<std::pair<float, int>> HNSW::searchLayer(const std::vector<f
         
         int current_node = current.second;
         // Ideally this check shouldn't fail.
-        if (layer < static_cast<int>(nodes_[current_node].neighbors.size())) {
-            for (int neighbor_id : nodes_[current_node].neighbors[layer]) {
+        if (layer < static_cast<int>(neighbors_[current_node].size())) {
+            for (int neighbor_id : neighbors_[current_node][layer]) {
                 if (!visited[neighbor_id]) {
                     visited[neighbor_id] = true;
-                    float dist = distance(query, nodes_[neighbor_id].data);
+                    float dist = distance(query.data(), data_.data() + neighbor_id * dim_);
                     
                     if (top_candidates.size() < static_cast<size_t>(ef) || dist < top_candidates.top().first) {
                         candidates.push({dist, neighbor_id});
@@ -154,10 +155,10 @@ std::vector<int> HNSW::selectNeighborsHeuristic(int node_id, std::priority_queue
         while (!temp.empty()) {
             int candidate = temp.top().second;
             temp.pop();
-            if (static_cast<int>(nodes_[candidate].neighbors.size()) > level) {
-                for (int neighbor : nodes_[candidate].neighbors[level]) {
+            if (static_cast<int>(neighbors_[candidate].size()) > level) {
+                for (int neighbor : neighbors_[candidate][level]) {
                     if (neighbor != node_id) { // Ideally should check in working_set if the neighbor is already there.
-                        float dist = distance(nodes_[node_id].data, nodes_[neighbor].data);
+                        float dist = distance(data_.data() + node_id * dim_, data_.data() + neighbor * dim_);
                         working_set.push({dist, neighbor});
                     }
                 }
@@ -172,7 +173,7 @@ std::vector<int> HNSW::selectNeighborsHeuristic(int node_id, std::priority_queue
         
         bool good = true;
         for (int result : results_set) {
-            float dist = distance(nodes_[current.second].data, nodes_[result].data);
+            float dist = distance(data_.data() + current.second * dim_, data_.data() + result * dim_);
             if (dist < current.first) {
                 good = false;
                 break;
@@ -198,8 +199,8 @@ std::vector<int> HNSW::selectNeighborsHeuristic(int node_id, std::priority_queue
 
 std::vector<int> HNSW::connectNeighbors(int node_id, std::priority_queue<std::pair<float, int>> candidates, int level, int M) {    
     
-    if (static_cast<int>(nodes_[node_id].neighbors.size()) <= level) {
-        nodes_[node_id].neighbors.resize(level + 1);
+    if (static_cast<int>(neighbors_[node_id].size()) <= level) {
+        neighbors_[node_id].resize(level + 1);
     }
 
     std::vector<int> selected_neighbors;
@@ -210,35 +211,30 @@ std::vector<int> HNSW::connectNeighbors(int node_id, std::priority_queue<std::pa
     }
     
     // Clear existing neighbors at this level
-    nodes_[node_id].neighbors[level].clear();
+    neighbors_[node_id][level].clear();
 
     for (int neighbor : selected_neighbors) {
-        nodes_[node_id].neighbors[level].push_back(neighbor);
+        neighbors_[node_id][level].push_back(neighbor);
         
         // Add bidirectional connection
-        if (static_cast<int>(nodes_[neighbor].neighbors.size()) <= level) {
-            nodes_[neighbor].neighbors.resize(level + 1);
+        if (static_cast<int>(neighbors_[neighbor].size()) <= level) {
+            neighbors_[neighbor].resize(level + 1);
         }
-        if (std::find(nodes_[neighbor].neighbors[level].begin(), nodes_[neighbor].neighbors[level].end(), node_id) == nodes_[neighbor].neighbors[level].end()) {
-            nodes_[neighbor].neighbors[level].push_back(node_id);
+        if (std::find(neighbors_[neighbor][level].begin(), neighbors_[neighbor][level].end(), node_id) == neighbors_[neighbor][level].end()) {
+            neighbors_[neighbor][level].push_back(node_id);
         }
     }
-    return nodes_[node_id].neighbors[level];
+    return neighbors_[node_id][level];
 }
 
-void HNSW::addPoint(const std::vector<float>& point, int label) {
-    Node new_node;
-    new_node.label = label;
-    new_node.data = point;
-    
-    int node_id = nodes_.size();
+void HNSW::addPoint(std::vector<float> point, int label) {
     int level = getRandomLevel();
     
-    new_node.neighbors.resize(level + 1);
-    nodes_.push_back(new_node);
+    neighbors_.emplace_back();
+    data_.insert(data_.end(), point.begin(), point.end());
     
     if (entry_point_ == -1) {
-        entry_point_ = node_id;
+        entry_point_ = label;
         max_level_ = level;
         return;
     }
@@ -270,14 +266,14 @@ void HNSW::addPoint(const std::vector<float>& point, int label) {
             }
         }
 
-        auto neighbors = connectNeighbors(node_id, candidates, lc, M_);
+        auto neighbors = connectNeighbors(label, candidates, lc, M_);
         for (int neighbor : neighbors) {
-            std::vector<int> econn = nodes_[neighbor].neighbors[lc];
+            std::vector<int> econn = neighbors_[neighbor][lc];
             int neighborhood_size = static_cast<int>(econn.size());
             if (neighborhood_size > M_max) {
                 std::priority_queue<std::pair<float, int>> econn_candidates;
                 for (int econn_neighbor : econn) {
-                    float dist = distance(nodes_[neighbor].data, nodes_[econn_neighbor].data);
+                    float dist = distance(data_.data() + neighbor * dim_, data_.data() + econn_neighbor * dim_);
                     econn_candidates.push({dist, econn_neighbor});
                 }
                 connectNeighbors(neighbor, econn_candidates, lc, M_max);
@@ -287,11 +283,11 @@ void HNSW::addPoint(const std::vector<float>& point, int label) {
     
     if (level > max_level_) {
         max_level_ = level;
-        entry_point_ = node_id;
+        entry_point_ = label;
     }
 }
 
-std::priority_queue<std::pair<float, int>> HNSW::searchKNN(const std::vector<float>& query, int k, int ef) {
+std::priority_queue<std::pair<float, int>> HNSW::searchKNN(std::vector<float> query, int k, int ef) {
     if (entry_point_ == -1) {
         return {};
     }
@@ -320,13 +316,13 @@ void HNSW::printInfo() const {
     std::cout << "M (max connections per layer): " << M_ << "\n";
     std::cout << "ef_construction: " << ef_construction_ << "\n";
     std::cout << "Max elements: " << max_elements_ << "\n";
-    std::cout << "Current number of nodes: " << nodes_.size() << "\n";
+    std::cout << "Current number of nodes: " << data_.size() / dim_ << "\n";
     std::cout << "Max level: " << max_level_ << "\n";
     std::cout << "Entry point ID: " << entry_point_ << "\n";
 
     std::vector<int> layer_counts;
-    for (const auto& node : nodes_) {
-        int levels = static_cast<int>(node.neighbors.size());
+    for (size_t node_id = 0; node_id < neighbors_.size(); ++node_id) {
+        int levels = static_cast<int>(neighbors_[node_id].size());
         if (layer_counts.size() < static_cast<size_t>(levels)) {
             layer_counts.resize(levels, 0);
         }

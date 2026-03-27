@@ -1,0 +1,1241 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 11K of event 'cycles:Pu'
+# Event count (approx.): 389540220657
+#
+# Children      Self  Command       Shared Object         Symbol                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+# ........  ........  ............  ....................  ...........................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+#
+    61.90%     0.00%  hnswlib_demo  [unknown]             [.] 0000000000000000
+            |
+            ---0
+               |          
+               |--35.95%--0x7f739ae5fc0e
+               |          |          
+               |           --35.70%--main._omp_fn.0
+               |                     |          
+               |                      --35.70%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, bool)
+               |                                |          
+               |                                 --34.59%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+               |                                           |          
+               |                                           |--15.08%--hnswlib::HierarchicalNSW<float>::searchBaseLayer(unsigned int, void const*, int)
+               |                                           |          
+               |                                           |--7.06%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+               |                                           |          
+               |                                           |--5.56%--pthread_mutex_lock@@GLIBC_2.2.5
+               |                                           |          
+               |                                            --5.29%--hnswlib::HierarchicalNSW<float>::mutuallyConnectNewElement(void const*, unsigned int, std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, int, bool) [clone .isra.0]
+               |                                                      |          
+               |                                                      |--3.62%--hnswlib::HierarchicalNSW<float>::getNeighborsByHeuristic2(std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, unsigned long)
+               |                                                      |          
+               |                                                       --1.48%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+               |          
+               |--12.68%--0x7f739ae62b66
+               |          
+               |--8.45%--0x7f739ae629a6
+               |          
+               |--3.30%--0x7f739ae62b62
+               |          
+               |--0.68%--0x7f739ae62b6e
+               |          
+                --0.57%--0x7f739ae629a2
+
+    37.21%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae629a6
+            |
+            ---0x7f739ae629a6
+
+    37.21%    37.21%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00000000000249a6
+            |          
+            |--28.76%--0x7f739ae629a6
+            |          
+             --8.45%--0
+                       0x7f739ae629a6
+
+    35.95%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae5fc0e
+            |
+            ---0x7f739ae5fc0e
+               |          
+                --35.70%--main._omp_fn.0
+                          |          
+                           --35.70%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, bool)
+                                     |          
+                                      --34.59%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+                                                |          
+                                                |--15.08%--hnswlib::HierarchicalNSW<float>::searchBaseLayer(unsigned int, void const*, int)
+                                                |          
+                                                |--7.06%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+                                                |          
+                                                |--5.56%--pthread_mutex_lock@@GLIBC_2.2.5
+                                                |          
+                                                 --5.29%--hnswlib::HierarchicalNSW<float>::mutuallyConnectNewElement(void const*, unsigned int, std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, int, bool) [clone .isra.0]
+                                                           |          
+                                                           |--3.62%--hnswlib::HierarchicalNSW<float>::getNeighborsByHeuristic2(std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, unsigned long)
+                                                           |          
+                                                            --1.48%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+
+    35.73%     0.00%  hnswlib_demo  hnswlib_demo          [.] main._omp_fn.0
+            |          
+             --35.73%--main._omp_fn.0
+                       |          
+                        --35.73%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, bool)
+                                  |          
+                                   --34.61%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+                                             |          
+                                             |--15.10%--hnswlib::HierarchicalNSW<float>::searchBaseLayer(unsigned int, void const*, int)
+                                             |          
+                                             |--7.06%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+                                             |          
+                                             |--5.56%--pthread_mutex_lock@@GLIBC_2.2.5
+                                             |          
+                                              --5.30%--hnswlib::HierarchicalNSW<float>::mutuallyConnectNewElement(void const*, unsigned int, std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, int, bool) [clone .isra.0]
+                                                        |          
+                                                        |--3.63%--hnswlib::HierarchicalNSW<float>::getNeighborsByHeuristic2(std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, unsigned long)
+                                                        |          
+                                                         --1.48%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+
+    35.73%     0.00%  hnswlib_demo  hnswlib_demo          [.] hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, bool)
+            |          
+             --35.73%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, bool)
+                       |          
+                        --34.61%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+                                  |          
+                                  |--15.10%--hnswlib::HierarchicalNSW<float>::searchBaseLayer(unsigned int, void const*, int)
+                                  |          
+                                  |--7.06%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+                                  |          
+                                  |--5.56%--pthread_mutex_lock@@GLIBC_2.2.5
+                                  |          
+                                   --5.30%--hnswlib::HierarchicalNSW<float>::mutuallyConnectNewElement(void const*, unsigned int, std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, int, bool) [clone .isra.0]
+                                             |          
+                                             |--3.63%--hnswlib::HierarchicalNSW<float>::getNeighborsByHeuristic2(std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, unsigned long)
+                                             |          
+                                              --1.48%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+
+    34.61%     0.67%  hnswlib_demo  hnswlib_demo          [.] hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+            |          
+            |--33.95%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+            |          |          
+            |          |--15.10%--hnswlib::HierarchicalNSW<float>::searchBaseLayer(unsigned int, void const*, int)
+            |          |          
+            |          |--7.06%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+            |          |          
+            |          |--5.56%--pthread_mutex_lock@@GLIBC_2.2.5
+            |          |          
+            |           --5.30%--hnswlib::HierarchicalNSW<float>::mutuallyConnectNewElement(void const*, unsigned int, std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, int, bool) [clone .isra.0]
+            |                     |          
+            |                     |--3.63%--hnswlib::HierarchicalNSW<float>::getNeighborsByHeuristic2(std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, unsigned long)
+            |                     |          
+            |                      --1.48%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+            |          
+             --0.67%--0
+                       0x7f739ae5fc0e
+                       main._omp_fn.0
+                       hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, bool)
+                       hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+
+    15.10%    15.10%  hnswlib_demo  hnswlib_demo          [.] hnswlib::HierarchicalNSW<float>::searchBaseLayer(unsigned int, void const*, int)
+            |          
+             --15.08%--0
+                       0x7f739ae5fc0e
+                       main._omp_fn.0
+                       hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, bool)
+                       hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+                       hnswlib::HierarchicalNSW<float>::searchBaseLayer(unsigned int, void const*, int)
+
+    12.68%    12.68%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x0000000000024b66
+            |
+            ---0
+               0x7f739ae62b66
+
+    12.68%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae62b66
+            |
+            ---0x7f739ae62b66
+
+     9.15%     9.15%  hnswlib_demo  hnswlib_demo          [.] hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+            |          
+             --9.15%--0
+                       0x7f739ae5fc0e
+                       |          
+                        --8.94%--main._omp_fn.0
+                                  hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, bool)
+                                  |          
+                                   --8.54%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+                                             |          
+                                             |--7.06%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+                                             |          
+                                              --1.48%--hnswlib::HierarchicalNSW<float>::mutuallyConnectNewElement(void const*, unsigned int, std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, int, bool) [clone .isra.0]
+                                                        hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+
+     6.99%     6.99%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00000000000249a2
+            |          
+            |--6.42%--0x7f739ae629a2
+            |          
+             --0.57%--0
+                       0x7f739ae629a2
+
+     6.99%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae629a2
+            |
+            ---0x7f739ae629a2
+
+     5.92%     5.92%  hnswlib_demo  libc.so.6             [.] pthread_mutex_lock@@GLIBC_2.2.5
+            |          
+             --5.92%--0
+                       0x7f739ae5fc0e
+                       |          
+                        --5.92%--main._omp_fn.0
+                                  |          
+                                   --5.92%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, bool)
+                                             |          
+                                              --5.56%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+                                                        pthread_mutex_lock@@GLIBC_2.2.5
+
+     5.30%     0.18%  hnswlib_demo  hnswlib_demo          [.] hnswlib::HierarchicalNSW<float>::mutuallyConnectNewElement(void const*, unsigned int, std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, int, bool) [clone .isra.0]
+            |          
+             --5.11%--hnswlib::HierarchicalNSW<float>::mutuallyConnectNewElement(void const*, unsigned int, std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, int, bool) [clone .isra.0]
+                       |          
+                       |--3.63%--hnswlib::HierarchicalNSW<float>::getNeighborsByHeuristic2(std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, unsigned long)
+                       |          
+                        --1.48%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+
+     3.63%     3.63%  hnswlib_demo  hnswlib_demo          [.] hnswlib::HierarchicalNSW<float>::getNeighborsByHeuristic2(std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, unsigned long)
+            |          
+             --3.62%--0
+                       0x7f739ae5fc0e
+                       main._omp_fn.0
+                       hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, bool)
+                       hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+                       hnswlib::HierarchicalNSW<float>::mutuallyConnectNewElement(void const*, unsigned int, std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, int, bool) [clone .isra.0]
+                       hnswlib::HierarchicalNSW<float>::getNeighborsByHeuristic2(std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, unsigned long)
+
+     3.30%     3.30%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x0000000000024b62
+            |
+            ---0
+               0x7f739ae62b62
+
+     3.30%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae62b62
+            |
+            ---0x7f739ae62b62
+
+     1.15%     1.15%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00000000000249a9
+            |          
+             --1.15%--0x7f739ae629a9
+
+     1.15%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae629a9
+            |
+            ---0x7f739ae629a9
+
+     0.90%     0.90%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00000000000249ad
+            |          
+             --0.72%--0x7f739ae629ad
+
+     0.90%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae629ad
+            |
+            ---0x7f739ae629ad
+
+     0.79%     0.00%  hnswlib_demo  libc.so.6             [.] __GI___lll_lock_wake
+            |
+            ---__GI___lll_lock_wake
+               |          
+                --0.55%--0xffffffff96a00134
+                          |          
+                           --0.53%--0xffffffff9685fceb
+
+     0.75%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96a00134
+            |          
+             --0.75%--0xffffffff96a00134
+                       |          
+                        --0.72%--0xffffffff9685fceb
+                                  |          
+                                   --0.64%--0xffffffff95db15de
+
+     0.72%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff9685fceb
+            |
+            ---0xffffffff9685fceb
+               |          
+                --0.64%--0xffffffff95db15de
+
+     0.68%     0.68%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x0000000000024b6e
+            |
+            ---0
+               0x7f739ae62b6e
+
+     0.68%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae62b6e
+            |
+            ---0x7f739ae62b6e
+
+     0.64%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db15de
+            |
+            ---0xffffffff95db15de
+
+     0.58%     0.58%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00000000000249af
+            |          
+             --0.57%--0x7f739ae629af
+
+     0.58%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae629af
+            |
+            ---0x7f739ae629af
+
+     0.47%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db0f1b
+     0.29%     0.29%  hnswlib_demo  [unknown]             [k] 0xffffffff95db39b3
+     0.25%     0.00%  hnswlib_demo  hnswlib_demo          [.] main._omp_fn.1
+     0.25%     0.25%  hnswlib_demo  libc.so.6             [.] malloc
+     0.19%     0.01%  hnswlib_demo  libc.so.6             [.] __GI___lll_lock_wait
+     0.17%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db0f3c
+     0.15%     0.15%  hnswlib_demo  libc.so.6             [.] __GI___pthread_mutex_unlock_usercnt
+     0.15%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db471d
+     0.13%     0.13%  hnswlib_demo  [unknown]             [k] 0xffffffff96a00c00
+     0.11%     0.11%  hnswlib_demo  libc.so.6             [.] cfree@GLIBC_2.2.5
+     0.10%     0.10%  hnswlib_demo  libc.so.6             [.] _int_free
+     0.09%     0.09%  hnswlib_demo  [unknown]             [k] 0xffffffff95db39f4
+     0.08%     0.00%  hnswlib_demo  hnswlib_demo          [.] std::__detail::_Map_base<unsigned long, std::pair<unsigned long const, unsigned int>, std::allocator<std::pair<unsigned long const, unsigned int> >, std::__detail::_Select1st, std::equal_to<unsigned long>, std::hash<unsigned long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true>, true>::operator[](unsigned long const&)
+     0.08%     0.08%  hnswlib_demo  hnswlib_demo          [.] std::_Hashtable<unsigned long, std::pair<unsigned long const, unsigned int>, std::allocator<std::pair<unsigned long const, unsigned int> >, std::__detail::_Select1st, std::equal_to<unsigned long>, std::hash<unsigned long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<std::pair<unsigned long const, unsigned int>, false>*, unsigned long)
+     0.08%     0.08%  hnswlib_demo  [unknown]             [k] 0xffffffff95db4500
+     0.07%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff9687a53e
+     0.07%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db39ee
+     0.06%     0.06%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a6ab
+     0.06%     0.06%  hnswlib_demo  libc.so.6             [.] pthread_mutex_unlock@@GLIBC_2.2.5
+     0.06%     0.06%  hnswlib_demo  [unknown]             [k] 0xffffffff96a00233
+     0.05%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db454c
+     0.05%     0.05%  hnswlib_demo  [unknown]             [k] 0xffffffff95db01b9
+     0.04%     0.04%  hnswlib_demo  [unknown]             [k] 0xffffffff96a000a9
+     0.04%     0.04%  hnswlib_demo  hnswlib_demo          [.] hnswlib::HierarchicalNSW<float>::searchKnn(void const*, unsigned long, hnswlib::BaseFilterFunctor*) const
+     0.03%     0.03%  hnswlib_demo  libc.so.6             [.] _int_malloc
+     0.03%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95fb437d
+     0.03%     0.03%  hnswlib_demo  [unknown]             [k] 0xffffffff96867f4b
+     0.03%     0.00%  hnswlib_demo  [unknown]             [k] 0x00007f7395101e50
+     0.03%     0.00%  hnswlib_demo  ld-linux-x86-64.so.2  [.] _dl_map_object
+     0.03%     0.00%  hnswlib_demo  ld-linux-x86-64.so.2  [.] __GI___open64_nocancel
+     0.03%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95ff8e17
+     0.03%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95ff73b8
+     0.03%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96011545
+     0.03%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff9600e845
+     0.03%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95ffdaf3
+     0.03%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95ffd64a
+     0.03%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95fb0689
+     0.03%     0.03%  hnswlib_demo  [unknown]             [k] 0xffffffff95db15ed
+     0.03%     0.03%  hnswlib_demo  [unknown]             [k] 0xffffffff95db1585
+     0.02%     0.00%  hnswlib_demo  [unknown]             [.] 0x40a00000420c0000
+     0.02%     0.00%  hnswlib_demo  [unknown]             [.] 0x0000000000430ad0
+     0.02%     0.00%  hnswlib_demo  [unknown]             [.] 0x00007f7392ec5990
+     0.02%     0.00%  hnswlib_demo  [unknown]             [.] 0x000000000042e8c0
+     0.02%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] GOMP_parallel
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96a00c22
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96866a99
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f49e99
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95ca6bf8
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff9685fcc6
+     0.01%     0.00%  hnswlib_demo  ld-linux-x86-64.so.2  [.] memset
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f497a9
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db4739
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f47692
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95fa287b
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f7c6f7
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f7b572
+     0.01%     0.01%  hnswlib_demo  [unknown]             [k] 0xffffffff9684d707
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f769e8
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f74093
+     0.01%     0.01%  hnswlib_demo  [unknown]             [k] 0xffffffff96b04104
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96b04110
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db40f1
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96872f4d
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db455d
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db009d
+     0.01%     0.01%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x0000000000024b69
+     0.01%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae62b69
+     0.01%     0.01%  hnswlib_demo  [unknown]             [k] 0xffffffff96a00083
+     0.01%     0.01%  hnswlib_demo  ld-linux-x86-64.so.2  [.] do_lookup_x
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db3a71
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d11f49
+     0.01%     0.01%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00000000000249a0
+     0.01%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae629a0
+     0.01%     0.01%  hnswlib_demo  [unknown]             [k] 0xffffffff96866d9f
+     0.01%     0.01%  hnswlib_demo  [unknown]             [k] 0xffffffff95db46dd
+     0.01%     0.01%  hnswlib_demo  [unknown]             [k] 0xffffffff96866d80
+     0.01%     0.01%  hnswlib_demo  [unknown]             [k] 0xffffffff9684ea08
+     0.01%     0.01%  hnswlib_demo  [unknown]             [k] 0xffffffff9685fce6
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96a00116
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96871fa0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d1c17e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d1bd18
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d163f1
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d11a4f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db3a5b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a00080
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9684ea0d
+     0.00%     0.00%  hnswlib_demo  libstdc++.so.6.0.33   [.] std::__basic_file<char>::xsgetn(char*, long)
+     0.00%     0.00%  hnswlib_demo  libc.so.6             [.] read
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffc466ce58
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95ffc595
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95ffbd17
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffc4cdb0d6
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffc467690f
+     0.00%     0.00%  hnswlib_demo  libc.so.6             [.] __memset_avx2_unaligned_erms
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db38d6
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a893
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a000ab
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db39a8
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db44f5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db01c6
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf50d
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96871b1c
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a530
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a00f70
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96871f49
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db45ad
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db01f5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d119ce
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db4633
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a836
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff9685fcf7
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96866e97
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a887
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d8785d
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a890
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a000c5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db3978
+     0.00%     0.00%  hnswlib_demo  libstdc++.so.6.0.33   [.] operator new(unsigned long)
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db4095
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x0000000000021b5c
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae5fb5c
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95ca6a8d
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9685fca1
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96835016
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db01b3
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f48c91
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96834ea6
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db3a26
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf4a8
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d0977c
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x0000000000021ae5
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae5fae5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d09727
+     0.00%     0.00%  hnswlib_demo  libc.so.6             [.] start_thread
+     0.00%     0.00%  hnswlib_demo  libm.so.6             [.] __ieee754_log_fma
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96866da9
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x0000000000021ad9
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae5fad9
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db0e59
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96871ad4
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d079ac
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d09771
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d09ddc
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95cd94a6
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95cd9153
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95cd8b46
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95cd75d8
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95cd5db7
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd5d7e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f9f4e5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95fa294a
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f491d5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f765b0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f47666
+     0.00%     0.00%  hnswlib_demo  libc.so.6             [.] clone3
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096e6e0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95fd9789
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95cc3fd1
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95cc39db
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95cc1ec8
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95fb47c4
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95fdccbc
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a00005
+     0.00%     0.00%  hnswlib_demo  libc.so.6             [.] __memmove_avx_unaligned_erms
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x0000000000021b60
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae5fb60
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd9435
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f77021
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x0000000000024a5f
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae62a5f
+     0.00%     0.00%  hnswlib_demo  libc.so.6             [.] __mmap
+     0.00%     0.00%  hnswlib_demo  libc.so.6             [.] __libc_start_call_main
+     0.00%     0.00%  hnswlib_demo  hnswlib_demo          [.] main
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95eeeb05
+     0.00%     0.00%  hnswlib_demo  libc.so.6             [.] alloc_new_heap
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95ca67c0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db40be
+     0.00%     0.00%  hnswlib_demo  hnswlib_demo          [.] pthread_mutex_unlock@plt
+     0.00%     0.00%  hnswlib_demo  ld-linux-x86-64.so.2  [.] _dl_start_user
+     0.00%     0.00%  hnswlib_demo  ld-linux-x86-64.so.2  [.] _dl_new_object
+     0.00%     0.00%  hnswlib_demo  ld-linux-x86-64.so.2  [.] _dl_sysdep_start
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf4a5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db0253
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9683f13f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f4970d
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96866a34
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f23f92
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f48cba
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d41ae8
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f24011
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f598fd
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95ca69df
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf4a0
+     0.00%     0.00%  hnswlib_demo  libc.so.6             [.] __mprotect
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f5d93b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a717
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db3998
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db15a4
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f53547
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff960fb395
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a539
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a6a8
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a635
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff960fb3a6
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf71f
+     0.00%     0.00%  hnswlib_demo  libc.so.6             [.] __munmap
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f56dc7
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f56cd6
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f56af6
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf4c1
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96834e4f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d8781b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f5d7ab
+     0.00%     0.00%  hnswlib_demo  libm.so.6             [.] log@@GLIBC_2.29
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd5dd0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95c4ae5a
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f558d9
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95ca68de
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f53527
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a0008c
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff9683c120
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f5d5f9
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96a01026
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96865d42
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95c81fc9
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9621fe12
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db4a06
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a884
+     0.00%     0.00%  hnswlib_demo  ld-linux-x86-64.so.2  [.] _dl_fixup
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f565c6
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f55e9d
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95cc117f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95ca6d30
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x642f642f64732f68
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9684ea03
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96104b25
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96104e10
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db4539
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f23fdd
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a000bc
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96871a7b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f48a0c
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db39b1
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f49e45
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db4608
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96833715
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff968347c7
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f49f92
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf623
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db01b6
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95fb4395
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d096fb
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96866d92
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db0098
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95ca6d43
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95cd948a
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d372ca
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d16476
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96104e26
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f5d3f7
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f56582
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db45de
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95ca699a
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db0ea7
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db39b5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db158b
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x0000000000021ae8
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae5fae8
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f49fb7
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db39e2
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f49637
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f5d208
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f576d5
+     0.00%     0.00%  hnswlib_demo  libstdc++.so.6.0.33   [.] std::istream::read(char*, long)
+     0.00%     0.00%  hnswlib_demo  libc.so.6             [.] get_free_list
+     0.00%     0.00%  hnswlib_demo  libstdc++.so.6.0.33   [.] std::basic_filebuf<char, std::char_traits<char> >::xsgetn(char*, long)
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96b0410b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db457f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a70d
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff968343bc
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db0229
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f49d85
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f52ec0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf738
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a000b5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a6c9
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d11a8d
+     0.00%     0.00%  hnswlib_demo  libc.so.6             [.] arena_get2.part.0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9683f0f4
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db01ca
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9685fccb
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f52ec5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db470b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d1a58b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db3898
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf4b9
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95c4ada3
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x0000000000024ccf
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae62ccf
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db3a0b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96223a44
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f4934b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96a01653
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f534e3
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f49453
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f426f1
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f49766
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff960fb365
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff960fb38c
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db4505
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a6d8
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db3a4e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a00227
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9685fcb7
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9683c43c
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f5d741
+     0.00%     0.00%  hnswlib_demo  libc.so.6             [.] new_heap
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd75a5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a0011e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96104e15
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95c4adee
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96876aa5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db393d
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db158e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95fd8872
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95fb07f2
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95fdcbd1
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95fd8955
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96160e75
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96223a4a
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae62a27
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a527
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96866e8a
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd8b15
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9683c412
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95c4aed6
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd5dcc
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a630
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd5d7a
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d87220
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96866e89
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd94a8
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf531
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x0000000000021bd6
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae5fbd6
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf73c
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db38e9
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db0179
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d119bc
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a568
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f83b85
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f5d242
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95cd8b3b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a4f6
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f492b8
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96834ff7
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd8b4d
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f4946b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db4527
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f49769
+     0.00%     0.00%  hnswlib_demo  ld-linux-x86-64.so.2  [.] handle_amd
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95eee9a5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f494b6
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96b04109
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd5da6
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d8784e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f430b3
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd9114
+     0.00%     0.00%  hnswlib_demo  libstdc++.so.6.0.33   [.] std::__detail::_Prime_rehash_policy::_M_need_rehash(unsigned long, unsigned long, unsigned long) const
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96160ea0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f42850
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f492dc
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f497cc
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95fc436d
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f497e1
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d878ff
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db3993
+     0.00%     0.00%  hnswlib_demo  libc.so.6             [.] __ctype_init
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95eeea89
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd90e5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd75c1
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f49413
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d879d6
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95fdb035
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db4588
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db399a
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f5d401
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d87852
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9685fcef
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff960f9954
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf5fd
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff960f6475
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95eeeaa3
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db46fa
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d0df00
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db46a8
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d1afa1
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f49350
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d11af0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96223a3c
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db1587
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a684
+     0.00%     0.00%  hnswlib_demo  libc.so.6             [.] _setjmp
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d340d4
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d0770f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db40b3
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db0175
+     0.00%     0.00%  hnswlib_demo  libc.so.6             [.] __sigsetjmp
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f5b17f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f5d66d
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db009f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9683f1fa
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff960fb3ad
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f23f35
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96104da5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db455f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f56ad4
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d1c101
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a000b7
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db3a3a
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96834eb2
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95cc11aa
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95fdc770
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95fb4285
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96871acc
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d7d6ec
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a00111
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d771dd
+     0.00%     0.00%  hnswlib_demo  libc.so.6             [.] clock_gettime@@GLIBC_2.17
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95ca8941
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95c4aec1
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db3a5e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f23fc9
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f49e3f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f55364
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db158f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96876ab1
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d11981
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff962bb5b0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f24484
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95fb42a3
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf5f9
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db399e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cc1196
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f59a47
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95c4ad43
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f49e7a
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96866d81
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff960fb3b3
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96872f87
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d07726
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db40c2
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db3a48
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db3943
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db3983
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d2cdde
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d1bd26
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d17a77
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96834e7a
+     0.00%     0.00%  hnswlib_demo  libstdc++.so.6.0.33   [.] std::__basic_file<char>::is_open() const
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db4600
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf585
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf5fe
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9685fc91
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95ecb175
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96866daa
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf5f5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db39a3
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a665
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf611
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x0000000000021be8
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd5d50
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d1a56e
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae5fbe8
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d1a425
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d11a6b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d11a5d
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a63a
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d1af63
+     0.00%     0.00%  hnswlib_demo  libstdc++.so.6.0.33   [.] std::basic_streambuf<char, std::char_traits<char> >::xsgetn(char*, long)
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf541
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9683c584
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f5d63d
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf506
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf4b4
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db472c
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95c4acf4
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf733
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd5dd1
+     0.00%     0.00%  hnswlib_demo  hnswlib_demo          [.] readfvecs(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::vector<std::vector<float, std::allocator<float> >, std::allocator<std::vector<float, std::allocator<float> > > >&)
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a767
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db39f1
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db1597
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a6d4
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db15d1
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db01a5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a537
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96834e9b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a525
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d1a44a
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd8b20
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf5f7
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9683c127
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96a00f86
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd914e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95c8552a
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db3939
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db3a41
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d99a25
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd8b50
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d9c1c6
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9683f1b4
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96865dbb
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d98f51
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95dad0bf
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96a00fc6
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96866f75
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d87a06
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96872f30
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db45d5
+     0.00%     0.00%  hnswlib_demo  libc.so.6             [.] __sigjmp_save
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a00139
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9683f114
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9683f104
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd915a
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a4e5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a833
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db4683
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a824
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd94a1
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db45df
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x0000000000021ac4
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae5fac4
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd9102
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf53e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9685fcbb
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f58515
+     0.00%     0.00%  hnswlib_demo  ld-linux-x86-64.so.2  [.] brk
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd9472
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95ca6f07
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db471f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96223a22
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd944c
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95cd9480
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d87821
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f49e7f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a00000
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a000b3
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96866e9f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d87887
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f9f7ac
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f47c2d
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95f447d6
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95ca8b44
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95fa2cdb
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff960f630c
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff960f649b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f576a5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96834e01
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d879fc
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] omp_get_num_threads
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x0000000000021c03
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae5fc03
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db3937
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x0000000000021c1e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a703
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae5fc1e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96834f8d
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a00c03
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d771d5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9684ea06
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf714
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9685fcfb
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96866a32
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95eeebcc
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96865de2
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96a00c09
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95ca681c
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96862bfb
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x0000000000021bec
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x0000000000024a57
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf647
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db008e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db46c5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9685fc90
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a00002
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a000c7
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae5fbec
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae5fc08
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae62a57
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d0971d
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x0000000000021c08
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf5cc
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf5f0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db0efd
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95eeec34
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95eeec83
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9684e979
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96871a6c
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae629ce
+     0.00%     0.00%  hnswlib_demo  ld-linux-x86-64.so.2  [.] __GI___tunables_init
+     0.00%     0.00%  hnswlib_demo  libstdc++.so.6.0.33   [.] std::basic_filebuf<char, std::char_traits<char> >::underflow()
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95c854e8
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95ca67b2
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d878bd
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d878cf
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf503
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf543
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf555
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf580
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf734
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db0f37
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db393b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db410e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db4547
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db45a2
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db45d7
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db4a01
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff960fb3a8
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96866a3f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96866a69
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96866e99
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a765
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a000ba
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a000cf
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a0165b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95eeec0b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d340cd
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96866e9e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x000000000042f730
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x000000000096c4c0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x000000000096fc00
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x0000000000971c80
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x0000000000974a00
+     0.00%     0.00%  hnswlib_demo  libc.so.6             [.] __strstr_generic
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x0000000000021be3
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x0000000000023621
+     0.00%     0.00%  hnswlib_demo  libstdc++.so.6.0.33   [.] std::__basic_file<char>::open(char const*, std::_Ios_Openmode, int)
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00000000000235a0
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x0000000000024964
+     0.00%     0.00%  hnswlib_demo  libstdc++.so.6.0.33   [.] malloc@plt
+     0.00%     0.00%  hnswlib_demo  libstdc++.so.6.0.33   [.] operator delete(void*)
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95c4a945
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95c4a949
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95c85512
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95ca6807
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff960f9949
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95ca681e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95ca6a85
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95ca6f19
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d076bf
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d0976c
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d09775
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d13750
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d163cc
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d16687
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d1a4b3
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d1a584
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d1b8dd
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d1bdf8
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d1bf9a
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d22537
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d41af2
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf4aa
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d87818
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d87900
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d99956
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95d9ce4b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf4ad
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf4b2
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf4cc
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf4de
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf4e4
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf4f1
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf50f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf537
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf54e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf718
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf728
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf736
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95daf73a
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db0080
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db0085
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db00ab
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db01a0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db01a6
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db01c9
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db01ef
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db0e25
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db0eab
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db0f11
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db0f1e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db0f3e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db0faf
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db158d
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db15df
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db3935
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db393e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db3951
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db3967
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db39ab
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db40b0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db4111
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db44f7
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db44fe
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db453b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db45d0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db4647
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95fb062f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db4665
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db4692
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db46bf
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95db47c5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096d020
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95eeea81
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95eeec71
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95eeec74
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f23f95
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f48c25
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f48c2d
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f48c3d
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95f59a61
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff95fdb053
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff960f9925
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff961cbc48
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff968347c2
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96834e52
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96834e58
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96834f05
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96834f6f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96841648
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9684e960
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9684e96a
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9684e97e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96850f7d
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9685fcaf
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9685fcb2
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9685fcd6
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96862c0e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96863e27
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96863e70
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96863fc0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96863fc7
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96866a38
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96866a5c
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96866a86
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96866d85
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96871a5a
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96872a9f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96872aa3
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96872f8a
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a580
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a637
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a677
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff9687a6ad
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a000bf
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a0016f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a0019e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a001c1
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a0022c
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a00c0c
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a00c14
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a00c1d
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a00f73
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a015d0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a015e2
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a01620
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffff96a0166c
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae5fbe3
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae615a0
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae61621
+     0.00%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] 0x00007f739ae62964
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d16463
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d1bde7
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d879db
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d98f35
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d98cc9
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95d999c1
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff95db1580
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff9684470b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96866a66
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96866f45
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96871b91
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffff96a00f7b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000042f8d0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000042fa70
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x000000000042fc10
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000042fdb0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x000000000042ff50
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x0000000000430290
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000430430
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x00000000004305d0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x0000000000435750
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000043a6e0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096b960
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096be40
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096bfe0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x000000000096c180
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096c320
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096c660
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096cb40
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x000000000096cce0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096ce80
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096d1c0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096d360
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x000000000096db80
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096dd20
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096dec0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096e060
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096e200
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096e3a0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096e880
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096ea20
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096ebc0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096ed60
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096ef00
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096f0a0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096f580
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096f720
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096f8c0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096fa60
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000096ff40
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000970280
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000970420
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x00000000009705c0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000970760
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000970c40
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x0000000000970f80
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000971120
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x00000000009712c0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000971460
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000971600
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x00000000009717a0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000971940
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000972160
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000972300
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x00000000009724a0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x0000000000972640
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x00000000009727e0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x0000000000972b20
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000973000
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000973340
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x00000000009734e0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000973680
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x0000000000973820
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x00000000009739c0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000973d00
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000974040
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x00000000009746c0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000974ba0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000974ee0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000975080
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x00000000009753c0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000975560
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000975700
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000975a40
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000975d80
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000975f20
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000976260
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000976400
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x00000000009765a0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000976740
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x00000000009768e0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000976c20
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000976dc0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000977100
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x00000000009772a0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x00000000009775e0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000977780
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000977ac0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000977c60
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000977e00
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000977fa0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000978140
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000978480
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000978b00
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000978ca0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000978e40
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000978fe0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000979180
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x0000000000979320
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x00000000009794c0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000979660
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000979800
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x00000000009799a0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000979ce0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000979e80
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097a020
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097a1c0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097a360
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097a6a0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097a840
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097ab80
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097ad20
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097b200
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097b3a0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097b6e0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097ba20
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097bf00
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097c0a0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097c240
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097c580
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097ca60
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097cc00
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097cda0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097d0e0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097d280
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097d420
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097d900
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097dde0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097df80
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097e120
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097e2c0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097e460
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097e600
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097e940
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097ec80
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097ee20
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097f160
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097f300
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097f4a0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097f640
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097f7e0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097f980
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097fcc0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x000000000097fe60
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x00000000009801a0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x00000000009804e0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000980680
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000980820
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x00000000009809c0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000981040
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x00000000009811e0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000981520
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000981860
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000981a00
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x0000000000981ba0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000982080
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x00000000009823c0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000982560
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x00000000009828a0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000982be0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000982d80
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000982f20
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000983740
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000983a80
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000983c20
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000983f60
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x0000000000984100
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0x00000000009842a0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x5249445f4c54475f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x696c2f7273752f3d
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x00007ffdfe9391dc
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x00007ffdfe93b61e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x782b77002b77002b
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#

@@ -1,0 +1,368 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 100K of event 'cycles:Pu'
+# Event count (approx.): 3556659637432
+#
+# Children      Self  Command    Shared Object         Symbol                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+# ........  ........  .........  ....................  ......................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+#
+    82.50%     0.00%  hnsw_demo  libc.so.6             [.] __libc_start_call_main
+            |
+            ---__libc_start_call_main
+               |          
+                --82.50%--main
+                          |          
+                          |--81.75%--hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+                          |          |          
+                          |          |--77.48%--hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+                          |          |          |          
+                          |          |           --7.47%--std::pair<std::__detail::_Node_iterator<int, true, false>, bool> std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique<int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > >(int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > const&) [clone .isra.0]
+                          |          |                     |          
+                          |          |                      --5.81%--std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<int, false>*, unsigned long)
+                          |          |          
+                          |           --3.26%--hnsw::HNSW::connectNeighbors(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+                          |                     |          
+                          |                      --2.97%--hnsw::HNSW::selectNeighborsHeuristic(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+                          |          
+                           --0.72%--hnsw::HNSW::searchKNN(std::vector<float, std::allocator<float> > const&, int, int)
+                                     |          
+                                      --0.72%--hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+
+    82.50%     0.01%  hnsw_demo  hnsw_demo             [.] main
+            |          
+             --82.49%--main
+                       |          
+                       |--81.75%--hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+                       |          |          
+                       |          |--77.48%--hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+                       |          |          |          
+                       |          |           --7.47%--std::pair<std::__detail::_Node_iterator<int, true, false>, bool> std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique<int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > >(int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > const&) [clone .isra.0]
+                       |          |                     |          
+                       |          |                      --5.81%--std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<int, false>*, unsigned long)
+                       |          |          
+                       |           --3.26%--hnsw::HNSW::connectNeighbors(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+                       |                     |          
+                       |                      --2.97%--hnsw::HNSW::selectNeighborsHeuristic(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+                       |          
+                        --0.72%--hnsw::HNSW::searchKNN(std::vector<float, std::allocator<float> > const&, int, int)
+                                  |          
+                                   --0.72%--hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+
+    81.75%     0.54%  hnsw_demo  hnsw_demo             [.] hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+            |          
+            |--81.21%--hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+            |          |          
+            |          |--77.48%--hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+            |          |          |          
+            |          |           --7.47%--std::pair<std::__detail::_Node_iterator<int, true, false>, bool> std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique<int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > >(int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > const&) [clone .isra.0]
+            |          |                     |          
+            |          |                      --5.81%--std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<int, false>*, unsigned long)
+            |          |          
+            |           --3.26%--hnsw::HNSW::connectNeighbors(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+            |                     |          
+            |                      --2.97%--hnsw::HNSW::selectNeighborsHeuristic(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+            |          
+             --0.54%--__libc_start_call_main
+                       main
+                       hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+
+    78.20%    70.31%  hnsw_demo  hnsw_demo             [.] hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+            |          
+            |--70.31%--__libc_start_call_main
+            |          main
+            |          |          
+            |          |--69.67%--hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+            |          |          hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+            |          |          
+            |           --0.64%--hnsw::HNSW::searchKNN(std::vector<float, std::allocator<float> > const&, int, int)
+            |                     hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+            |          
+             --7.89%--hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+                       |          
+                        --7.54%--std::pair<std::__detail::_Node_iterator<int, true, false>, bool> std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique<int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > >(int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > const&) [clone .isra.0]
+                                  |          
+                                   --5.87%--std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<int, false>*, unsigned long)
+
+    10.24%     0.00%  hnsw_demo  [unknown]             [.] 0000000000000000
+            |
+            ---0
+               |          
+               |--6.03%--_int_malloc
+               |          
+                --4.19%--unlink_chunk.isra.0
+
+     7.59%     1.29%  hnsw_demo  hnsw_demo             [.] std::pair<std::__detail::_Node_iterator<int, true, false>, bool> std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique<int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > >(int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > const&) [clone .isra.0]
+            |          
+            |--6.30%--std::pair<std::__detail::_Node_iterator<int, true, false>, bool> std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique<int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > >(int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > const&) [clone .isra.0]
+            |          |          
+            |           --5.87%--std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<int, false>*, unsigned long)
+            |          
+             --1.29%--__libc_start_call_main
+                       main
+                       |          
+                        --1.28%--hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+                                  |          
+                                   --1.24%--hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+                                             std::pair<std::__detail::_Node_iterator<int, true, false>, bool> std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique<int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > >(int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > const&) [clone .isra.0]
+
+     6.60%     6.58%  hnsw_demo  libc.so.6             [.] _int_malloc
+            |          
+            |--6.01%--0
+            |          _int_malloc
+            |          
+             --0.51%--_int_malloc
+
+     5.87%     5.87%  hnsw_demo  hnsw_demo             [.] std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<int, false>*, unsigned long)
+            |          
+             --5.87%--__libc_start_call_main
+                       main
+                       |          
+                        --5.81%--hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+                                  hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+                                  |          
+                                   --5.81%--std::pair<std::__detail::_Node_iterator<int, true, false>, bool> std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique<int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > >(int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > const&) [clone .isra.0]
+                                             std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<int, false>*, unsigned long)
+
+     4.62%     4.62%  hnsw_demo  libc.so.6             [.] unlink_chunk.isra.0
+            |          
+             --4.19%--0
+                       unlink_chunk.isra.0
+
+     4.22%     4.22%  hnsw_demo  libc.so.6             [.] malloc_consolidate
+            |          
+             --4.22%--malloc_consolidate
+
+     3.26%     0.27%  hnsw_demo  hnsw_demo             [.] hnsw::HNSW::connectNeighbors(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+            |          
+             --2.98%--hnsw::HNSW::connectNeighbors(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+                       |          
+                        --2.97%--hnsw::HNSW::selectNeighborsHeuristic(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+
+     2.97%     2.96%  hnsw_demo  hnsw_demo             [.] hnsw::HNSW::selectNeighborsHeuristic(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+            |          
+             --2.96%--__libc_start_call_main
+                       main
+                       hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+                       hnsw::HNSW::connectNeighbors(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+                       hnsw::HNSW::selectNeighborsHeuristic(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+
+     1.41%     1.41%  hnsw_demo  libc.so.6             [.] _int_free
+            |
+            ---_int_free
+
+     0.72%     0.00%  hnsw_demo  hnsw_demo             [.] hnsw::HNSW::searchKNN(std::vector<float, std::allocator<float> > const&, int, int)
+            |
+            ---hnsw::HNSW::searchKNN(std::vector<float, std::allocator<float> > const&, int, int)
+               |          
+                --0.72%--hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+
+     0.57%     0.57%  hnsw_demo  libc.so.6             [.] malloc
+     0.52%     0.00%  hnsw_demo  [unknown]             [.] 0x0000000000000001
+            |
+            ---0x1
+
+     0.51%     0.51%  hnsw_demo  libc.so.6             [.] cfree@GLIBC_2.2.5
+     0.20%     0.20%  hnsw_demo  libstdc++.so.6.0.33   [.] std::__detail::_Prime_rehash_policy::_M_need_rehash(unsigned long, unsigned long, unsigned long) const
+     0.15%     0.15%  hnsw_demo  libc.so.6             [.] __memset_avx2_unaligned_erms
+     0.08%     0.08%  hnsw_demo  libstdc++.so.6.0.33   [.] operator new(unsigned long)
+     0.07%     0.07%  hnsw_demo  libstdc++.so.6.0.33   [.] operator delete(void*)
+     0.06%     0.06%  hnsw_demo  hnsw_demo             [.] std::__detail::_Prime_rehash_policy::_M_need_rehash(unsigned long, unsigned long, unsigned long) const@plt
+     0.05%     0.05%  hnsw_demo  libstdc++.so.6.0.33   [.] std::__detail::_Prime_rehash_policy::_M_next_bkt(unsigned long) const
+     0.04%     0.04%  hnsw_demo  hnsw_demo             [.] void std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >::_M_realloc_append<std::pair<float, int> >(std::pair<float, int>&&)
+     0.02%     0.02%  hnsw_demo  libc.so.6             [.] _int_free_merge_chunk
+     0.02%     0.02%  hnsw_demo  libc.so.6             [.] _int_free_create_chunk
+     0.01%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff85a00f86
+     0.01%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff85865de2
+     0.01%     0.01%  hnsw_demo  hnsw_demo             [.] operator delete(void*)@plt
+     0.01%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff85a00c22
+     0.01%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff85866a99
+     0.01%     0.01%  hnsw_demo  libstdc++.so.6.0.33   [.] malloc@plt
+     0.01%     0.01%  hnsw_demo  libc.so.6             [.] __memmove_avx_unaligned_erms
+     0.01%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff85a01026
+     0.01%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84c8552a
+     0.01%     0.01%  hnsw_demo  hnsw_demo             [.] void std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >::_M_realloc_append<std::pair<float, int> const&>(std::pair<float, int> const&)
+     0.01%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84f49e99
+     0.01%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84ca6bf8
+     0.01%     0.01%  hnsw_demo  hnsw_demo             [.] void std::vector<int, std::allocator<int> >::_M_realloc_append<int const&>(int const&)
+     0.01%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84f497a9
+     0.01%     0.01%  hnsw_demo  [unknown]             [k] 0xffffffff85a00f70
+     0.01%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84d999c1
+     0.01%     0.01%  hnsw_demo  [unknown]             [k] 0xffffffff85a01010
+     0.01%     0.01%  hnsw_demo  libm.so.6             [.] __ieee754_log_fma
+     0.01%     0.01%  hnsw_demo  hnsw_demo             [.] operator new(unsigned long)@plt
+     0.01%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff85865d42
+     0.01%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84c81fc9
+     0.01%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84f47692
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff85a00c00
+     0.00%     0.00%  hnsw_demo  libc.so.6             [.] alloc_perturb
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84db4a01
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84fa287b
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84f7c6f7
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84f7b572
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84d9ce4b
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84f769e8
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84f74093
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff8584d707
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0x0000000000000091
+     0.00%     0.00%  hnsw_demo  hnsw_demo             [.] hnsw::HNSW::getRandomLevel()
+     0.00%     0.00%  hnsw_demo  libc.so.6             [.] _int_free_maybe_consolidate.part.0
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff85862c0e
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff85865d3a
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84ca6a8d
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84f48c91
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff85a00134
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff8585fceb
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0x0000000000000331
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84d99a25
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84d98f51
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84ccd21f
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84d9ceb4
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0x0000000000000111
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff85b04104
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff85b04110
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff85a0101b
+     0.00%     0.00%  hnsw_demo  hnsw_demo             [.] std::vector<hnsw::HNSW::Node, std::allocator<hnsw::HNSW::Node> >::~vector()
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff85a00c09
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff85862bfb
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0x0000000000000811
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff85a00f7b
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff85a00f73
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff85865d47
+     0.00%     0.00%  hnsw_demo  libstdc++.so.6.0.33   [.] std::__basic_file<char>::xsgetn(char*, long)
+     0.00%     0.00%  hnsw_demo  libc.so.6             [.] read
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84ffc595
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84ffbd17
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff85835016
+     0.00%     0.00%  hnsw_demo  libc.so.6             [.] __brk
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffffc2e320d6
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffffc27ff78c
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0x0000000000000151
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0x00000000000002a1
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0x00000000000008f1
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff85834ff7
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84c8550e
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff8521fe12
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84db4a06
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84d9c1a5
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84dad0bf
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff85a01013
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84c85512
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84f47660
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0x00000000000015b1
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0x0000000000000841
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff8587a580
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84d9999b
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0x0001bc1447956f80
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff85a000ba
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84f47599
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84dacf30
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84dad0cd
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84dad07b
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84c854fd
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0x0000000000000211
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0x00000000000006d1
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0x0000000000002111
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff85a01653
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff85a0165b
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff85a00c03
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0x000348c1480499c0
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff85a015d6
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0x0001ff3a478f5400
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff8561b110
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84ccd343
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff8587afb2
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff8561c3c6
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff8561be1d
+     0.00%     0.00%  hnsw_demo  libstdc++.so.6.0.33   [.] free@plt
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0x0000000000000121
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0x0000000000000090
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0x0000000000000761
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84ccd333
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0x0000000000000631
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84d9ce6a
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84c854f8
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84ccd200
+     0.00%     0.00%  hnsw_demo  hnsw_demo             [.] std::vector<std::vector<float, std::allocator<float> >, std::allocator<std::vector<float, std::allocator<float> > > >::~vector()
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff85834ea6
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84f476b1
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff85834e01
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84fdd64b
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffffc2d82820
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84f587c8
+     0.00%     0.00%  hnsw_demo  ld-linux-x86-64.so.2  [.] strcmp
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0x352e6f732e6e6172
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffffc2d82617
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84f7b678
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84f248ce
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84f58704
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84f5522e
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffffc27ff779
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffffc2e31f89
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84fdd65c
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84f57eb9
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffffc2d74d8d
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84fd5aed
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84ffbcf0
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84fa282f
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84fd5ad4
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff8587a530
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffffc2e8deb6
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffffc2e3aa6e
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84fd5acb
+     0.00%     0.00%  hnsw_demo  libc.so.6             [.] sysmalloc
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84f49649
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff8587a097
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84f76f8d
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84f7670c
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84f492bb
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84f42917
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84f47886
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff8584d709
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffffc27f793d
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffffc2e31fbf
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84f47ae4
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84f9f515
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84fa294a
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84c4fcd3
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84d9c1e2
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff850fb43a
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84f53593
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84fa281c
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84fa283d
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84f49761
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffffc2d74a77
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffffc2d74d5f
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84f57836
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84fd9a0e
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84fdc222
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffffc27e99eb
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffffc2e8dca5
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84f7b40f
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84fd5ae4
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0x00007efedb518990
+     0.00%     0.00%  hnsw_demo  ld-linux-x86-64.so.2  [.] check_match
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84c4acc5
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84f53547
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84fdc238
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84d9c1ab
+     0.00%     0.00%  hnsw_demo  ld-linux-x86-64.so.2  [.] _dl_start_user
+     0.00%     0.00%  hnsw_demo  ld-linux-x86-64.so.2  [.] _dl_start
+     0.00%     0.00%  hnsw_demo  ld-linux-x86-64.so.2  [.] _dl_relocate_object
+     0.00%     0.00%  hnsw_demo  ld-linux-x86-64.so.2  [.] _dl_sysdep_start
+     0.00%     0.00%  hnsw_demo  ld-linux-x86-64.so.2  [.] dl_main
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84ca69d4
+     0.00%     0.00%  hnsw_demo  ld-linux-x86-64.so.2  [.] do_lookup_x
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84ca69df
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff85b0410b
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffff84f477cf
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84f49350
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffff84f4922f
+     0.00%     0.00%  hnsw_demo  ld-linux-x86-64.so.2  [.] _start
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#
