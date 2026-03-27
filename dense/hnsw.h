@@ -3,7 +3,6 @@
 
 #include <vector>
 #include <queue>
-#include <unordered_set>
 #include <random>
 #include <cmath>
 #include <algorithm>
@@ -29,7 +28,7 @@ namespace hnsw {
         
         float distance(const std::vector<float>& a, const std::vector<float>& b) const;
         void addPoint(const std::vector<float>& point, int label);
-        MinPQ searchKNN(const std::vector<float>& query, int k, int ef = 50);
+        std::priority_queue<std::pair<float, int>> searchKNN(const std::vector<float>& query, int k, int ef = 50);
         void printInfo() const;
         
     private:
@@ -49,10 +48,10 @@ namespace hnsw {
         std::uniform_real_distribution<double> level_generator_;
         
         int getRandomLevel();
-        MinPQ searchLayer(const std::vector<float>& query, const std::vector<int>& entry_points, int ef, int layer);
-        std::vector<int> connectNeighbors(int node_id, const MinPQ& candidates, int level, int M);
-        std::vector<int> selectNeighbors(int node_id, const MinPQ& candidates, int M);
-        std::vector<int> selectNeighborsHeuristic(int node_id, const MinPQ& candidates, int M, int level);
+        std::priority_queue<std::pair<float, int>> searchLayer(const std::vector<float>& query, const std::vector<int>& entry_points, int ef, int layer);
+        std::vector<int> connectNeighbors(int node_id, std::priority_queue<std::pair<float, int>> candidates, int level, int M);
+        std::vector<int> selectNeighbors(int node_id, std::priority_queue<std::pair<float, int>> candidates, int M);
+        std::vector<int> selectNeighborsHeuristic(int node_id, std::priority_queue<std::pair<float, int>> candidates, int M, int level);
     };
 }
 

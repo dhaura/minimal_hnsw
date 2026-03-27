@@ -146,7 +146,7 @@ int main(int argc, char* argv[]) {
 
     int correct = 0;
     for (int i = 0; i < query_count; i++) {
-        MinPQ nns = index.searchKNN(query[i], k, ef);
+        std::priority_queue<std::pair<float, int>> nns = index.searchKNN(query[i], k, ef);
         while (!nns.empty()) {
             auto nn = nns.top();
             nns.pop();

@@ -1,6 +1,8 @@
 #include "hnsw.h"
 #include <iostream>
 #include <immintrin.h>
+#include <unordered_set>
+#include <omp.h>
 
 using namespace hnsw;
 
@@ -39,6 +41,16 @@ float HNSW::distance(const std::vector<float>& a, const std::vector<float>& b) c
         dist += diff * diff;
     }
     return dist;
+
+    // float dist = 0.0f;
+    // size_t size = a.size();
+    
+    // #pragma omp simd reduction(+:dist)
+    // for (; i < size; ++i) {
+    //     float diff = a[i] - b[i];
+    //     dist += diff * diff;
+    // }
+    // return dist;
 }
 
 int HNSW::getRandomLevel() {
@@ -48,8 +60,8 @@ int HNSW::getRandomLevel() {
     return static_cast<int>(-log(r) * (1.0 / log(M_)));
 }
 
-MinPQ HNSW::searchLayer(const std::vector<float>& query, const std::vector<int>& entry_points, int ef, int layer) {
-    std::unordered_set<int> visited;
+std::priority_queue<std::pair<float, int>> HNSW::searchLayer(const std::vector<float>& query, const std::vector<int>& entry_points, int ef, int layer) {
+    std::vector<bool> visited(nodes_.size(), false);
     
     MinPQ candidates;
     std::priority_queue<std::pair<float, int>> top_candidates;
@@ -58,7 +70,7 @@ MinPQ HNSW::searchLayer(const std::vector<float>& query, const std::vector<int>&
         float d = distance(query, nodes_[entry_point].data);
         candidates.push({d, entry_point});
         top_candidates.push({d, entry_point});
-        visited.insert(entry_point);
+        visited[entry_point] = true;
     }
     
     while (!candidates.empty()) {
@@ -74,8 +86,8 @@ MinPQ HNSW::searchLayer(const std::vector<float>& query, const std::vector<int>&
         // Ideally this check shouldn't fail.
         if (layer < static_cast<int>(nodes_[current_node].neighbors.size())) {
             for (int neighbor_id : nodes_[current_node].neighbors[layer]) {
-                if (visited.find(neighbor_id) == visited.end()) {
-                    visited.insert(neighbor_id);
+                if (!visited[neighbor_id]) {
+                    visited[neighbor_id] = true;
                     float dist = distance(query, nodes_[neighbor_id].data);
                     
                     if (top_candidates.size() < static_cast<size_t>(ef) || dist < top_candidates.top().first) {
@@ -91,43 +103,37 @@ MinPQ HNSW::searchLayer(const std::vector<float>& query, const std::vector<int>&
         }
     }
     
-    MinPQ result;
-    while (!top_candidates.empty()) {
-        result.push(top_candidates.top());
-        top_candidates.pop();
-    }
-    return result;
+    return top_candidates;
 }
 
-std::vector<int> HNSW::selectNeighbors(int node_id, const MinPQ& candidates, int M) {
+std::vector<int> HNSW::selectNeighbors(int node_id, std::priority_queue<std::pair<float, int>> candidates, int M) {
 
     if (candidates.size() <= static_cast<size_t>(M)) {
-        MinPQ temp = candidates;
         std::vector<int> result;
-        while (!temp.empty()) {
-            result.push_back(temp.top().second);
-            temp.pop();
+        while (!candidates.empty()) {
+            result.push_back(candidates.top().second);
+            candidates.pop();
         }
         return result;
     }
 
     std::vector<int> selected_candidates;
-    MinPQ temp = candidates;
-    while (!temp.empty()) {
-        int candidate = temp.top().second;
-        temp.pop();
-        if (static_cast<int>(selected_candidates.size()) >= M) {
-            break;
+    while (!candidates.empty()) {
+        if (static_cast<int>(candidates.size()) > M) {
+            candidates.pop();
+            continue;
         }
+        int candidate = candidates.top().second;
+        candidates.pop();
         selected_candidates.push_back(candidate);
     }
     return selected_candidates;
 }
 
-std::vector<int> HNSW::selectNeighborsHeuristic(int node_id, const MinPQ& candidates, int M, int level) {
+std::vector<int> HNSW::selectNeighborsHeuristic(int node_id, std::priority_queue<std::pair<float, int>> candidates, int M, int level) {
     
    if (candidates.size() <= static_cast<size_t>(M)) {
-        MinPQ temp = candidates;
+        std::priority_queue<std::pair<float, int>> temp = candidates;
         std::vector<int> result;
         while (!temp.empty()) {
             result.push_back(temp.top().second);
@@ -136,11 +142,15 @@ std::vector<int> HNSW::selectNeighborsHeuristic(int node_id, const MinPQ& candid
         return result;
     }
 
-    MinPQ working_set = candidates;
+    MinPQ working_set;
+    while (!candidates.empty()) {
+        working_set.push(candidates.top());
+        candidates.pop();
+    }
     std::vector<int> results_set;
     
     if (extend_candidates_) {
-        MinPQ temp = candidates;
+        MinPQ temp = working_set;
         while (!temp.empty()) {
             int candidate = temp.top().second;
             temp.pop();
@@ -186,7 +196,7 @@ std::vector<int> HNSW::selectNeighborsHeuristic(int node_id, const MinPQ& candid
     return results_set;
 }
 
-std::vector<int> HNSW::connectNeighbors(int node_id, const MinPQ& candidates, int level, int M) {    
+std::vector<int> HNSW::connectNeighbors(int node_id, std::priority_queue<std::pair<float, int>> candidates, int level, int M) {    
     
     if (static_cast<int>(nodes_[node_id].neighbors.size()) <= level) {
         nodes_[node_id].neighbors.resize(level + 1);
@@ -237,7 +247,7 @@ void HNSW::addPoint(const std::vector<float>& point, int label) {
     
     // Search from top layer to target layer
     for (int lc = max_level_; lc > level; --lc) {
-        MinPQ nearest = searchLayer(point, entry_points, 1, lc);
+        std::priority_queue<std::pair<float, int>> nearest = searchLayer(point, entry_points, 1, lc);
         if (!nearest.empty()) {
             entry_points.clear();
             while (!nearest.empty()) {
@@ -250,25 +260,27 @@ void HNSW::addPoint(const std::vector<float>& point, int label) {
     // Insert at all layers from level to 0
     for (int lc = level; lc >= 0; --lc) {
         int M_max = (lc == 0) ? M_ * 2 : M_;
-        MinPQ candidates = searchLayer(point, entry_points, ef_construction_, lc);
+        std::priority_queue<std::pair<float, int>> candidates = searchLayer(point, entry_points, ef_construction_, lc);
+        if (!candidates.empty()) {
+            entry_points.clear();
+            std::priority_queue<std::pair<float, int>> temp = candidates;
+            while (!temp.empty()) {
+                entry_points.push_back(temp.top().second);
+                temp.pop();
+            }
+        }
+
         auto neighbors = connectNeighbors(node_id, candidates, lc, M_);
         for (int neighbor : neighbors) {
             std::vector<int> econn = nodes_[neighbor].neighbors[lc];
             int neighborhood_size = static_cast<int>(econn.size());
             if (neighborhood_size > M_max) {
-                MinPQ econn_candidates;
+                std::priority_queue<std::pair<float, int>> econn_candidates;
                 for (int econn_neighbor : econn) {
                     float dist = distance(nodes_[neighbor].data, nodes_[econn_neighbor].data);
                     econn_candidates.push({dist, econn_neighbor});
                 }
                 connectNeighbors(neighbor, econn_candidates, lc, M_max);
-            }
-        }
-        if (!candidates.empty()) {
-            entry_points.clear();
-            while (!candidates.empty()) {
-                entry_points.push_back(candidates.top().second);
-                candidates.pop();
             }
         }
     }
@@ -279,7 +291,7 @@ void HNSW::addPoint(const std::vector<float>& point, int label) {
     }
 }
 
-MinPQ HNSW::searchKNN(const std::vector<float>& query, int k, int ef) {
+std::priority_queue<std::pair<float, int>> HNSW::searchKNN(const std::vector<float>& query, int k, int ef) {
     if (entry_point_ == -1) {
         return {};
     }
@@ -288,7 +300,7 @@ MinPQ HNSW::searchKNN(const std::vector<float>& query, int k, int ef) {
     
     // Search from top layer to layer 0
     for (int lc = max_level_; lc > 0; --lc) {
-        MinPQ nearest = searchLayer(query, entry_points, 1, lc);
+        std::priority_queue<std::pair<float, int>> nearest = searchLayer(query, entry_points, 1, lc);
         if (!nearest.empty()) {
             entry_points.clear();
             while (!nearest.empty()) {
