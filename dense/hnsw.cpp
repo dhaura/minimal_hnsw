@@ -12,8 +12,90 @@ HNSW::HNSW(int dim, int M, int ef_construction, int max_elements,
       use_heuristic_(use_heuristic), extend_candidates_(extend_candidates), keep_pruned_(keep_pruned),
       max_level_(0), entry_point_(-1), rng_(42), level_generator_(0.0, 1.0) {
     data_.reserve(max_elements * dim);
-    neighbors_.emplace_back();
-    neighbors_.back().reserve(max_elements_);
+    size_neighbor_list_level0_ = static_cast<uint32_t>(2 * M_ + 1);  // count + maxM0 neighbors
+    size_neighbor_list_per_element_ = static_cast<uint32_t>(M_ + 1); // count + maxM neighbors
+    level0_neighbor_lists_.assign(static_cast<size_t>(max_elements_) * size_neighbor_list_level0_, 0);
+    neighbor_lists_.clear();
+    neighbor_list_offsets_.assign(max_elements_, std::numeric_limits<uint32_t>::max());
+    element_levels_.assign(max_elements_, 0);
+}
+
+uint32_t* HNSW::get_neighbor_list0(uint32_t node_id) {
+    return level0_neighbor_lists_.data() + static_cast<size_t>(node_id) * size_neighbor_list_level0_;
+}
+
+const uint32_t* HNSW::get_neighbor_list0(uint32_t node_id) const {
+    return level0_neighbor_lists_.data() + static_cast<size_t>(node_id) * size_neighbor_list_level0_;
+}
+
+uint32_t* HNSW::get_neighbor_list(uint32_t node_id, int level) {
+    if (level <= 0 || level > element_levels_[node_id]) {
+        return nullptr;
+    }
+    uint32_t base = neighbor_list_offsets_[node_id];
+    if (base == std::numeric_limits<uint32_t>::max()) {
+        return nullptr;
+    }
+    return neighbor_lists_.data() + static_cast<size_t>(base) + static_cast<size_t>(level - 1) * size_neighbor_list_per_element_;
+}
+
+const uint32_t* HNSW::get_neighbor_list(uint32_t node_id, int level) const {
+    if (level <= 0 || level > element_levels_[node_id]) {
+        return nullptr;
+    }
+    uint32_t base = neighbor_list_offsets_[node_id];
+    if (base == std::numeric_limits<uint32_t>::max()) {
+        return nullptr;
+    }
+    return neighbor_lists_.data() + static_cast<size_t>(base) + static_cast<size_t>(level - 1) * size_neighbor_list_per_element_;
+}
+
+uint32_t* HNSW::get_neighbor_list_at_level(uint32_t node_id, int level) {
+    return level == 0 ? get_neighbor_list0(node_id) : get_neighbor_list(node_id, level);
+}
+
+const uint32_t* HNSW::get_neighbor_list_at_level(uint32_t node_id, int level) const {
+    return level == 0 ? get_neighbor_list0(node_id) : get_neighbor_list(node_id, level);
+}
+
+uint32_t HNSW::getListCount(const uint32_t* ptr) const {
+    return ptr ? ptr[0] : 0;
+}
+
+void HNSW::setListCount(uint32_t* ptr, uint32_t size) {
+    if (ptr) {
+        ptr[0] = size;
+    }
+}
+
+std::vector<uint32_t> HNSW::getNeighborsAtLevel(uint32_t node_id, int level) const {
+    const uint32_t* ll = get_neighbor_list_at_level(node_id, level);
+    if (!ll) {
+        return {};
+    }
+    uint32_t count = getListCount(ll);
+    std::vector<uint32_t> neighbors;
+    neighbors.reserve(count);
+    for (uint32_t i = 0; i < count; ++i) {
+        neighbors.push_back(ll[1 + i]);
+    }
+    return neighbors;
+}
+
+void HNSW::setNeighborsAtLevel(uint32_t node_id, int level, const std::vector<uint32_t>& neighbors, int max_degree) {
+    uint32_t* ll = get_neighbor_list_at_level(node_id, level);
+    if (!ll) {
+        return;
+    }
+    uint32_t block_size = (level == 0) ? size_neighbor_list_level0_ : size_neighbor_list_per_element_;
+    uint32_t capped = std::min<uint32_t>(static_cast<uint32_t>(neighbors.size()), static_cast<uint32_t>(max_degree));
+    setListCount(ll, capped);
+    for (uint32_t i = 0; i < capped; ++i) {
+        ll[1 + i] = neighbors[i];
+    }
+    for (uint32_t i = capped + 1; i < block_size; ++i) {
+        ll[i] = 0;
+    }
 }
 
 // L2 Euclidean distance
@@ -85,20 +167,17 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<fl
         }
         
         uint32_t current_node = current.second;
-        // Ideally this check shouldn't fail.
-        if (layer < neighbors_.size()) {
-            for (uint32_t neighbor_id : neighbors_[layer][current_node]) {
-                if (!visited[neighbor_id]) {
-                    visited[neighbor_id] = true;
-                    float dist = distance(query.data(), data_.data() + neighbor_id * dim_);
-                    
-                    if (top_candidates.size() < static_cast<size_t>(ef) || dist < top_candidates.top().first) {
-                        candidates.push({dist, neighbor_id});
-                        top_candidates.push({dist, neighbor_id});
-                        
-                        if (top_candidates.size() > static_cast<size_t>(ef)) {
-                            top_candidates.pop();
-                        }
+        for (uint32_t neighbor_id : getNeighborsAtLevel(current_node, layer)) {
+            if (!visited[neighbor_id]) {
+                visited[neighbor_id] = true;
+                float dist = distance(query.data(), data_.data() + neighbor_id * dim_);
+
+                if (top_candidates.size() < static_cast<size_t>(ef) || dist < top_candidates.top().first) {
+                    candidates.push({dist, neighbor_id});
+                    top_candidates.push({dist, neighbor_id});
+
+                    if (top_candidates.size() > static_cast<size_t>(ef)) {
+                        top_candidates.pop();
                     }
                 }
             }
@@ -156,12 +235,10 @@ std::vector<uint32_t> HNSW::selectNeighborsHeuristic(uint32_t node_id, std::prio
         while (!temp.empty()) {
             uint32_t candidate = temp.top().second;
             temp.pop();
-            if (static_cast<int>(neighbors_.size()) > level) {
-                for (uint32_t neighbor : neighbors_[level][candidate]) {
-                    if (neighbor != node_id) { // Ideally should check in working_set if the neighbor is already there.
-                        float dist = distance(data_.data() + node_id * dim_, data_.data() + neighbor * dim_);
-                        working_set.push({dist, neighbor});
-                    }
+            for (uint32_t neighbor : getNeighborsAtLevel(candidate, level)) {
+                if (neighbor != node_id) { // Ideally should check in working_set if the neighbor is already there.
+                    float dist = distance(data_.data() + node_id * dim_, data_.data() + neighbor * dim_);
+                    working_set.push({dist, neighbor});
                 }
             }
         }
@@ -207,29 +284,43 @@ std::vector<uint32_t> HNSW::connectNeighbors(uint32_t node_id, std::priority_que
         selected_neighbors = selectNeighbors(node_id, candidates, M);
     }
     
-    // Clear existing neighbors at this level
-    neighbors_[level][node_id].clear();
+    setNeighborsAtLevel(node_id, level, selected_neighbors, M);
+
+    int neighbor_max_degree = (level == 0) ? (2 * M_) : M_;
 
     for (uint32_t neighbor : selected_neighbors) {
-        neighbors_[level][node_id].push_back(neighbor);
-        
-        // Add bidirectional connection
-        if (std::find(neighbors_[level][neighbor].begin(), neighbors_[level][neighbor].end(), node_id) == neighbors_[level][neighbor].end()) {
-            neighbors_[level][neighbor].push_back(node_id);
+        std::vector<uint32_t> neighbor_list = getNeighborsAtLevel(neighbor, level);
+
+        // Add bidirectional connection if needed.
+        if (std::find(neighbor_list.begin(), neighbor_list.end(), node_id) == neighbor_list.end()) {
+            neighbor_list.push_back(node_id);
+            if (static_cast<int>(neighbor_list.size()) > neighbor_max_degree) {
+                std::priority_queue<std::pair<float, uint32_t>> econn_candidates;
+                for (uint32_t econn_neighbor : neighbor_list) {
+                    float dist = distance(data_.data() + neighbor * dim_, data_.data() + econn_neighbor * dim_);
+                    econn_candidates.push({dist, econn_neighbor});
+                }
+                std::vector<uint32_t> reduced_neighbors = use_heuristic_
+                    ? selectNeighborsHeuristic(neighbor, econn_candidates, neighbor_max_degree, level)
+                    : selectNeighbors(neighbor, econn_candidates, neighbor_max_degree);
+                setNeighborsAtLevel(neighbor, level, reduced_neighbors, neighbor_max_degree);
+            } else {
+                setNeighborsAtLevel(neighbor, level, neighbor_list, neighbor_max_degree);
+            }
         }
     }
-    return neighbors_[level][node_id];
+    return getNeighborsAtLevel(node_id, level);
 }
 
 void HNSW::addPoint(std::vector<float> point, uint32_t label) {
     int level = getRandomLevel();
 
-    if (level > max_level_) {
-        int level_diff = level - max_level_;
-        for (size_t i = 0; i < level_diff; ++i) {
-            neighbors_.emplace_back();
-            neighbors_.back().reserve(max_elements_);
-        }
+    element_levels_[label] = level;
+    if (level > 0) {
+        neighbor_list_offsets_[label] = static_cast<uint32_t>(neighbor_lists_.size());
+        neighbor_lists_.resize(neighbor_lists_.size() + static_cast<size_t>(level) * size_neighbor_list_per_element_, 0);
+    } else {
+        neighbor_list_offsets_[label] = std::numeric_limits<uint32_t>::max();
     }
     
     data_.insert(data_.end(), point.begin(), point.end());
@@ -269,7 +360,7 @@ void HNSW::addPoint(std::vector<float> point, uint32_t label) {
 
         auto neighbors = connectNeighbors(label, candidates, lc, M_);
         for (uint32_t neighbor : neighbors) {
-            std::vector<uint32_t> econn = neighbors_[lc][neighbor];
+            std::vector<uint32_t> econn = getNeighborsAtLevel(neighbor, lc);
             int neighborhood_size = static_cast<int>(econn.size());
             if (neighborhood_size > M_max) {
                 std::priority_queue<std::pair<float, uint32_t>> econn_candidates;
@@ -322,11 +413,11 @@ void HNSW::printInfo() const {
     std::cout << "Entry point ID: " << entry_point_ << "\n";
 
     std::vector<int> layer_counts;
-    // TODO: fix
-    for (size_t level_id = 0; level_id < neighbors_.size(); ++level_id) {
+    for (int level_id = 0; level_id <= max_level_; ++level_id) {
         int count = 0;
-        for (size_t node_id = 0; node_id < neighbors_[level_id].capacity(); ++node_id) {
-            if (!neighbors_[level_id][node_id].empty()) {
+        size_t num_nodes = data_.size() / dim_;
+        for (size_t node_id = 0; node_id < num_nodes; ++node_id) {
+            if (!getNeighborsAtLevel(static_cast<uint32_t>(node_id), level_id).empty()) {
                 count++;
             }
         }
