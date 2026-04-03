@@ -1,5 +1,6 @@
 #include "hnsw.h"
 #include <iostream>
+#include <fstream>
 #include <immintrin.h>
 #include <unordered_set>
 #include <omp.h>
@@ -10,7 +11,7 @@ HNSW::HNSW(int dim, int M, int ef_construction, int max_elements,
     bool use_heuristic, bool extend_candidates, bool keep_pruned)
     : dim_(dim), M_(M), ef_construction_(ef_construction), max_elements_(max_elements), 
       use_heuristic_(use_heuristic), extend_candidates_(extend_candidates), keep_pruned_(keep_pruned),
-      max_level_(0), entry_point_(-1), rng_(42), level_generator_(0.0, 1.0) {
+    max_level_(0), entry_point_(-1), current_phase_(Phase::Insertion), rng_(42), level_generator_(0.0, 1.0) {
     data_.reserve(max_elements * dim);
     size_neighbor_list_level0_ = static_cast<uint32_t>(2 * M_ + 1);  // count + maxM0 neighbors
     size_neighbor_list_per_element_ = static_cast<uint32_t>(M_ + 1); // count + maxM neighbors
@@ -18,6 +19,11 @@ HNSW::HNSW(int dim, int M, int ef_construction, int max_elements,
     neighbor_lists_.clear();
     neighbor_list_offsets_.assign(max_elements_, std::numeric_limits<uint32_t>::max());
     element_levels_.assign(max_elements_, 0);
+
+    // Since first inserted element is not searched in layer 0:
+    num_dist_calc_layer0_insertion_.push_back(0);
+    num_cand_elements_layer0_insertion_.push_back(0);
+    max_hops_layer0_insertion_.push_back(0);
 }
 
 uint32_t* HNSW::get_neighbor_list0(uint32_t node_id) {
@@ -146,13 +152,39 @@ int HNSW::getRandomLevel() {
 
 std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<float> query, std::vector<uint32_t> entry_points, int ef, int layer) {
     std::vector<bool> visited(max_elements_, false);
+    std::vector<int32_t> hop_counts;
+    if (layer == 0) {
+        hop_counts.assign(max_elements_, -1);
+    }
     
     MinPQ candidates;
     std::priority_queue<std::pair<float, uint32_t>> top_candidates;
+
+    int32_t dist_calc_count = 0;
+    int32_t cand_elements_count = 0;
+    int32_t max_hops = 0;
+    auto push_metrics = [&](uint32_t dist_count, uint32_t cand_count, uint32_t hop_count) {
+        if (current_phase_ == Phase::Insertion) {
+            num_dist_calc_layer0_insertion_.push_back(dist_count);
+            num_cand_elements_layer0_insertion_.push_back(cand_count);
+            max_hops_layer0_insertion_.push_back(hop_count);
+        } else {
+            num_dist_calc_layer0_search_.push_back(dist_count);
+            num_cand_elements_layer0_search_.push_back(cand_count);
+            max_hops_layer0_search_.push_back(hop_count);
+        }
+    };
     
     for (uint32_t entry_point : entry_points) {
         float d = distance(query.data(), data_.data() + entry_point * dim_);
+        if (layer == 0) {
+            dist_calc_count++;
+            hop_counts[entry_point] = 0;
+        }
         candidates.push({d, entry_point});
+        if (layer == 0) {
+            cand_elements_count++;
+        }
         top_candidates.push({d, entry_point});
         visited[entry_point] = true;
     }
@@ -167,13 +199,24 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<fl
         }
         
         uint32_t current_node = current.second;
+        int32_t current_hops = (layer == 0) ? hop_counts[current_node] : 0;
         for (uint32_t neighbor_id : getNeighborsAtLevel(current_node, layer)) {
             if (!visited[neighbor_id]) {
                 visited[neighbor_id] = true;
                 float dist = distance(query.data(), data_.data() + neighbor_id * dim_);
 
+                if (layer == 0) {
+                    dist_calc_count++;
+                    int32_t neighbor_hops = current_hops + 1;
+                    hop_counts[neighbor_id] = neighbor_hops;
+                    max_hops = std::max(max_hops, neighbor_hops);
+                }
+
                 if (top_candidates.size() < static_cast<size_t>(ef) || dist < top_candidates.top().first) {
                     candidates.push({dist, neighbor_id});
+                    if (layer == 0) {
+                        cand_elements_count++;
+                    }
                     top_candidates.push({dist, neighbor_id});
 
                     if (top_candidates.size() > static_cast<size_t>(ef)) {
@@ -182,6 +225,10 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<fl
                 }
             }
         }
+    }
+
+    if (layer == 0) {
+        push_metrics(dist_calc_count, cand_elements_count, max_hops);
     }
     
     return top_candidates;
@@ -313,6 +360,7 @@ std::vector<uint32_t> HNSW::connectNeighbors(uint32_t node_id, std::priority_que
 }
 
 void HNSW::addPoint(std::vector<float> point, uint32_t label) {
+    current_phase_ = Phase::Insertion;
     int level = getRandomLevel();
 
     element_levels_[label] = level;
@@ -384,6 +432,8 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchKNN(std::vector<floa
         return {};
     }
 
+    current_phase_ = Phase::Search;
+
     std::vector<uint32_t> entry_points = {entry_point_};
 
     // Search from top layer to layer 0
@@ -426,4 +476,40 @@ void HNSW::printInfo() const {
     for (size_t i = 0; i < layer_counts.size(); ++i) {
         std::cout << "Layer " << i << " has " << layer_counts[i] << " nodes\n";
     }
+}
+
+bool HNSW::dumpLayer0Counts(const std::string& output_path, const std::string param) const {
+    std::ofstream out(output_path);
+    if (!out) {
+        return false;
+    }
+
+    if (param == "dist_calc_insertion") {
+        for (uint32_t count : num_dist_calc_layer0_insertion_) {
+            out << count << "\n";
+        }
+    } else if (param == "cand_elements_insertion") {
+        for (uint32_t count : num_cand_elements_layer0_insertion_) {
+            out << count << "\n";
+        }
+    } else if (param == "max_hops_insertion") {
+        for (uint32_t count : max_hops_layer0_insertion_) {
+            out << count << "\n";
+        }
+    } else if (param == "dist_calc_search") {
+        for (uint32_t count : num_dist_calc_layer0_search_) {
+            out << count << "\n";
+        }
+    } else if (param == "cand_elements_search") {
+        for (uint32_t count : num_cand_elements_layer0_search_) {
+            out << count << "\n";
+        }
+    } else if (param == "max_hops_search") {
+        for (uint32_t count : max_hops_layer0_search_) {
+            out << count << "\n";
+        }
+    } else {
+        return false; // Invalid parameter
+    }
+    return true;
 }

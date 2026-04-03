@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <limits>
 #include <cstdint>
+#include <string>
 
 namespace hnsw {
     using MinPQ = std::priority_queue<
@@ -25,6 +26,7 @@ namespace hnsw {
         void addPoint(std::vector<float> point, uint32_t label);
         std::priority_queue<std::pair<float, uint32_t>> searchKNN(std::vector<float> query, int k, int ef = 50);
         void printInfo() const;
+        bool dumpLayer0Counts(const std::string& output_path, const std::string param) const;
         
     private:
         int dim_;
@@ -42,9 +44,23 @@ namespace hnsw {
         std::vector<uint32_t> neighbor_list_offsets_;       // per-node start offset into neighbor_lists_flat_
         std::vector<int> element_levels_;
 
+        std::vector<uint32_t> num_dist_calc_layer0_insertion_;
+        std::vector<uint32_t> num_cand_elements_layer0_insertion_;
+        std::vector<uint32_t> max_hops_layer0_insertion_;
+
+        std::vector<uint32_t> num_dist_calc_layer0_search_;
+        std::vector<uint32_t> num_cand_elements_layer0_search_;
+        std::vector<uint32_t> max_hops_layer0_search_;
+
         bool use_heuristic_;
         bool extend_candidates_;
         bool keep_pruned_;
+        enum class Phase {
+            Insertion,
+            Search
+        };
+
+        Phase current_phase_;
         
         std::mt19937 rng_;
         std::uniform_real_distribution<double> level_generator_;

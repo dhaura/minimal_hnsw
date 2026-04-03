@@ -76,9 +76,9 @@ int main(int argc, char* argv[]) {
     std::cout << "Minimal HNSW Demo\n";
     std::cout << "=================\n\n";
 
-     if (argc < 11)
+    if (argc < 12)
     {
-        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <input_filepath> <query_filepath> <gt_filepath> <file_type>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <input_filepath> <query_filepath> <gt_filepath> <file_type> [output_path_folder]" << std::endl;
         return 1;
     }
 
@@ -93,6 +93,13 @@ int main(int argc, char* argv[]) {
     std::string query_filepath = argv[8];
     std::string gt_filepath = argv[9];
     std::string file_type = argv[10];
+    std::string output_path_folder = argv[11];
+    std::string dist_counts_insertion_output_path = output_path_folder + "/layer0_distance_counts_insertion.txt";
+    std::string cand_elements_insertion_output_path = output_path_folder + "/layer0_cand_elements_counts_insertion.txt";
+    std::string max_hops_insertion_output_path = output_path_folder + "/layer0_max_hops_counts_insertion.txt";
+    std::string dist_counts_search_output_path = output_path_folder + "/layer0_distance_counts_search.txt";
+    std::string cand_elements_search_output_path = output_path_folder + "/layer0_cand_elements_counts_search.txt";
+    std::string max_hops_search_output_path = output_path_folder + "/layer0_max_hops_counts_search.txt";
 
     // Read a dense dataset from file.
     std::vector<std::vector<float>> points;
@@ -177,6 +184,42 @@ int main(int argc, char* argv[]) {
     std::cout << "Average Query time: " << query_time.count() / query_count << " microseconds\n";
 
     index.printInfo();
+
+    if (index.dumpLayer0Counts(dist_counts_insertion_output_path, "dist_calc_insertion")) {
+        std::cout << "Wrote insertion layer-0 distance counts to: " << dist_counts_insertion_output_path << "\n";
+    } else {
+        std::cerr << "Failed to write insertion layer-0 distance counts to: " << dist_counts_insertion_output_path << "\n";
+    }
+
+    if (index.dumpLayer0Counts(cand_elements_insertion_output_path, "cand_elements_insertion")) {
+        std::cout << "Wrote insertion layer-0 candidate elements counts to: " << cand_elements_insertion_output_path << "\n";
+    } else {
+        std::cerr << "Failed to write insertion layer-0 candidate elements counts to: " << cand_elements_insertion_output_path << "\n";
+    }
+
+    if (index.dumpLayer0Counts(max_hops_insertion_output_path, "max_hops_insertion")) {
+        std::cout << "Wrote insertion layer-0 max hops counts to: " << max_hops_insertion_output_path << "\n";
+    } else {
+        std::cerr << "Failed to write insertion layer-0 max hops counts to: " << max_hops_insertion_output_path << "\n";
+    }
+
+    if (index.dumpLayer0Counts(dist_counts_search_output_path, "dist_calc_search")) {
+        std::cout << "Wrote search layer-0 distance counts to: " << dist_counts_search_output_path << "\n";
+    } else {
+        std::cerr << "Failed to write search layer-0 distance counts to: " << dist_counts_search_output_path << "\n";
+    }
+
+    if (index.dumpLayer0Counts(cand_elements_search_output_path, "cand_elements_search")) {
+        std::cout << "Wrote search layer-0 candidate elements counts to: " << cand_elements_search_output_path << "\n";
+    } else {
+        std::cerr << "Failed to write search layer-0 candidate elements counts to: " << cand_elements_search_output_path << "\n";
+    }
+
+    if (index.dumpLayer0Counts(max_hops_search_output_path, "max_hops_search")) {
+        std::cout << "Wrote search layer-0 max hops counts to: " << max_hops_search_output_path << "\n";
+    } else {
+        std::cerr << "Failed to write search layer-0 max hops counts to: " << max_hops_search_output_path << "\n";
+    }
     
     std::cout << "\nDemo completed successfully!\n";
     
