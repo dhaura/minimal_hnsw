@@ -11,7 +11,7 @@ HNSW::HNSW(int dim, int M, int ef_construction, int max_elements,
     bool use_heuristic, bool extend_candidates, bool keep_pruned)
     : dim_(dim), M_(M), ef_construction_(ef_construction), max_elements_(max_elements), 
       use_heuristic_(use_heuristic), extend_candidates_(extend_candidates), keep_pruned_(keep_pruned),
-    max_level_(0), entry_point_(-1), current_phase_(Phase::Insertion), rng_(42), level_generator_(0.0, 1.0) {
+        max_level_(0), entry_point_(-1), pca_projection_ready_(false), current_phase_(Phase::Insertion), rng_(42), level_generator_(0.0, 1.0) {
     data_.reserve(max_elements * dim);
     size_neighbor_list_level0_ = static_cast<uint32_t>(2 * M_ + 1);  // count + maxM0 neighbors
     size_neighbor_list_per_element_ = static_cast<uint32_t>(M_ + 1); // count + maxM neighbors
@@ -21,9 +21,9 @@ HNSW::HNSW(int dim, int M, int ef_construction, int max_elements,
     element_levels_.assign(max_elements_, 0);
 
     // Since first inserted element is not searched in layer 0:
-    num_dist_calc_layer0_insertion_.push_back(0);
-    num_cand_elements_layer0_insertion_.push_back(0);
-    max_hops_layer0_insertion_.push_back(0);
+    // num_dist_calc_layer0_insertion_.push_back(0);
+    // num_cand_elements_layer0_insertion_.push_back(0);
+    // max_hops_layer0_insertion_.push_back(0);
 }
 
 uint32_t* HNSW::get_neighbor_list0(uint32_t node_id) {
@@ -104,6 +104,160 @@ void HNSW::setNeighborsAtLevel(uint32_t node_id, int level, const std::vector<ui
     }
 }
 
+void HNSW::fitPcaProjection() {
+    pca_projection_ready_ = false;
+    pca_mean_.assign(static_cast<size_t>(dim_), 0.0f);
+    pca_component_1_.assign(static_cast<size_t>(dim_), 0.0f);
+    pca_component_2_.assign(static_cast<size_t>(dim_), 0.0f);
+
+    const size_t num_nodes = (dim_ > 0) ? (data_.size() / static_cast<size_t>(dim_)) : 0;
+    if (num_nodes == 0 || dim_ <= 0) {
+        return;
+    }
+
+    if (dim_ == 1) {
+        pca_component_1_[0] = 1.0f;
+        pca_projection_ready_ = true;
+        return;
+    }
+
+    for (size_t node_id = 0; node_id < num_nodes; ++node_id) {
+        const float* point = data_.data() + node_id * static_cast<size_t>(dim_);
+        for (int dim_id = 0; dim_id < dim_; ++dim_id) {
+            pca_mean_[static_cast<size_t>(dim_id)] += point[dim_id];
+        }
+    }
+    const float inv_num_nodes = 1.0f / static_cast<float>(num_nodes);
+    for (int dim_id = 0; dim_id < dim_; ++dim_id) {
+        pca_mean_[static_cast<size_t>(dim_id)] *= inv_num_nodes;
+    }
+
+    std::vector<double> covariance(static_cast<size_t>(dim_) * static_cast<size_t>(dim_), 0.0);
+    for (size_t node_id = 0; node_id < num_nodes; ++node_id) {
+        const float* point = data_.data() + node_id * static_cast<size_t>(dim_);
+        for (int row = 0; row < dim_; ++row) {
+            const double centered_row = static_cast<double>(point[row]) - static_cast<double>(pca_mean_[static_cast<size_t>(row)]);
+            for (int col = row; col < dim_; ++col) {
+                const double centered_col = static_cast<double>(point[col]) - static_cast<double>(pca_mean_[static_cast<size_t>(col)]);
+                covariance[static_cast<size_t>(row) * static_cast<size_t>(dim_) + static_cast<size_t>(col)] += centered_row * centered_col;
+            }
+        }
+    }
+
+    const double inv_denom = (num_nodes > 1) ? (1.0 / static_cast<double>(num_nodes - 1)) : 1.0;
+    for (int row = 0; row < dim_; ++row) {
+        for (int col = row; col < dim_; ++col) {
+            const double value = covariance[static_cast<size_t>(row) * static_cast<size_t>(dim_) + static_cast<size_t>(col)] * inv_denom;
+            covariance[static_cast<size_t>(row) * static_cast<size_t>(dim_) + static_cast<size_t>(col)] = value;
+            covariance[static_cast<size_t>(col) * static_cast<size_t>(dim_) + static_cast<size_t>(row)] = value;
+        }
+    }
+
+    auto multiplyCovariance = [&](const std::vector<float>& vector) {
+        std::vector<double> result(static_cast<size_t>(dim_), 0.0);
+        for (int row = 0; row < dim_; ++row) {
+            double sum = 0.0;
+            for (int col = 0; col < dim_; ++col) {
+                sum += covariance[static_cast<size_t>(row) * static_cast<size_t>(dim_) + static_cast<size_t>(col)] * static_cast<double>(vector[static_cast<size_t>(col)]);
+            }
+            result[static_cast<size_t>(row)] = sum;
+        }
+        return result;
+    };
+
+    auto normalizeVector = [](std::vector<float>& vector) {
+        double norm_sq = 0.0;
+        for (float value : vector) {
+            norm_sq += static_cast<double>(value) * static_cast<double>(value);
+        }
+        if (norm_sq <= std::numeric_limits<double>::epsilon()) {
+            return false;
+        }
+        const float inv_norm = static_cast<float>(1.0 / std::sqrt(norm_sq));
+        for (float& value : vector) {
+            value *= inv_norm;
+        }
+        return true;
+    };
+
+    auto computeComponent = [&](const std::vector<std::vector<float>>& basis) {
+        std::vector<float> vector(static_cast<size_t>(dim_), 0.0f);
+        vector[0] = 1.0f;
+        if (!basis.empty()) {
+            for (int dim_id = 0; dim_id < dim_; ++dim_id) {
+                vector[static_cast<size_t>(dim_id)] = static_cast<float>((dim_id == 0) ? 0.5f : 0.0f);
+            }
+        }
+
+        if (!normalizeVector(vector)) {
+            vector.assign(static_cast<size_t>(dim_), 0.0f);
+            vector[0] = 1.0f;
+        }
+
+        for (int iteration = 0; iteration < 64; ++iteration) {
+            std::vector<double> next_double = multiplyCovariance(vector);
+            for (const std::vector<float>& prior : basis) {
+                double dot = 0.0;
+                for (int dim_id = 0; dim_id < dim_; ++dim_id) {
+                    dot += next_double[static_cast<size_t>(dim_id)] * static_cast<double>(prior[static_cast<size_t>(dim_id)]);
+                }
+                for (int dim_id = 0; dim_id < dim_; ++dim_id) {
+                    next_double[static_cast<size_t>(dim_id)] -= dot * static_cast<double>(prior[static_cast<size_t>(dim_id)]);
+                }
+            }
+
+            std::vector<float> next(static_cast<size_t>(dim_), 0.0f);
+            for (int dim_id = 0; dim_id < dim_; ++dim_id) {
+                next[static_cast<size_t>(dim_id)] = static_cast<float>(next_double[static_cast<size_t>(dim_id)]);
+            }
+
+            if (!normalizeVector(next)) {
+                break;
+            }
+
+            double diff_sq = 0.0;
+            for (int dim_id = 0; dim_id < dim_; ++dim_id) {
+                const double delta = static_cast<double>(next[static_cast<size_t>(dim_id)]) - static_cast<double>(vector[static_cast<size_t>(dim_id)]);
+                diff_sq += delta * delta;
+            }
+            vector = std::move(next);
+            if (diff_sq <= 1e-10) {
+                break;
+            }
+        }
+
+        return vector;
+    };
+
+    pca_component_1_ = computeComponent({});
+    if (!normalizeVector(pca_component_1_)) {
+        pca_component_1_.assign(static_cast<size_t>(dim_), 0.0f);
+        pca_component_1_[0] = 1.0f;
+    }
+
+    std::vector<std::vector<float>> basis;
+    basis.push_back(pca_component_1_);
+    pca_component_2_ = computeComponent(basis);
+    if (!normalizeVector(pca_component_2_)) {
+        pca_component_2_.assign(static_cast<size_t>(dim_), 0.0f);
+        pca_component_2_[1] = 1.0f;
+    }
+
+    double dot = 0.0;
+    for (int dim_id = 0; dim_id < dim_; ++dim_id) {
+        dot += static_cast<double>(pca_component_1_[static_cast<size_t>(dim_id)]) * static_cast<double>(pca_component_2_[static_cast<size_t>(dim_id)]);
+    }
+    for (int dim_id = 0; dim_id < dim_; ++dim_id) {
+        pca_component_2_[static_cast<size_t>(dim_id)] -= static_cast<float>(dot * static_cast<double>(pca_component_1_[static_cast<size_t>(dim_id)]));
+    }
+    if (!normalizeVector(pca_component_2_)) {
+        pca_component_2_.assign(static_cast<size_t>(dim_), 0.0f);
+        pca_component_2_[1] = 1.0f;
+    }
+
+    pca_projection_ready_ = true;
+}
+
 // L2 Euclidean distance
 float HNSW::distance(float * a, float * b) const {
     float dist = 0.0f;
@@ -160,31 +314,31 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<fl
     MinPQ candidates;
     std::priority_queue<std::pair<float, uint32_t>> top_candidates;
 
-    int32_t dist_calc_count = 0;
-    int32_t cand_elements_count = 0;
-    int32_t max_hops = 0;
-    auto push_metrics = [&](uint32_t dist_count, uint32_t cand_count, uint32_t hop_count) {
-        if (current_phase_ == Phase::Insertion) {
-            num_dist_calc_layer0_insertion_.push_back(dist_count);
-            num_cand_elements_layer0_insertion_.push_back(cand_count);
-            max_hops_layer0_insertion_.push_back(hop_count);
-        } else {
-            num_dist_calc_layer0_search_.push_back(dist_count);
-            num_cand_elements_layer0_search_.push_back(cand_count);
-            max_hops_layer0_search_.push_back(hop_count);
-        }
-    };
+    // int32_t dist_calc_count = 0;
+    // int32_t cand_elements_count = 0;
+    // int32_t max_hops = 0;
+    // auto push_metrics = [&](uint32_t dist_count, uint32_t cand_count, uint32_t hop_count) {
+    //     if (current_phase_ == Phase::Insertion) {
+    //         num_dist_calc_layer0_insertion_.push_back(dist_count);
+    //         num_cand_elements_layer0_insertion_.push_back(cand_count);
+    //         max_hops_layer0_insertion_.push_back(hop_count);
+    //     } else {
+    //         num_dist_calc_layer0_search_.push_back(dist_count);
+    //         num_cand_elements_layer0_search_.push_back(cand_count);
+    //         max_hops_layer0_search_.push_back(hop_count);
+    //     }
+    // };
     
     for (uint32_t entry_point : entry_points) {
         float d = distance(query.data(), data_.data() + entry_point * dim_);
-        if (layer == 0) {
-            dist_calc_count++;
-            hop_counts[entry_point] = 0;
-        }
+        // if (layer == 0) {
+        //     dist_calc_count++;
+        //     hop_counts[entry_point] = 0;
+        // }
         candidates.push({d, entry_point});
-        if (layer == 0) {
-            cand_elements_count++;
-        }
+        // if (layer == 0) {
+        //     cand_elements_count++;
+        // }
         top_candidates.push({d, entry_point});
         visited[entry_point] = true;
     }
@@ -205,18 +359,18 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<fl
                 visited[neighbor_id] = true;
                 float dist = distance(query.data(), data_.data() + neighbor_id * dim_);
 
-                if (layer == 0) {
-                    dist_calc_count++;
-                    int32_t neighbor_hops = current_hops + 1;
-                    hop_counts[neighbor_id] = neighbor_hops;
-                    max_hops = std::max(max_hops, neighbor_hops);
-                }
+                // if (layer == 0) {
+                //     dist_calc_count++;
+                //     int32_t neighbor_hops = current_hops + 1;
+                //     hop_counts[neighbor_id] = neighbor_hops;
+                //     max_hops = std::max(max_hops, neighbor_hops);
+                // }
 
                 if (top_candidates.size() < static_cast<size_t>(ef) || dist < top_candidates.top().first) {
                     candidates.push({dist, neighbor_id});
-                    if (layer == 0) {
-                        cand_elements_count++;
-                    }
+                    // if (layer == 0) {
+                    //     cand_elements_count++;
+                    // }
                     top_candidates.push({dist, neighbor_id});
 
                     if (top_candidates.size() > static_cast<size_t>(ef)) {
@@ -227,9 +381,9 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<fl
         }
     }
 
-    if (layer == 0) {
-        push_metrics(dist_calc_count, cand_elements_count, max_hops);
-    }
+    // if (layer == 0) {
+    //     push_metrics(dist_calc_count, cand_elements_count, max_hops);
+    // }
     
     return top_candidates;
 }
@@ -361,6 +515,7 @@ std::vector<uint32_t> HNSW::connectNeighbors(uint32_t node_id, std::priority_que
 
 void HNSW::addPoint(std::vector<float> point, uint32_t label) {
     current_phase_ = Phase::Insertion;
+    pca_projection_ready_ = false;
     int level = getRandomLevel();
 
     element_levels_[label] = level;
@@ -452,6 +607,212 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchKNN(std::vector<floa
     return searchLayer(query, entry_points, std::max(ef, k), 0);
 }
 
+// Helper function to convert coordinates to Hilbert index
+// For 2D case with normalized coordinates [0, 1]
+uint64_t HNSW::xy2d(uint32_t n, uint32_t x, uint32_t y) {
+    uint64_t rx, ry, s, d = 0;
+    for (s = n / 2; s > 0; s /= 2) {
+        rx = (x & s) > 0;
+        ry = (y & s) > 0;
+        d += s * s * ((3 * rx) ^ ry);
+        // Rotate
+        if (ry == 0) {
+            if (rx == 1) {
+                x = n - 1 - x;
+                y = n - 1 - y;
+            }
+            std::swap(x, y);
+        }
+    }
+    return d;
+}
+
+// Convert multi-dimensional point to 2D using PCA projection
+std::pair<float, float> HNSW::projectTo2D(const std::vector<float>& point) const {
+    if (!pca_projection_ready_ || static_cast<int>(pca_mean_.size()) != dim_ ||
+        static_cast<int>(pca_component_1_.size()) != dim_ || static_cast<int>(pca_component_2_.size()) != dim_) {
+        const float x = (point.size() > 0) ? point[0] : 0.0f;
+        const float y = (point.size() > 1) ? point[1] : 0.0f;
+        return std::make_pair(x, y);
+    }
+
+    double x = 0.0;
+    double y = 0.0;
+    for (int dim_id = 0; dim_id < dim_; ++dim_id) {
+        const double centered = static_cast<double>(point[static_cast<size_t>(dim_id)]) - static_cast<double>(pca_mean_[static_cast<size_t>(dim_id)]);
+        x += centered * static_cast<double>(pca_component_1_[static_cast<size_t>(dim_id)]);
+        y += centered * static_cast<double>(pca_component_2_[static_cast<size_t>(dim_id)]);
+    }
+    return std::make_pair(static_cast<float>(x), static_cast<float>(y));
+}
+
+// Compute Hilbert index for a point
+uint64_t HNSW::computeHilbertIndex(const std::vector<float>& point, 
+                                  float min_x, float max_x, 
+                                  float min_y, float max_y) {
+    std::pair<float, float> proj = projectTo2D(point);
+    float x = proj.first;
+    float y = proj.second;
+    
+    // Normalize to [0, 1]
+    float range_x = max_x - min_x;
+    float range_y = max_y - min_y;
+    if (range_x < 1e-6f) range_x = 1.0f;
+    if (range_y < 1e-6f) range_y = 1.0f;
+    
+    float norm_x = (x - min_x) / range_x;
+    float norm_y = (y - min_y) / range_y;
+    
+    // Clamp to [0, 1]
+    norm_x = std::max(0.0f, std::min(1.0f, norm_x));
+    norm_y = std::max(0.0f, std::min(1.0f, norm_y));
+    
+    // Scale to grid coordinates (use 16-bit grid for good resolution)
+    uint32_t grid_size = 65536;  // 2^16
+    uint32_t grid_x = static_cast<uint32_t>(norm_x * (grid_size - 1));
+    uint32_t grid_y = static_cast<uint32_t>(norm_y * (grid_size - 1));
+    
+    return xy2d(grid_size, grid_x, grid_y);
+}
+
+void HNSW::finalizeIndex() {
+    // Apply Hilbert curve ordering to improve cache locality
+    size_t num_nodes = data_.size() / dim_;
+    if (num_nodes <= 1) {
+        return;  // Nothing to optimize
+    }
+
+    fitPcaProjection();
+    
+    // Compute bounds for normalization
+    float min_x = std::numeric_limits<float>::max();
+    float max_x = std::numeric_limits<float>::lowest();
+    float min_y = std::numeric_limits<float>::max();
+    float max_y = std::numeric_limits<float>::lowest();
+    
+    for (size_t i = 0; i < num_nodes; ++i) {
+        std::vector<float> point(data_.begin() + i * dim_,
+                                 data_.begin() + (i + 1) * dim_);
+        std::pair<float, float> proj = projectTo2D(point);
+        float x = proj.first;
+        float y = proj.second;
+        min_x = std::min(min_x, x);
+        max_x = std::max(max_x, x);
+        min_y = std::min(min_y, y);
+        max_y = std::max(max_y, y);
+    }
+    
+    // Compute Hilbert indices for all points
+    std::vector<std::pair<uint64_t, uint32_t>> hilbert_indices;
+    hilbert_indices.reserve(num_nodes);
+    
+    for (size_t i = 0; i < num_nodes; ++i) {
+        std::vector<float> point(data_.begin() + i * dim_,
+                                 data_.begin() + (i + 1) * dim_);
+        uint64_t h_idx = computeHilbertIndex(point, min_x, max_x, min_y, max_y);
+        hilbert_indices.push_back(std::make_pair(h_idx, static_cast<uint32_t>(i)));
+    }
+    
+    // Sort by Hilbert index
+    std::sort(hilbert_indices.begin(), hilbert_indices.end());
+    
+    // Create mapping from old IDs to new IDs
+    std::vector<uint32_t> old_to_new(num_nodes);
+    std::vector<uint32_t> new_to_old(num_nodes);
+    for (uint32_t new_id = 0; new_id < num_nodes; ++new_id) {
+        uint32_t old_id = hilbert_indices[new_id].second;
+        old_to_new[old_id] = new_id;
+        new_to_old[new_id] = old_id;
+    }
+    old_to_new_labels_ = old_to_new;
+    new_to_old_labels_ = new_to_old;
+    
+    // Reorder data vector
+    std::vector<float> new_data;
+    new_data.reserve(data_.size());
+    for (uint32_t new_id = 0; new_id < num_nodes; ++new_id) {
+        uint32_t old_id = new_to_old[new_id];
+        new_data.insert(new_data.end(),
+                       data_.begin() + old_id * dim_,
+                       data_.begin() + (old_id + 1) * dim_);
+    }
+    data_ = new_data;
+    
+    // Update element_levels mapping
+    std::vector<int> new_element_levels(num_nodes);
+    for (uint32_t old_id = 0; old_id < num_nodes; ++old_id) {
+        uint32_t new_id = old_to_new[old_id];
+        new_element_levels[new_id] = element_levels_[old_id];
+    }
+    element_levels_ = new_element_levels;
+    
+    // Update neighbor list offsets
+    std::vector<uint32_t> new_neighbor_list_offsets(num_nodes, std::numeric_limits<uint32_t>::max());
+    for (uint32_t old_id = 0; old_id < num_nodes; ++old_id) {
+        uint32_t new_id = old_to_new[old_id];
+        new_neighbor_list_offsets[new_id] = neighbor_list_offsets_[old_id];
+    }
+    neighbor_list_offsets_ = new_neighbor_list_offsets;
+    
+    // Update level 0 neighbor lists with new IDs
+    std::vector<uint32_t> new_level0_neighbor_lists(level0_neighbor_lists_.size(), 0);
+    for (uint32_t old_id = 0; old_id < num_nodes; ++old_id) {
+        uint32_t new_id = old_to_new[old_id];
+        
+        const uint32_t* old_list = level0_neighbor_lists_.data() + old_id * size_neighbor_list_level0_;
+        uint32_t* new_list = new_level0_neighbor_lists.data() + new_id * size_neighbor_list_level0_;
+        
+        uint32_t neighbor_count = old_list[0];
+        new_list[0] = neighbor_count;
+        
+        for (uint32_t i = 0; i < neighbor_count; ++i) {
+            uint32_t old_neighbor = old_list[1 + i];
+            uint32_t new_neighbor = old_to_new[old_neighbor];
+            new_list[1 + i] = new_neighbor;
+        }
+    }
+    level0_neighbor_lists_ = new_level0_neighbor_lists;
+    
+    // Update upper layer neighbor lists
+    for (uint32_t old_id = 0; old_id < num_nodes; ++old_id) {
+        uint32_t offset = neighbor_list_offsets_[old_to_new[old_id]];
+        if (offset != std::numeric_limits<uint32_t>::max()) {
+            int level = element_levels_[old_to_new[old_id]];
+            for (int lv = 1; lv <= level; ++lv) {
+                uint32_t* neighbor_list = neighbor_lists_.data() + offset + (lv - 1) * size_neighbor_list_per_element_;
+                uint32_t neighbor_count = neighbor_list[0];
+                
+                for (uint32_t i = 0; i < neighbor_count; ++i) {
+                    uint32_t old_neighbor = neighbor_list[1 + i];
+                    uint32_t new_neighbor = old_to_new[old_neighbor];
+                    neighbor_list[1 + i] = new_neighbor;
+                }
+            }
+        }
+    }
+    
+    // Update entry point
+    entry_point_ = old_to_new[entry_point_];
+    
+    std::cout << "Hilbert curve optimization applied: " << num_nodes << " points reordered\n";
+}
+
+void HNSW::relabelGroundTruth(std::vector<std::vector<uint32_t>>& groundtruth) const {
+    if (old_to_new_labels_.empty()) {
+        return;
+    }
+
+    for (size_t i = 0; i < groundtruth.size(); ++i) {
+        std::vector<uint32_t>& labels = groundtruth[i];
+        for (size_t j = 0; j < labels.size(); ++j) {
+            uint32_t label = labels[j];
+            if (label < old_to_new_labels_.size()) {
+                labels[j] = old_to_new_labels_[label];
+            }
+        }
+    }
+}
+
 void HNSW::printInfo() const {
     std::cout << "\nHNSW Index Info:\n";
     std::cout << "Dimension: " << dim_ << "\n";
@@ -478,38 +839,38 @@ void HNSW::printInfo() const {
     }
 }
 
-bool HNSW::dumpLayer0Counts(const std::string& output_path, const std::string param) const {
-    std::ofstream out(output_path);
-    if (!out) {
-        return false;
-    }
+// bool HNSW::dumpLayer0Counts(const std::string& output_path, const std::string param) const {
+//     std::ofstream out(output_path);
+//     if (!out) {
+//         return false;
+//     }
 
-    if (param == "dist_calc_insertion") {
-        for (uint32_t count : num_dist_calc_layer0_insertion_) {
-            out << count << "\n";
-        }
-    } else if (param == "cand_elements_insertion") {
-        for (uint32_t count : num_cand_elements_layer0_insertion_) {
-            out << count << "\n";
-        }
-    } else if (param == "max_hops_insertion") {
-        for (uint32_t count : max_hops_layer0_insertion_) {
-            out << count << "\n";
-        }
-    } else if (param == "dist_calc_search") {
-        for (uint32_t count : num_dist_calc_layer0_search_) {
-            out << count << "\n";
-        }
-    } else if (param == "cand_elements_search") {
-        for (uint32_t count : num_cand_elements_layer0_search_) {
-            out << count << "\n";
-        }
-    } else if (param == "max_hops_search") {
-        for (uint32_t count : max_hops_layer0_search_) {
-            out << count << "\n";
-        }
-    } else {
-        return false; // Invalid parameter
-    }
-    return true;
-}
+//     if (param == "dist_calc_insertion") {
+//         for (uint32_t count : num_dist_calc_layer0_insertion_) {
+//             out << count << "\n";
+//         }
+//     } else if (param == "cand_elements_insertion") {
+//         for (uint32_t count : num_cand_elements_layer0_insertion_) {
+//             out << count << "\n";
+//         }
+//     } else if (param == "max_hops_insertion") {
+//         for (uint32_t count : max_hops_layer0_insertion_) {
+//             out << count << "\n";
+//         }
+//     } else if (param == "dist_calc_search") {
+//         for (uint32_t count : num_dist_calc_layer0_search_) {
+//             out << count << "\n";
+//         }
+//     } else if (param == "cand_elements_search") {
+//         for (uint32_t count : num_cand_elements_layer0_search_) {
+//             out << count << "\n";
+//         }
+//     } else if (param == "max_hops_search") {
+//         for (uint32_t count : max_hops_layer0_search_) {
+//             out << count << "\n";
+//         }
+//     } else {
+//         return false; // Invalid parameter
+//     }
+//     return true;
+// }
