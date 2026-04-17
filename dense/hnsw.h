@@ -12,6 +12,8 @@
 #include <utility>
 
 namespace hnsw {
+    class HilbertOrdering;
+
     using MinPQ = std::priority_queue<
         std::pair<float, uint32_t>,
         std::vector<std::pair<float, uint32_t>>,
@@ -55,11 +57,6 @@ namespace hnsw {
         std::vector<uint32_t> old_to_new_labels_;
         std::vector<uint32_t> new_to_old_labels_;
 
-        bool pca_projection_ready_;
-        std::vector<float> pca_mean_;
-        std::vector<float> pca_component_1_;
-        std::vector<float> pca_component_2_;
-
         // Profiling metrics for layer 0.
         std::vector<uint32_t> num_dist_calc_layer0_insertion_;
         std::vector<uint32_t> num_cand_elements_layer0_insertion_;
@@ -97,14 +94,8 @@ namespace hnsw {
         std::vector<uint32_t> connectNeighbors(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int level, int M);
         std::vector<uint32_t> selectNeighbors(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int M);
         std::vector<uint32_t> selectNeighborsHeuristic(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int M, int level);
-        
-        // Hilbert curve ordering helpers
-        uint64_t xy2d(uint32_t n, uint32_t x, uint32_t y);
-        void fitPcaProjection();
-        std::pair<float, float> projectTo2D(const std::vector<float>& point) const;
-        uint64_t computeHilbertIndex(const std::vector<float>& point, 
-                                     float min_x, float max_x, 
-                                     float min_y, float max_y);
+
+        friend class HilbertOrdering;
     };
 }
 

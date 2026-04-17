@@ -1,5 +1,5 @@
 # Create library for HNSW
-add_library(hnsw_lib hnsw.cpp hnsw.h)
+add_library(hnsw_lib hnsw.cpp hilbert_ordering.cpp hnsw.h hilbert_ordering.h)
 
 # Create executables
 add_executable(hnsw_demo main.cpp)
