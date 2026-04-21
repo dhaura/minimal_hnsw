@@ -12,8 +12,6 @@
 #include <utility>
 
 namespace hnsw {
-    class HilbertOrdering;
-
     using MinPQ = std::priority_queue<
         std::pair<float, uint32_t>,
         std::vector<std::pair<float, uint32_t>>,
@@ -28,7 +26,7 @@ namespace hnsw {
         float distance(float * a, float * b) const;
         void addPoint(std::vector<float> point, uint32_t label);
         std::priority_queue<std::pair<float, uint32_t>> searchKNN(std::vector<float> query, int k, int ef = 50);
-        void finalizeIndex();
+        void setLabelRemapping(std::vector<uint32_t> old_to_new, std::vector<uint32_t> new_to_old);
         void relabelGroundTruth(std::vector<std::vector<uint32_t>>& groundtruth) const;
         void printInfo() const;
 
@@ -94,8 +92,6 @@ namespace hnsw {
         std::vector<uint32_t> connectNeighbors(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int level, int M);
         std::vector<uint32_t> selectNeighbors(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int M);
         std::vector<uint32_t> selectNeighborsHeuristic(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int M, int level);
-
-        friend class HilbertOrdering;
     };
 }
 

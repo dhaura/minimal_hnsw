@@ -1,5 +1,4 @@
 #include "hnsw.h"
-#include "hilbert_ordering.h"
 #include <iostream>
 #include <fstream>
 #include <immintrin.h>
@@ -453,8 +452,9 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchKNN(std::vector<floa
     return searchLayer(query, entry_points, std::max(ef, k), 0);
 }
 
-void HNSW::finalizeIndex() {
-    HilbertOrdering::reorder(*this);
+void HNSW::setLabelRemapping(std::vector<uint32_t> old_to_new, std::vector<uint32_t> new_to_old) {
+    old_to_new_labels_ = std::move(old_to_new);
+    new_to_old_labels_ = std::move(new_to_old);
 }
 
 

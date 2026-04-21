@@ -1,4 +1,5 @@
 #include "hnsw.h"
+#include "hilbert_ordering.h"
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -118,11 +119,21 @@ int main(int argc, char* argv[]) {
         std::cerr << "Unsupported file type: " << file_type << std::endl;
         return -1;
     }
+
+    std::cout << "Applying Hilbert ordering before index construction...\n";
+    auto start_reorder_time = std::chrono::steady_clock::now();
+    std::vector<uint32_t> old_to_new;
+    std::vector<uint32_t> new_to_old;
+    HilbertOrdering::reorderDataset(points, old_to_new, new_to_old);
+    auto end_reorder_time = std::chrono::steady_clock::now();
+    auto reorder_time = std::chrono::duration_cast<std::chrono::microseconds>(end_reorder_time - start_reorder_time);
+    std::cout << "Hilbert pre-order completed in " << reorder_time.count() << " microseconds\n";
     
     auto start_index_time = std::chrono::steady_clock::now();
     
     // Create HNSW index with 2D vectors.
     HNSW index(dim, M, ef_construction, points.size(), use_heuristic, extend_candidates, keep_pruned);
+    index.setLabelRemapping(std::move(old_to_new), std::move(new_to_old));
     
     // Add points from the dataset to the index.
     std::cout << "Adding points to the index...\n";
@@ -136,14 +147,6 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Added " << points.size() << " points to the index in " << index_time.count() << " microseconds.\n";
     std::cout << "Average insertion time: " << index_time.count() / points.size() << " microseconds\n";
-    
-    // Finalize the index with Hilbert curve ordering
-    std::cout << "\nFinalizing index with Hilbert curve ordering...\n";
-    auto start_finalize_time = std::chrono::steady_clock::now();
-    index.finalizeIndex();
-    auto end_finalize_time = std::chrono::steady_clock::now();
-    auto finalize_time = std::chrono::duration_cast<std::chrono::microseconds>(end_finalize_time - start_finalize_time);
-    std::cout << "Finalization completed in " << finalize_time.count() << " microseconds\n";
     
     // Search for nearest neighbors.
     std::cout << "\nSearching for k-nearest neighbors...\n";

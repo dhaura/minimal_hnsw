@@ -56,3 +56,4 @@ Makefile
 
 # Other library files
 dense/hnswlib/*
+dense/faiss/*

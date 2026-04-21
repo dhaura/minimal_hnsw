@@ -1,6 +1,33 @@
 # Create library for HNSW
 add_library(hnsw_lib hnsw.cpp hilbert_ordering.cpp hnsw.h hilbert_ordering.h)
 
+set(FAISS_ROOT "" CACHE PATH "Faiss install prefix (optional, e.g. <prefix> with lib/cmake/faiss)")
+
+if(FAISS_ROOT)
+    list(PREPEND CMAKE_PREFIX_PATH "${FAISS_ROOT}")
+    list(PREPEND CMAKE_PREFIX_PATH "${FAISS_ROOT}/lib/cmake/faiss")
+endif()
+
+find_package(faiss CONFIG QUIET)
+if(NOT faiss_FOUND)
+    find_package(Faiss CONFIG QUIET)
+endif()
+
+if(TARGET faiss::faiss)
+    target_link_libraries(hnsw_lib PUBLIC faiss::faiss)
+elseif(TARGET faiss)
+    target_link_libraries(hnsw_lib PUBLIC faiss)
+elseif(faiss_FOUND AND DEFINED faiss_LIBRARIES)
+    if(DEFINED faiss_INCLUDE_DIRS)
+        target_include_directories(hnsw_lib PRIVATE ${faiss_INCLUDE_DIRS})
+    endif()
+    target_link_libraries(hnsw_lib PUBLIC ${faiss_LIBRARIES})
+else()
+    message(FATAL_ERROR "Prebuilt Faiss not found. Set FAISS_ROOT or CMAKE_PREFIX_PATH to your Faiss install.")
+endif()
+
+message(STATUS "Using prebuilt Faiss")
+
 # Create executables
 add_executable(hnsw_demo main.cpp)
 add_executable(hnswlib_demo hnswlib_main.cpp)
