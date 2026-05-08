@@ -27,13 +27,20 @@ minimal_hnsw/
 # Clone hnswlib (for benchmarking)
 git clone https://github.com/nmslib/hnswlib.git
 
+# Clone and build faiss (for PCA calculations used for hilbert ordering)
+git clone https://github.com/facebookresearch/faiss.git
+cmake -S $SCRATCH/repos/minimal_hnsw/dense/faiss -B $SCRATCH/repos/minimal_hnsw/dense/faiss/build -DFAISS_ENABLE_GPU=OFF -DFAISS_ENABLE_PYTHON=OFF -DFAISS_ENABLE_EXTRAS=OFF -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=$SCRATCH/repos/minimal_hnsw/dense/faiss/install
+cmake --build $SCRATCH/repos/minimal_hnsw/dense/faiss/build -j4
+cmake --install $SCRATCH/repos/minimal_hnsw/dense/faiss/build
+
 # Create build directory
 mkdir build
 cd build
 
 # Configure and build
-cmake ..
-make
+modue load intel # For MKL support
+cmake -S $SCRATCH/repos/minimal_hnsw -B $SCRATCH/repos/minimal_hnsw/build -DFAISS_ROOT=$SCRATCH/repos/minimal_hnsw/dense/faiss/install
+cmake --build $SCRATCH/repos/minimal_hnsw/build -j4
 
 # Download the dataset
 cd ../
@@ -44,7 +51,10 @@ tar -xzvf sift.tar.gz
 
 # Run the demo 
 cd ../build
-./bin/hnsw_demo 16 200 150 1 0 0 $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_base.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_query.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_groundtruth.ivecs fvecs
+./bin/hnsw_demo 16 200 150 1 0 0 0 $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_base.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_query.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_groundtruth.ivecs fvecs
+
+# Usage
+# ./bin/hnsw_demo <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <use_mkl> <input_filepath> <query_filepath> <gt_filepath> <file_type>
 ```
 
 ## Dense HNSW Implementation

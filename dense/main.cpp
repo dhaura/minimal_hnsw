@@ -77,15 +77,15 @@ int main(int argc, char* argv[]) {
     std::cout << "Minimal HNSW Demo\n";
     std::cout << "=================\n\n";
 
-    if (argc < 11)
+    if (argc < 12)
     {
-        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <input_filepath> <query_filepath> <gt_filepath> <file_type>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <use_mkl> <input_filepath> <query_filepath> <gt_filepath> <file_type>" << std::endl;
         return 1;
     }
 
-    // if (argc < 12)
+    // if (argc < 13)
     // {
-    //     std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <input_filepath> <query_filepath> <gt_filepath> <file_type> <output_path_folder>" << std::endl;
+    //     std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <use_mkl> <input_filepath> <query_filepath> <gt_filepath> <file_type> <output_path_folder>" << std::endl;
     //     return 1;
     // }
 
@@ -96,11 +96,12 @@ int main(int argc, char* argv[]) {
     bool use_heuristic = (std::stoi(argv[4]) != 0);
     bool extend_candidates = (std::stoi(argv[5]) != 0);
     bool keep_pruned = (std::stoi(argv[6]) != 0);
-    std::string input_filepath = argv[7];
-    std::string query_filepath = argv[8];
-    std::string gt_filepath = argv[9];
-    std::string file_type = argv[10];
-    // std::string output_path_folder = argv[11];
+    bool use_mkl = (std::stoi(argv[7]) != 0);
+    std::string input_filepath = argv[8];
+    std::string query_filepath = argv[9];
+    std::string gt_filepath = argv[10];
+    std::string file_type = argv[11];
+    // std::string output_path_folder = argv[12];
     // std::string dist_counts_insertion_output_path = output_path_folder + "/layer0_distance_counts_insertion.txt";
     // std::string cand_elements_insertion_output_path = output_path_folder + "/layer0_cand_elements_counts_insertion.txt";
     // std::string max_hops_insertion_output_path = output_path_folder + "/layer0_max_hops_counts_insertion.txt";
@@ -132,7 +133,7 @@ int main(int argc, char* argv[]) {
     auto start_index_time = std::chrono::steady_clock::now();
     
     // Create HNSW index with 2D vectors.
-    HNSW index(dim, M, ef_construction, points.size(), use_heuristic, extend_candidates, keep_pruned);
+    HNSW index(dim, M, ef_construction, points.size(), use_heuristic, extend_candidates, keep_pruned, use_mkl);
     index.setLabelRemapping(std::move(old_to_new), std::move(new_to_old));
     
     // Add points from the dataset to the index.

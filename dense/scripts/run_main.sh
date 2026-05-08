@@ -7,8 +7,11 @@
 #SBATCH --constraint=cpu
 #SBATCH --output=logs/hnsw_1M_100_%j.out
 
-srun -u -n 1 perf record -F 99 -g -- $SCRATCH/repos/minimal_hnsw/build/bin/hnsw_demo 16 200 150 1 0 0 $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_base.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_query.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_groundtruth.ivecs fvecs $SCRATCH/repos/minimal_hnsw/dense/output
-perf report --stdio > $SCRATCH/repos/minimal_hnsw/dense/perf/perf_report_1M_v2.txt
+module load intel
 
-source $SCRATCH/repos/minimal_hnsw/venv/bin/activate
-python3 $SCRATCH/repos/minimal_hnsw/dense/scripts/plot_distribution.py $SCRATCH/repos/minimal_hnsw/dense/output --output $SCRATCH/repos/minimal_hnsw/dense/output/plots --bins 60
+export OMP_NUM_THREADS=1
+srun -u -n 1 perf record -e cache-references,cache-misses -F 99 -g -- $SCRATCH/repos/minimal_hnsw/build/bin/hnsw_demo 16 200 150 1 0 0 0 $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_base.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_query.fvecs $SCRATCH/repos/minimal_hnsw/dense/data/sift/sift_groundtruth.ivecs fvecs
+perf report --stdio > $SCRATCH/repos/minimal_hnsw/dense/perf/perf_report_1M_with_relabling.txt
+
+# source $SCRATCH/repos/minimal_hnsw/venv/bin/activate
+# python3 $SCRATCH/repos/minimal_hnsw/dense/scripts/plot_distribution.py $SCRATCH/repos/minimal_hnsw/dense/output --output $SCRATCH/repos/minimal_hnsw/dense/output/plots --bins 60

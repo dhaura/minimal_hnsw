@@ -21,7 +21,7 @@ namespace hnsw {
     class HNSW {
     public:
         HNSW(int dim, int M = 16, int ef_construction = 200, int max_elements = 1000, 
-            bool use_heuristic = false, bool extend_candidates = false, bool keep_pruned = false);
+            bool use_heuristic = false, bool extend_candidates = false, bool keep_pruned = false, bool use_mkl = false);
         
         float distance(float * a, float * b) const;
         void addPoint(std::vector<float> point, uint32_t label);
@@ -67,12 +67,21 @@ namespace hnsw {
         bool use_heuristic_;
         bool extend_candidates_;
         bool keep_pruned_;
+        bool use_mkl_;
         enum class Phase {
             Insertion,
             Search
         };
 
         Phase current_phase_;
+
+        // Runtime stats for the three inner loops in searchLayer.
+        uint64_t filter_loop_time_ns_ = 0;
+        uint64_t filter_loop_calls_ = 0;
+        uint64_t dist_loop_time_ns_ = 0;
+        uint64_t dist_loop_calls_ = 0;
+        uint64_t candidate_loop_time_ns_ = 0;
+        uint64_t candidate_loop_calls_ = 0;
         
         std::mt19937 rng_;
         std::uniform_real_distribution<double> level_generator_;

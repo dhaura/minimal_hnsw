@@ -1,16 +1,53 @@
 #include "hnsw.h"
+#include <chrono>
 #include <iostream>
 #include <fstream>
 #include <immintrin.h>
 #include <unordered_set>
 #include <omp.h>
 
+#if defined(__has_include)
+#if __has_include(<mkl.h>)
+#include <mkl.h>
+#define HNSW_HAS_MKL 1
+#endif
+#endif
+
+#ifndef HNSW_HAS_MKL
+#define HNSW_HAS_MKL 0
+#endif
+
 using namespace hnsw;
 
+namespace {
+struct LoopTimingStats {
+    uint64_t total_ns = 0;
+    uint64_t calls = 0;
+
+    void add(uint64_t ns) {
+        total_ns += ns;
+        ++calls;
+    }
+
+    double average_us() const {
+        if (calls == 0) {
+            return 0.0;
+        }
+        return static_cast<double>(total_ns) / static_cast<double>(calls) / 1000.0;
+    }
+};
+
+LoopTimingStats g_filter_loop_stats;
+LoopTimingStats g_distance_loop_stats;
+LoopTimingStats g_push_loop_stats;
+
+constexpr size_t kMklDistanceThreshold = 256;
+} // namespace
+
 HNSW::HNSW(int dim, int M, int ef_construction, int max_elements, 
-    bool use_heuristic, bool extend_candidates, bool keep_pruned)
+    bool use_heuristic, bool extend_candidates, bool keep_pruned, bool use_mkl)
     : dim_(dim), M_(M), ef_construction_(ef_construction), max_elements_(max_elements), 
-      use_heuristic_(use_heuristic), extend_candidates_(extend_candidates), keep_pruned_(keep_pruned),
+      use_heuristic_(use_heuristic), extend_candidates_(extend_candidates), keep_pruned_(keep_pruned), use_mkl_(use_mkl),
                 max_level_(0), entry_point_(-1), current_phase_(Phase::Insertion), rng_(42), level_generator_(0.0, 1.0) {
     data_.reserve(max_elements * dim);
     size_neighbor_list_level0_ = static_cast<uint32_t>(2 * M_ + 1);  // count + maxM0 neighbors
@@ -110,22 +147,37 @@ float HNSW::distance(float * a, float * b) const {
     size_t size = dim_;
     size_t i = 0;
     
-    // Process 8 floats at a time with AVX
-    #ifdef __AVX__
+    // Process as many floats as the available SIMD width allows.
+    #ifdef __AVX512F__
+    __m512 sum_v = _mm512_setzero_ps();
+    constexpr size_t simd_width = 16;
+    const size_t simd_end = size - (size % simd_width);
+    for (; i < simd_end; i += simd_width) {
+        __m512 va = _mm512_loadu_ps(&a[i]);
+        __m512 vb = _mm512_loadu_ps(&b[i]);
+        __m512 diff = _mm512_sub_ps(va, vb);
+        sum_v = _mm512_fmadd_ps(diff, diff, sum_v);
+    }
+    alignas(64) float tmp[16];
+    _mm512_storeu_ps(tmp, sum_v);
+    for (int j = 0; j < 16; ++j) dist += tmp[j];
+    #elif defined(__AVX__)
     __m256 sum_v = _mm256_setzero_ps();
-    for (; i + 7 < size; i += 8) {
+    constexpr size_t simd_width = 8;
+    const size_t simd_end = size - (size % simd_width);
+    for (; i < simd_end; i += simd_width) {
         __m256 va = _mm256_loadu_ps(&a[i]);
         __m256 vb = _mm256_loadu_ps(&b[i]);
         __m256 diff = _mm256_sub_ps(va, vb);
         sum_v = _mm256_fmadd_ps(diff, diff, sum_v);  // fused multiply-add
     }
-    // Horizontal sum
     float tmp[8];
     _mm256_storeu_ps(tmp, sum_v);
     for (int j = 0; j < 8; ++j) dist += tmp[j];
     #endif
     
     // Remaining elements
+    #pragma omp simd reduction(+:dist)
     for (; i < size; ++i) {
         float diff = a[i] - b[i];
         dist += diff * diff;
@@ -150,6 +202,270 @@ int HNSW::getRandomLevel() {
     return static_cast<int>(-log(r) * (1.0 / log(M_)));
 }
 
+/*
+    Using MKL and OMP.
+    Batched Cabdidates + Neighbors.
+*/
+// std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<float> query, std::vector<uint32_t> entry_points, int ef, int layer) {
+//     std::vector<bool> visited(max_elements_, false);
+//     std::vector<int32_t> hop_counts;
+//     if (layer == 0) {
+//         hop_counts.assign(max_elements_, -1);
+//     }
+
+//     float* query_data = query.data();
+//     float query_norm = 0.0f;
+//     #pragma omp simd reduction(+:query_norm)
+//     for (int i = 0; i < dim_; ++i) {
+//         query_norm += query_data[i] * query_data[i];
+//     }
+    
+//     MinPQ candidates;
+//     std::priority_queue<std::pair<float, uint32_t>> top_candidates;
+    
+//     for (uint32_t entry_point : entry_points) {
+//         float d = distance(query_data, data_.data() + entry_point * dim_);
+//         candidates.push({d, entry_point});
+//         top_candidates.push({d, entry_point});
+//         visited[entry_point] = true;
+//     }
+
+//     int thread_count = omp_get_max_threads();
+//     std::vector<uint32_t> candidate_batch;
+//     candidate_batch.reserve(thread_count * 10);
+
+//     std::vector<uint32_t> filtered_neighbors;
+//     filtered_neighbors.reserve(((layer == 0) ? (2 * M_) : M_));
+    
+//     while (!candidates.empty()) {
+//         if (top_candidates.size() >= static_cast<size_t>(ef) &&
+//             candidates.top().first > top_candidates.top().first) {
+//             break;
+//         }
+
+//         candidate_batch.clear();
+//         filtered_neighbors.clear();
+
+//         while (!candidates.empty()) {
+//             auto current = candidates.top();
+//             if (top_candidates.size() >= static_cast<size_t>(ef) &&
+//                 current.first > top_candidates.top().first) {
+//                 break;
+//             }
+//             candidate_batch.push_back(current.second);
+//             candidates.pop();
+//         }
+        
+//         auto loop1_start = std::chrono::steady_clock::now();
+//         for (uint32_t current_node : candidate_batch) {
+//             for (uint32_t neighbor_id : getNeighborsAtLevel(current_node, layer)) {
+//                 if (!visited[neighbor_id]) {
+//                     filtered_neighbors.push_back(neighbor_id);
+//                     visited[neighbor_id] = true;
+//                 }
+//             }
+//         }
+
+//         auto loop1_end = std::chrono::steady_clock::now();
+//         g_filter_loop_stats.add(static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(loop1_end - loop1_start).count()));
+
+//         std::vector<float> neighbor_dists(filtered_neighbors.size());
+
+//         auto loop2_start = std::chrono::steady_clock::now();
+//         #if HNSW_HAS_MKL
+//         if (use_mkl_ && filtered_neighbors.size() >= kMklDistanceThreshold) {
+//             const MKL_INT m = static_cast<MKL_INT>(filtered_neighbors.size());
+//             const MKL_INT d = static_cast<MKL_INT>(dim_);
+
+//             std::vector<float> packed_neighbors(static_cast<size_t>(m) * static_cast<size_t>(d));
+//             std::vector<float> neighbor_norms(static_cast<size_t>(m), 0.0f);
+//             std::vector<float> dots(static_cast<size_t>(m), 0.0f);
+
+//             for (MKL_INT i = 0; i < m; ++i) {
+//                 const float* src = data_.data() + static_cast<size_t>(filtered_neighbors[static_cast<size_t>(i)]) * dim_;
+//                 float* dst = packed_neighbors.data() + static_cast<size_t>(i) * dim_;
+//                 float norm = 0.0f;
+//                 #pragma omp simd reduction(+:norm)
+//                 for (int j = 0; j < dim_; ++j) {
+//                     const float v = src[j];
+//                     dst[j] = v;
+//                     norm += v * v;
+//                 }
+//                 neighbor_norms[static_cast<size_t>(i)] = norm;
+//             }
+
+//             // dots = A * q, where A is m x d packed neighbor matrix.
+//             cblas_sgemv(CblasRowMajor, CblasNoTrans, m, d, 1.0f,
+//                         packed_neighbors.data(), d, query_data, 1, 0.0f,
+//                         dots.data(), 1);
+
+//             #pragma omp parallel for
+//             for (size_t i = 0; i < filtered_neighbors.size(); ++i) {
+//                 neighbor_dists[i] = neighbor_norms[i] + query_norm - 2.0f * dots[i];
+//             }
+//         } else {
+//         #endif
+//             #pragma omp parallel for
+//             for (size_t i = 0; i < filtered_neighbors.size(); ++i) {
+//                 uint32_t neighbor_id = filtered_neighbors[i];
+//                 float* neighbor_data = data_.data() + neighbor_id * dim_;
+//                 float dist = distance(query_data, neighbor_data);
+//                 neighbor_dists[i] = dist;
+//             }
+//         #if HNSW_HAS_MKL
+//         }
+//         #endif
+//         auto loop2_end = std::chrono::steady_clock::now();
+//         g_distance_loop_stats.add(static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(loop2_end - loop2_start).count()));
+
+//         auto loop3_start = std::chrono::steady_clock::now();
+//         for (size_t i = 0; i < filtered_neighbors.size(); ++i) {
+//             uint32_t neighbor_id = filtered_neighbors[i];
+//             float dist = neighbor_dists[i];
+//             if (top_candidates.size() < static_cast<size_t>(ef) || dist < top_candidates.top().first) {
+//                 candidates.push({dist, neighbor_id});
+//                 top_candidates.push({dist, neighbor_id});
+
+//                 if (top_candidates.size() > static_cast<size_t>(ef)) {
+//                     top_candidates.pop();
+//                 }
+//             }
+//         }
+//         auto loop3_end = std::chrono::steady_clock::now();
+//         g_push_loop_stats.add(static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(loop3_end - loop3_start).count()));
+//     }
+    
+//     return top_candidates;
+// }
+
+/*
+    Using MKL and OMP.
+    Batched Neighbors.
+*/
+// std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<float> query, std::vector<uint32_t> entry_points, int ef, int layer) {
+//     std::vector<bool> visited(max_elements_, false);
+//     std::vector<int32_t> hop_counts;
+//     if (layer == 0) {
+//         hop_counts.assign(max_elements_, -1);
+//     }
+
+//     float* query_data = query.data();
+//     float query_norm = 0.0f;
+//     #pragma omp simd reduction(+:query_norm)
+//     for (int i = 0; i < dim_; ++i) {
+//         query_norm += query_data[i] * query_data[i];
+//     }
+    
+//     MinPQ candidates;
+//     std::priority_queue<std::pair<float, uint32_t>> top_candidates;
+    
+//     for (uint32_t entry_point : entry_points) {
+//         float d = distance(query_data, data_.data() + entry_point * dim_);
+//         candidates.push({d, entry_point});
+//         top_candidates.push({d, entry_point});
+//         visited[entry_point] = true;
+//     }
+
+//     int thread_count = omp_get_max_threads();
+
+//     std::vector<uint32_t> filtered_neighbors;
+//     filtered_neighbors.reserve(((layer == 0) ? (2 * M_) : M_));
+    
+//     while (!candidates.empty()) {
+//         if (top_candidates.size() >= static_cast<size_t>(ef) &&
+//             candidates.top().first > top_candidates.top().first) {
+//             break;
+//         }
+
+//         filtered_neighbors.clear();
+
+//         auto current = candidates.top();
+//         candidates.pop();
+        
+//         auto loop1_start = std::chrono::steady_clock::now();
+
+//         for (uint32_t neighbor_id : getNeighborsAtLevel(current.second, layer)) {
+//                 if (!visited[neighbor_id]) {
+//                     filtered_neighbors.push_back(neighbor_id);
+//                     visited[neighbor_id] = true;
+//                 }
+//             }
+
+//         auto loop1_end = std::chrono::steady_clock::now();
+//         g_filter_loop_stats.add(static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(loop1_end - loop1_start).count()));
+
+//         std::vector<float> neighbor_dists(filtered_neighbors.size());
+
+//         auto loop2_start = std::chrono::steady_clock::now();
+//         #if HNSW_HAS_MKL
+//         if (use_mkl_ && filtered_neighbors.size() >= kMklDistanceThreshold) {
+//             const MKL_INT m = static_cast<MKL_INT>(filtered_neighbors.size());
+//             const MKL_INT d = static_cast<MKL_INT>(dim_);
+
+//             std::vector<float> packed_neighbors(static_cast<size_t>(m) * static_cast<size_t>(d));
+//             std::vector<float> neighbor_norms(static_cast<size_t>(m), 0.0f);
+//             std::vector<float> dots(static_cast<size_t>(m), 0.0f);
+
+//             for (MKL_INT i = 0; i < m; ++i) {
+//                 const float* src = data_.data() + static_cast<size_t>(filtered_neighbors[static_cast<size_t>(i)]) * dim_;
+//                 float* dst = packed_neighbors.data() + static_cast<size_t>(i) * dim_;
+//                 float norm = 0.0f;
+//                 #pragma omp simd reduction(+:norm)
+//                 for (int j = 0; j < dim_; ++j) {
+//                     const float v = src[j];
+//                     dst[j] = v;
+//                     norm += v * v;
+//                 }
+//                 neighbor_norms[static_cast<size_t>(i)] = norm;
+//             }
+
+//             // dots = A * q, where A is m x d packed neighbor matrix.
+//             cblas_sgemv(CblasRowMajor, CblasNoTrans, m, d, 1.0f,
+//                         packed_neighbors.data(), d, query_data, 1, 0.0f,
+//                         dots.data(), 1);
+
+//             #pragma omp parallel for
+//             for (size_t i = 0; i < filtered_neighbors.size(); ++i) {
+//                 neighbor_dists[i] = neighbor_norms[i] + query_norm - 2.0f * dots[i];
+//             }
+//         } else {
+//         #endif
+//             #pragma omp parallel for
+//             for (size_t i = 0; i < filtered_neighbors.size(); ++i) {
+//                 uint32_t neighbor_id = filtered_neighbors[i];
+//                 float* neighbor_data = data_.data() + neighbor_id * dim_;
+//                 float dist = distance(query_data, neighbor_data);
+//                 neighbor_dists[i] = dist;
+//             }
+//         #if HNSW_HAS_MKL
+//         }
+//         #endif
+//         auto loop2_end = std::chrono::steady_clock::now();
+//         g_distance_loop_stats.add(static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(loop2_end - loop2_start).count()));
+
+//         auto loop3_start = std::chrono::steady_clock::now();
+//         for (size_t i = 0; i < filtered_neighbors.size(); ++i) {
+//             uint32_t neighbor_id = filtered_neighbors[i];
+//             float dist = neighbor_dists[i];
+//             if (top_candidates.size() < static_cast<size_t>(ef) || dist < top_candidates.top().first) {
+//                 candidates.push({dist, neighbor_id});
+//                 top_candidates.push({dist, neighbor_id});
+
+//                 if (top_candidates.size() > static_cast<size_t>(ef)) {
+//                     top_candidates.pop();
+//                 }
+//             }
+//         }
+//         auto loop3_end = std::chrono::steady_clock::now();
+//         g_push_loop_stats.add(static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(loop3_end - loop3_start).count()));
+//     }
+    
+//     return top_candidates;
+// }
+
+/*
+    Sequential version without MKL.
+*/
 std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<float> query, std::vector<uint32_t> entry_points, int ef, int layer) {
     std::vector<bool> visited(max_elements_, false);
     std::vector<int32_t> hop_counts;
@@ -200,7 +516,14 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<fl
         
         uint32_t current_node = current.second;
         int32_t current_hops = (layer == 0) ? hop_counts[current_node] : 0;
-        for (uint32_t neighbor_id : getNeighborsAtLevel(current_node, layer)) {
+        
+        const uint32_t* ll = get_neighbor_list_at_level(current_node, layer);
+        if (!ll) {
+            continue;
+        }
+        uint32_t count = getListCount(ll);
+        for (uint32_t i = 0; i < count; ++i) {
+            uint32_t neighbor_id = ll[1 + i];
             if (!visited[neighbor_id]) {
                 visited[neighbor_id] = true;
                 float dist = distance(query.data(), data_.data() + neighbor_id * dim_);
@@ -498,6 +821,14 @@ void HNSW::printInfo() const {
     for (size_t i = 0; i < layer_counts.size(); ++i) {
         std::cout << "Layer " << i << " has " << layer_counts[i] << " nodes\n";
     }
+
+    // std::cout << "\nAverage runtime per selected loop:\n";
+    // std::cout << "Loop 1 (neighbor filter): " << g_filter_loop_stats.average_us()
+    //           << " us over " << g_filter_loop_stats.calls << " calls\n";
+    // std::cout << "Loop 2 (distance compute): " << g_distance_loop_stats.average_us()
+    //           << " us over " << g_distance_loop_stats.calls << " calls\n";
+    // std::cout << "Loop 3 (candidate push): " << g_push_loop_stats.average_us()
+    //           << " us over " << g_push_loop_stats.calls << " calls\n";
 }
 
 // bool HNSW::dumpLayer0Counts(const std::string& output_path, const std::string param) const {
