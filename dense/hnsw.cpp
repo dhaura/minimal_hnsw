@@ -40,6 +40,8 @@ struct LoopTimingStats {
 LoopTimingStats g_filter_loop_stats;
 LoopTimingStats g_distance_loop_stats;
 LoopTimingStats g_push_loop_stats;
+LoopTimingStats g_search_layer0_loop_stats;
+LoopTimingStats g_search_layerN_loop_stats;
 
 constexpr size_t kMklDistanceThreshold = 256;
 } // namespace
@@ -505,6 +507,7 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<fl
         visited[entry_point] = true;
     }
     
+    const auto loop_start = std::chrono::steady_clock::now();
     while (!candidates.empty()) {
         auto current = candidates.top();
         candidates.pop();
@@ -548,6 +551,15 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<fl
                 }
             }
         }
+    }
+
+    const auto loop_end = std::chrono::steady_clock::now();
+    const uint64_t loop_ns = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::nanoseconds>(loop_end - loop_start).count());
+    if (layer == 0) {
+        g_search_layer0_loop_stats.add(loop_ns);
+    } else {
+        g_search_layerN_loop_stats.add(loop_ns);
     }
 
     // if (layer == 0) {
@@ -821,6 +833,10 @@ void HNSW::printInfo() const {
     for (size_t i = 0; i < layer_counts.size(); ++i) {
         std::cout << "Layer " << i << " has " << layer_counts[i] << " nodes\n";
     }
+
+    std::cout << "\nAverage runtime per searchLayer call:\n";
+    std::cout << "Layer 0: " << g_search_layer0_loop_stats.average_us() << " us over " << g_search_layer0_loop_stats.calls << " calls\n";   
+    std::cout << "Other Layers: " << g_search_layerN_loop_stats.average_us() << " us over " << g_search_layerN_loop_stats.calls << " calls\n";
 
     // std::cout << "\nAverage runtime per selected loop:\n";
     // std::cout << "Loop 1 (neighbor filter): " << g_filter_loop_stats.average_us()
