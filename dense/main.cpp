@@ -77,15 +77,15 @@ int main(int argc, char* argv[]) {
     std::cout << "Minimal HNSW Demo\n";
     std::cout << "=================\n\n";
 
-    if (argc < 12)
+    if (argc < 14)
     {
-        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <use_mkl> <input_filepath> <query_filepath> <gt_filepath> <file_type>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <use_mkl> <mklThreshold> <input_filepath> <query_filepath> <gt_filepath> <file_type> <timing_csv_path>" << std::endl;
         return 1;
     }
 
-    // if (argc < 13)
+    // if (argc < 14)
     // {
-    //     std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <use_mkl> <input_filepath> <query_filepath> <gt_filepath> <file_type> <output_path_folder>" << std::endl;
+    //     std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <use_mkl> <mklThreshold> <input_filepath> <query_filepath> <gt_filepath> <file_type> <output_path_folder>" << std::endl;
     //     return 1;
     // }
 
@@ -97,11 +97,13 @@ int main(int argc, char* argv[]) {
     bool extend_candidates = (std::stoi(argv[5]) != 0);
     bool keep_pruned = (std::stoi(argv[6]) != 0);
     bool use_mkl = (std::stoi(argv[7]) != 0);
-    std::string input_filepath = argv[8];
-    std::string query_filepath = argv[9];
-    std::string gt_filepath = argv[10];
-    std::string file_type = argv[11];
-    // std::string output_path_folder = argv[12];
+    size_t mklThreshold = std::stoul(argv[8]);
+    std::string input_filepath = argv[9];
+    std::string query_filepath = argv[10];
+    std::string gt_filepath = argv[11];
+    std::string file_type = argv[12];
+    std::string timing_csv_path = argv[13];
+    // std::string output_path_folder = argv[14];
     // std::string dist_counts_insertion_output_path = output_path_folder + "/layer0_distance_counts_insertion.txt";
     // std::string cand_elements_insertion_output_path = output_path_folder + "/layer0_cand_elements_counts_insertion.txt";
     // std::string max_hops_insertion_output_path = output_path_folder + "/layer0_max_hops_counts_insertion.txt";
@@ -133,7 +135,7 @@ int main(int argc, char* argv[]) {
     auto start_index_time = std::chrono::steady_clock::now();
     
     // Create HNSW index with 2D vectors.
-    HNSW index(dim, M, ef_construction, points.size(), use_heuristic, extend_candidates, keep_pruned, use_mkl);
+    HNSW index(dim, M, ef_construction, points.size(), use_heuristic, extend_candidates, keep_pruned, use_mkl, mklThreshold);
     index.setLabelRemapping(std::move(old_to_new), std::move(new_to_old));
     
     // Add points from the dataset to the index.
@@ -190,7 +192,7 @@ int main(int argc, char* argv[]) {
     std::cout << "Total Query time: " << query_time.count() << " microseconds\n";
     std::cout << "Average Query time: " << query_time.count() / query_count << " microseconds\n";
 
-    index.printInfo();
+    index.printInfo(timing_csv_path);
 
     // if (index.dumpLayer0Counts(dist_counts_insertion_output_path, "dist_calc_insertion")) {
     //     std::cout << "Wrote insertion layer-0 distance counts to: " << dist_counts_insertion_output_path << "\n";

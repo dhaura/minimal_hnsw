@@ -21,14 +21,15 @@ namespace hnsw {
     class HNSW {
     public:
         HNSW(int dim, int M = 16, int ef_construction = 200, int max_elements = 1000, 
-            bool use_heuristic = false, bool extend_candidates = false, bool keep_pruned = false, bool use_mkl = false);
+            bool use_heuristic = false, bool extend_candidates = false, bool keep_pruned = false, 
+            bool use_mkl = false, size_t mklThreshold = 256);
         
         float distance(float * a, float * b) const;
         void addPoint(std::vector<float> point, uint32_t label);
         std::priority_queue<std::pair<float, uint32_t>> searchKNN(std::vector<float> query, int k, int ef = 50);
         void setLabelRemapping(std::vector<uint32_t> old_to_new, std::vector<uint32_t> new_to_old);
         void relabelGroundTruth(std::vector<std::vector<uint32_t>>& groundtruth) const;
-        void printInfo() const;
+        void printInfo(const std::string& timing_csv_path) const;
 
         // For profiling layer 0 metrics.
         bool dumpLayer0Counts(const std::string& output_path, const std::string param) const {
@@ -44,12 +45,16 @@ namespace hnsw {
         uint32_t entry_point_;
 
         std::vector<float> data_;
+        std::vector<float> norms_; // Precomputed norms for inner product distance 
         uint32_t size_neighbor_list_level0_;
         uint32_t size_neighbor_list_per_element_;
         std::vector<uint32_t> level0_neighbor_lists_;       // [count, n1, n2, ...] per node, fixed-size block
         std::vector<uint32_t> neighbor_lists_;         // upper layers only: one contiguous buffer
         std::vector<uint32_t> neighbor_list_offsets_;       // per-node start offset into neighbor_lists_flat_
         std::vector<int> element_levels_;
+
+        std::vector<uint64_t> visited_bits_;
+        std::vector<uint32_t> visited_list_;
         
         // For Hilbert curve ordering
         std::vector<uint32_t> old_to_new_labels_;
@@ -68,6 +73,7 @@ namespace hnsw {
         bool extend_candidates_;
         bool keep_pruned_;
         bool use_mkl_;
+        size_t mklThreshold_;
         enum class Phase {
             Insertion,
             Search
@@ -97,6 +103,10 @@ namespace hnsw {
         void setListCount(uint32_t* ptr, uint32_t size);
         std::vector<uint32_t> getNeighborsAtLevel(uint32_t node_id, int level) const;
         void setNeighborsAtLevel(uint32_t node_id, int level, const std::vector<uint32_t>& neighbors, int max_degree);
+        void prepareVisited();
+        bool isVisited(uint32_t id) const;
+        void markVisited(uint32_t id);
+        void clearVisited();
         std::priority_queue<std::pair<float, uint32_t>> searchLayer(std::vector<float> query, std::vector<uint32_t> entry_points, int ef, int layer);
         std::vector<uint32_t> connectNeighbors(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int level, int M);
         std::vector<uint32_t> selectNeighbors(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int M);
