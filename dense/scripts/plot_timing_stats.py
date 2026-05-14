@@ -11,10 +11,12 @@ import matplotlib.pyplot as plt
 def load_and_average(csv_path):
     sums = defaultdict(lambda: [0.0, 0.0, 0.0, 0.0, 0.0])
     counts = defaultdict(int)
+    mad_sums = defaultdict(float)
+    mad_counts = defaultdict(int)
 
     with open(csv_path, "r", newline="") as f:
         reader = csv.DictReader(f)
-        required = ["nfilter", "t1", "t2", "t3", "t4", "t5"]
+        required = ["nfilter", "t1", "t2", "t3", "t4", "t5", "label_mad"]
         for name in required:
             if name not in reader.fieldnames:
                 raise ValueError(f"Missing column: {name}")
@@ -29,11 +31,14 @@ def load_and_average(csv_path):
                     float(row["t4"]),
                     float(row["t5"]),
                 ]
+                mad_value = float(row["label_mad"])
             except (ValueError, TypeError):
                 continue
 
             sums[nfilter] = [sums[nfilter][i] + values[i] for i in range(5)]
             counts[nfilter] += 1
+            mad_sums[nfilter] += mad_value
+            mad_counts[nfilter] += 1
 
     x_vals = sorted(counts.keys())
     y_vals = [[0.0 for _ in x_vals] for _ in range(5)]
@@ -45,7 +50,16 @@ def load_and_average(csv_path):
         for i in range(5):
             y_vals[i][idx] = sums[nfilter][i] / count
 
-    return x_vals, y_vals
+    mad_vals = [0.0 for _ in x_vals]
+    for idx, nfilter in enumerate(x_vals):
+        count = mad_counts[nfilter]
+        if count == 0:
+            continue
+        mad_vals[idx] = mad_sums[nfilter] / count
+
+    freq_vals = [counts[nfilter] for nfilter in x_vals]
+
+    return x_vals, y_vals, mad_vals, freq_vals
 
 
 def plot_lines(x_vals, y_vals, output_path):
@@ -72,6 +86,34 @@ def plot_lines(x_vals, y_vals, output_path):
     plt.savefig(output_path, dpi=150)
 
 
+def plot_label_mad(x_vals, mad_vals, output_path):
+    plt.figure(figsize=(10, 6))
+    plt.plot(x_vals, mad_vals, label="Label MAD")
+    plt.xlabel("nfilter")
+    plt.ylabel("label_mad")
+    plt.title("Average label MAD per nfilter")
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150)
+
+
+def plot_nfilter_frequency(x_vals, freq_vals, output_path):
+    plt.figure(figsize=(10, 6))
+    plt.plot(x_vals, freq_vals, label="Frequency")
+    plt.xlabel("nfilter")
+    plt.ylabel("count")
+    plt.title("nfilter frequency")
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Plot average t1..t5 vs nfilter.")
     parser.add_argument(
@@ -84,12 +126,24 @@ def main():
         default="$SCRATCH/repos/minimal_hnsw/dense/output/timing_stats/plots/mkl_stats.png",
         help="Output plot path (PNG)",
     )
+    parser.add_argument(
+        "--output-mad",
+        default="$SCRATCH/repos/minimal_hnsw/dense/output/timing_stats/plots/mkl_label_mad.png",
+        help="Output label MAD plot path (PNG)",
+    )
+    parser.add_argument(
+        "--output-freq",
+        default="$SCRATCH/repos/minimal_hnsw/dense/output/timing_stats/plots/mkl_nfilter_freq.png",
+        help="Output nfilter frequency plot path (PNG)",
+    )
 
     args = parser.parse_args()
-    x_vals, y_vals = load_and_average(args.input)
+    x_vals, y_vals, mad_vals, freq_vals = load_and_average(args.input)
     if not x_vals:
         raise ValueError("No valid data found in the input CSV.")
     plot_lines(x_vals, y_vals, args.output)
+    plot_label_mad(x_vals, mad_vals, args.output_mad)
+    plot_nfilter_frequency(x_vals, freq_vals, args.output_freq)
 
 
 if __name__ == "__main__":
