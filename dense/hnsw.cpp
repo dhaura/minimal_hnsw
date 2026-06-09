@@ -319,7 +319,7 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<fl
 
         auto filter_start = std::chrono::steady_clock::now();
         // Extract a batch of candidates to process in parallel.
-        while (!candidates.empty()) {
+        while (!candidates.empty() && candidate_batch.size() < static_cast<size_t>(batch_size)) {
             auto current = candidates.top();
             if (top_candidates.size() >= static_cast<size_t>(ef) &&
                 current.first > top_candidates.top().first) {
