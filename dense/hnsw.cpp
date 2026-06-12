@@ -61,7 +61,6 @@ LoopTimingStats g_search_layer0_loop_stats;
 LoopTimingStats g_search_layerN_loop_stats;
 
 std::vector<int> g_nfilter_stats;
-std::vector<double> g_label_mad_stats;
 } // namespace
 
 HNSW::HNSW(int dim, int M, int ef_construction, int max_elements, 
@@ -292,7 +291,8 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<fl
     std::vector<uint32_t> candidate_batch; // Tracks the current batch of candidates being processed in parallel.
     candidate_batch.reserve(batch_size);
 
-    int max_neighbors = (layer == 0) ? (2 * M_ * batch_size) : M_ * batch_size; // Maximum neighbors to consider in the current batch.
+    int max_degree = (layer == 0) ? (2 * M_) : M_; // Maximum degree of neighbors to explore at the current layer.
+    int max_neighbors = max_degree * batch_size; // Maximum neighbors to consider in the current batch.
     std::vector<uint32_t> filtered_neighbors; // Tracks the unique neighbors of the current batch of candidates that haven't been visited yet.
     filtered_neighbors.reserve(max_neighbors);
 
@@ -345,37 +345,6 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<fl
 
         if (layer == 0 && current_phase_ == Phase::Search) {
             g_nfilter_stats.push_back(static_cast<int>(filtered_neighbors.size()));
-
-            if (filtered_neighbors.empty()) {
-                g_label_mad_stats.push_back(0.0);
-            } else {
-                const size_t mid = filtered_neighbors.size() / 2;
-                double median = 0.0;
-                if (filtered_neighbors.size() % 2 == 0) {
-                    median = (static_cast<double>(filtered_neighbors[mid - 1]) +
-                              static_cast<double>(filtered_neighbors[mid])) / 2.0;
-                } else {
-                    median = static_cast<double>(filtered_neighbors[mid]);
-                }
-
-                std::vector<double> deviations;
-                deviations.reserve(filtered_neighbors.size());
-                for (uint32_t label : filtered_neighbors) {
-                    deviations.push_back(std::abs(static_cast<double>(label) - median));
-                }
-                std::sort(deviations.begin(), deviations.end());
-
-                double mad = 0.0;
-                if (deviations.size() % 2 == 0) {
-                    mad = (deviations[mid - 1] + deviations[mid]) / 2.0;
-                } else {
-                    mad = deviations[mid];
-                }
-                g_label_mad_stats.push_back(mad);
-            }
-        }
-
-        if (layer == 0 && current_phase_ == Phase::Search) {
             g_filter_loop_stats.add(static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(filter_end - filter_start).count()));
         }
 
@@ -1002,7 +971,6 @@ void HNSW::printInfo(const std::string& timing_csv_path) const {
             g_mkl_gemv_loop_stats.count(),
             g_distance_loop_stats.count(),
             g_cand_update_loop_stats.count(),
-            g_label_mad_stats.size()
         });
 
         for (size_t i = 0; i < max_samples; ++i) {
@@ -1039,12 +1007,6 @@ void HNSW::printInfo(const std::string& timing_csv_path) const {
             timing_csv << ",";
             if (i < g_cand_update_loop_stats.count()) {
                 timing_csv << g_cand_update_loop_stats.sample_us(i);
-            } else {
-                timing_csv << "0";
-            }
-            timing_csv << ",";
-            if (i < g_label_mad_stats.size()) {
-                timing_csv << g_label_mad_stats[i];
             } else {
                 timing_csv << "0";
             }

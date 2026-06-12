@@ -6,6 +6,18 @@
 #include <cmath>
 #include <iomanip>
 #include <chrono>
+#include <omp.h>
+
+#if defined(__has_include)
+#if __has_include(<mkl.h>)
+#include <mkl.h>
+#define HNSW_HAS_MKL 1
+#endif
+#endif
+
+#ifndef HNSW_HAS_MKL
+#define HNSW_HAS_MKL 0
+#endif
 
 using namespace hnsw;
 
@@ -122,6 +134,11 @@ int main(int argc, char* argv[]) {
         std::cerr << "Unsupported file type: " << file_type << std::endl;
         return -1;
     }
+
+    int num_omp_threads = omp_get_max_threads();
+    int num_mkl_threads = mkl_get_max_threads();
+    std::cout << "Number of OpenMP threads: " << num_omp_threads << "\n";
+    std::cout << "Number of MKL threads: " << num_mkl_threads << "\n";
 
     std::cout << "Applying Hilbert ordering before index construction...\n";
     auto start_reorder_time = std::chrono::steady_clock::now();
