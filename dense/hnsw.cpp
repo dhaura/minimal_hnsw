@@ -78,7 +78,7 @@ HNSW::HNSW(int dim, int M, int ef_construction, int max_elements,
     neighbor_list_offsets_.assign(max_elements_, std::numeric_limits<uint32_t>::max());
     element_levels_.assign(max_elements_, 0);
 
-    const size_t num_visited_words = (static_cast<size_t>(max_elements_) + 63) / 64;
+    const size_t num_visited_words = (static_cast<size_t>(max_elements_) + 7) / 8;
     visited_bits_.assign(num_visited_words, 0);
     visited_list_.reserve(static_cast<size_t>(max_elements_));
 
@@ -167,7 +167,7 @@ void HNSW::setNeighborsAtLevel(uint32_t node_id, int level, const std::vector<ui
 }
 
 void HNSW::prepareVisited() {
-    const size_t num_visited_words = (static_cast<size_t>(max_elements_) + 63) / 64;
+    const size_t num_visited_words = (static_cast<size_t>(max_elements_) + 7) / 8;
     if (visited_bits_.size() < num_visited_words) {
         visited_bits_.resize(num_visited_words, 0);
     }
@@ -175,14 +175,14 @@ void HNSW::prepareVisited() {
 }
 
 bool HNSW::isVisited(uint32_t id) const {
-    const size_t word = static_cast<size_t>(id) >> 6;
-    const uint64_t mask = 1ULL << (id & 63U);
+    const size_t word = static_cast<size_t>(id) >> 3;
+    const uint8_t mask = 1U << (id & 7U);
     return (visited_bits_[word] & mask) != 0;
 }
 
 void HNSW::markVisited(uint32_t id) {
-    const size_t word = static_cast<size_t>(id) >> 6;
-    const uint64_t mask = 1ULL << (id & 63U);
+    const size_t word = static_cast<size_t>(id) >> 3;
+    const uint8_t mask = 1U << (id & 7U);
     if ((visited_bits_[word] & mask) == 0) {
         visited_bits_[word] |= mask;
         visited_list_.push_back(id);
@@ -191,8 +191,8 @@ void HNSW::markVisited(uint32_t id) {
 
 void HNSW::clearVisited() {
     for (uint32_t id : visited_list_) {
-        const size_t word = static_cast<size_t>(id) >> 6;
-        const uint64_t mask = 1ULL << (id & 63U);
+        const size_t word = static_cast<size_t>(id) >> 3;
+        const uint8_t mask = 1U << (id & 7U);
         visited_bits_[word] &= ~mask;
     }
 }
@@ -315,7 +315,6 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<fl
         filtered_neighbors.clear();
         neighbor_data.clear();
         dots.clear();
-
 
         auto filter_start = std::chrono::steady_clock::now();
         // Extract a batch of candidates to process in parallel.

@@ -53,7 +53,7 @@ namespace hnsw {
         std::vector<uint32_t> neighbor_list_offsets_;       // per-node start offset into neighbor_lists_flat_
         std::vector<int> element_levels_;
 
-        std::vector<uint64_t> visited_bits_;
+        std::vector<uint8_t> visited_bits_;
         std::vector<uint32_t> visited_list_;
         
         // For Hilbert curve ordering
