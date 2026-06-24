@@ -85,6 +85,19 @@ int readbvecs(const std::string& filename, std::vector<std::vector<float>>& data
     return dim;
 }
 
+float computeRecall(const std::vector<std::vector<uint32_t>>& true_labels, const std::vector<std::vector<uint32_t>>& predicted_labels, int k) {
+    int correct = 0;
+    int query_count = static_cast<int>(true_labels.size());
+    for (int i = 0; i < query_count; ++i) {
+        for (uint32_t id : predicted_labels[i]) {
+            if (std::find(true_labels[i].begin(), true_labels[i].end(), id) != true_labels[i].end()) {
+                correct++;
+            }
+        }
+    }
+    return static_cast<float>(correct) / (query_count * k) * 100.0f;
+}
+
 int main(int argc, char* argv[]) {
     std::cout << "Minimal HNSW Demo\n";
     std::cout << "=================\n\n";
@@ -189,22 +202,19 @@ int main(int argc, char* argv[]) {
     
     auto start_query_time = std::chrono::steady_clock::now();
 
-    int correct = 0;
+    std::vector<std::vector<uint32_t>> predicted_labels(query_count);
     for (int i = 0; i < query_count; i++) {
         std::priority_queue<std::pair<float, uint32_t>> nns = index.searchKNN(query[i], k, ef);
         while (!nns.empty()) {
-            auto nn = nns.top();
+            predicted_labels[i].push_back(nns.top().second);
             nns.pop();
-            if (std::find(true_labels[i].begin(), true_labels[i].end(), nn.second) != true_labels[i].end()) {
-                correct++;
-            }
         }
     }
 
     auto end_query_time = std::chrono::steady_clock::now();
     auto query_time = std::chrono::duration_cast<std::chrono::microseconds>(end_query_time - start_query_time);
     
-    float recall = static_cast<float>(correct) / (query_count * k) * 100.0f;
+    float recall = computeRecall(true_labels, predicted_labels, k);
     std::cout << "Recall@k: " << std::fixed << std::setprecision(2) << recall << "%\n";
     std::cout << "Total Query time: " << query_time.count() << " microseconds\n";
     std::cout << "Average Query time: " << query_time.count() / query_count << " microseconds\n";

@@ -10,6 +10,8 @@
 #include <cstdint>
 #include <string>
 #include <utility>
+#include <atomic>
+#include <memory> 
 
 namespace hnsw {
     using MinPQ = std::priority_queue<
@@ -53,7 +55,8 @@ namespace hnsw {
         std::vector<uint32_t> neighbor_list_offsets_;       // per-node start offset into neighbor_lists_flat_
         std::vector<int> element_levels_;
 
-        std::vector<uint8_t> visited_bits_;
+        std::unique_ptr<std::atomic<uint8_t>[]> visited_bits_;
+        size_t visited_bits_words_ = 0;
         std::vector<uint32_t> visited_list_;
         
         // For Hilbert curve ordering
@@ -105,8 +108,9 @@ namespace hnsw {
         void setNeighborsAtLevel(uint32_t node_id, int level, const std::vector<uint32_t>& neighbors, int max_degree);
         void prepareVisited();
         bool isVisited(uint32_t id) const;
-        void markVisited(uint32_t id);
+        bool tryMarkVisited(uint32_t id);
         void clearVisited();
+        std::priority_queue<std::pair<float, uint32_t>> searchBaseLayer(std::vector<float> query, std::vector<uint32_t> entry_points, int ef, int layer);
         std::priority_queue<std::pair<float, uint32_t>> searchLayer(std::vector<float> query, std::vector<uint32_t> entry_points, int ef, int layer);
         std::vector<uint32_t> connectNeighbors(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int level, int M);
         std::vector<uint32_t> selectNeighbors(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int M);

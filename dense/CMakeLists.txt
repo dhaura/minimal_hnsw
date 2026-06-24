@@ -71,13 +71,21 @@ add_executable(hnsw_demo main.cpp)
 add_executable(hnswlib_demo hnswlib_main.cpp)
 
 # Link the library to the executable
-target_link_libraries(hnsw_demo hnsw_lib)
+target_link_libraries(hnsw_demo PRIVATE hnsw_lib)
 
 # Link OpenMP for parallelization
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
-    target_link_libraries(hnsw_demo OpenMP::OpenMP_CXX)
-    target_link_libraries(hnswlib_demo OpenMP::OpenMP_CXX)
+    target_link_libraries(hnsw_lib     PUBLIC  OpenMP::OpenMP_CXX)
+    target_link_libraries(hnsw_demo    PRIVATE OpenMP::OpenMP_CXX)
+    target_link_libraries(hnswlib_demo PRIVATE OpenMP::OpenMP_CXX)
+endif()
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+    foreach(tgt hnsw_lib hnsw_demo hnswlib_demo)
+        target_compile_options(${tgt} PRIVATE -fiopenmp)
+        target_link_options(${tgt}    PRIVATE -fiopenmp)
+    endforeach()
 endif()
 
 # ---- Perf-friendly build option ----

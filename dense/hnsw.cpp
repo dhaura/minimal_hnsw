@@ -6,6 +6,8 @@
 #include <immintrin.h>
 #include <unordered_set>
 #include <omp.h>
+#include <memory>
+#include <atomic>
 
 #if defined(__has_include)
 #if __has_include(<mkl.h>)
@@ -78,8 +80,11 @@ HNSW::HNSW(int dim, int M, int ef_construction, int max_elements,
     neighbor_list_offsets_.assign(max_elements_, std::numeric_limits<uint32_t>::max());
     element_levels_.assign(max_elements_, 0);
 
-    const size_t num_visited_words = (static_cast<size_t>(max_elements_) + 7) / 8;
-    visited_bits_.assign(num_visited_words, 0);
+    const size_t num_words = (static_cast<size_t>(max_elements_) + 7) / 8;
+    visited_bits_       = std::make_unique<std::atomic<uint8_t>[]>(num_words);
+    visited_bits_words_ = num_words;
+    for (size_t i = 0; i < num_words; ++i)
+        visited_bits_[i].store(0, std::memory_order_relaxed);  
     visited_list_.reserve(static_cast<size_t>(max_elements_));
 
     // Since first inserted element is not searched in layer 0:
@@ -167,33 +172,26 @@ void HNSW::setNeighborsAtLevel(uint32_t node_id, int level, const std::vector<ui
 }
 
 void HNSW::prepareVisited() {
-    const size_t num_visited_words = (static_cast<size_t>(max_elements_) + 7) / 8;
-    if (visited_bits_.size() < num_visited_words) {
-        visited_bits_.resize(num_visited_words, 0);
-    }
-    visited_list_.clear();
+    clearVisited();        // reset any bits left from the previous call
+    visited_list_.clear(); // start with an empty tracking list
 }
 
 bool HNSW::isVisited(uint32_t id) const {
-    const size_t word = static_cast<size_t>(id) >> 3;
-    const uint8_t mask = 1U << (id & 7U);
-    return (visited_bits_[word] & mask) != 0;
+    const uint8_t mask = static_cast<uint8_t>(1U << (id & 7U));
+    return (visited_bits_[id >> 3].load(std::memory_order_relaxed) & mask) != 0;
 }
 
-void HNSW::markVisited(uint32_t id) {
-    const size_t word = static_cast<size_t>(id) >> 3;
-    const uint8_t mask = 1U << (id & 7U);
-    if ((visited_bits_[word] & mask) == 0) {
-        visited_bits_[word] |= mask;
-        visited_list_.push_back(id);
-    }
+bool HNSW::tryMarkVisited(uint32_t id) {
+    const uint8_t mask = static_cast<uint8_t>(1U << (id & 7U));
+    const uint8_t old  = visited_bits_[id >> 3].fetch_or(mask, std::memory_order_relaxed);
+    return (old & mask) == 0;
 }
 
 void HNSW::clearVisited() {
     for (uint32_t id : visited_list_) {
-        const size_t word = static_cast<size_t>(id) >> 3;
-        const uint8_t mask = 1U << (id & 7U);
-        visited_bits_[word] &= ~mask;
+        const uint8_t mask = static_cast<uint8_t>(1U << (id & 7U));
+        visited_bits_[id >> 3].fetch_and(static_cast<uint8_t>(~mask),
+                                         std::memory_order_relaxed);
     }
 }
 
@@ -234,8 +232,8 @@ float HNSW::distance(float * a, float * b) const {
     
     // Remaining elements
     #pragma omp simd reduction(+:dist)
-    for (; i < size; ++i) {
-        float diff = a[i] - b[i];
+    for (int k = i; k < size; ++k) {
+        float diff = a[k] - b[k];
         dist += diff * diff;
     }
     return dist;
@@ -262,7 +260,7 @@ int HNSW::getRandomLevel() {
     Using MKL and OMP.
     Batched Cabdidates + Neighbors.
 */
-std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<float> query, std::vector<uint32_t> entry_points, int ef, int layer) {
+std::priority_queue<std::pair<float, uint32_t>> HNSW::searchBaseLayer(std::vector<float> query, std::vector<uint32_t> entry_points, int ef, int layer) {
     // Use a bitset to track visited nodes so that the eliminate redundant distance calculations and candidate expansions.
     prepareVisited();
 
@@ -270,7 +268,7 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<fl
 
     // Calculate q^2 for query vector.
     float query_norm = 0.0f;
-    #pragma omp reduction(+:query_norm)
+    #pragma omp parallel for reduction(+:query_norm)
     for (int i = 0; i < dim_; ++i) {
         query_norm += query_data[i] * query_data[i];
     }
@@ -283,11 +281,13 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<fl
         float d = distance(query_data, data_.data() + entry_point * dim_);
         candidates.push({d, entry_point});
         top_candidates.push({d, entry_point});
-        markVisited(entry_point);
+        if (tryMarkVisited(entry_point)) {
+            visited_list_.push_back(entry_point);
+        }
     }
 
     int thread_count = omp_get_max_threads();
-    int batch_size = thread_count * 10;
+    int batch_size = 32;
     std::vector<uint32_t> candidate_batch; // Tracks the current batch of candidates being processed in parallel.
     candidate_batch.reserve(batch_size);
 
@@ -329,14 +329,71 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<fl
         }
         
         // For each candidate in the batch, gather their neighbors and filter out those that have already been visited.
-        for (uint32_t current_node : candidate_batch) {
-            for (uint32_t neighbor_id : getNeighborsAtLevel(current_node, layer)) {
-                if (!isVisited(neighbor_id)) {
-                    filtered_neighbors.push_back(neighbor_id);
-                    markVisited(neighbor_id);
+        // for (uint32_t current_node : candidate_batch) {
+        //     for (uint32_t neighbor_id : getNeighborsAtLevel(current_node, layer)) {
+        //         if (!isVisited(neighbor_id)) {
+        //             filtered_neighbors.push_back(neighbor_id);
+        //             markVisited(neighbor_id);
+        //         }
+        //     }
+        // }
+
+        // #pragma omp parallel
+        // {
+        //     std::vector<uint32_t> local;
+        //     local.reserve(max_neighbors);
+
+        //     #pragma omp for schedule(dynamic)
+        //     for (size_t i = 0; i < candidate_batch.size(); ++i) {
+        //         for (uint32_t nb : getNeighborsAtLevel(candidate_batch[i], layer)) {
+        //             if (isVisited(nb)) continue;
+        //             if (tryMarkVisited(nb)) {
+        //                 local.push_back(nb);
+        //             }
+        //         }
+        //     }
+
+        //     #pragma omp critical
+        //     {
+        //         filtered_neighbors.insert(filtered_neighbors.end(), local.begin(), local.end());
+        //         visited_list_.insert(visited_list_.end(), local.begin(), local.end());
+        //     }
+        // }
+
+        const size_t vbase = visited_list_.size();
+        const size_t ub = batch_size * max_degree;
+        // Size (not just reserve) to the upper bound so the parallel writes below land in
+        // live elements; we shrink back to the real count after the region.
+        filtered_neighbors.resize(ub);
+        visited_list_.resize(vbase + ub);
+
+        std::atomic<size_t> cursor{0};  
+
+        #pragma omp parallel
+        {
+            std::vector<uint32_t> local;
+            local.reserve(max_neighbors);
+
+            #pragma omp for schedule(dynamic) nowait
+            for (size_t i = 0; i < candidate_batch.size(); ++i) {
+                for (uint32_t nb : getNeighborsAtLevel(candidate_batch[i], layer)) {
+                    if (isVisited(nb)) continue;
+                    if (tryMarkVisited(nb)) {
+                        local.push_back(nb);
+                    }
                 }
             }
+
+            const size_t off =
+                cursor.fetch_add(local.size(), std::memory_order_relaxed);
+ 
+            std::copy(local.begin(), local.end(), filtered_neighbors.begin() + off);
+            std::copy(local.begin(), local.end(), visited_list_.begin()      + vbase + off);
         }
+
+        const size_t total = cursor.load(std::memory_order_relaxed);
+        filtered_neighbors.resize(total);
+        visited_list_.resize(vbase + total);
 
         // Sort the filtered neighbors to improve cache locality in the upcoming distance calculations.
         std::sort(filtered_neighbors.begin(), filtered_neighbors.end());
@@ -568,106 +625,101 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<fl
 /*
     Sequential version without MKL.
 */
-// std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<float> query, std::vector<uint32_t> entry_points, int ef, int layer) {
-//     std::vector<bool> visited(max_elements_, false);
-//     std::vector<int32_t> hop_counts;
-//     if (layer == 0) {
-//         hop_counts.assign(max_elements_, -1);
-//     }
+std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<float> query, std::vector<uint32_t> entry_points, int ef, int layer) {
+    std::vector<bool> visited(max_elements_, false);
+    std::vector<int32_t> hop_counts;
+    if (layer == 0) {
+        hop_counts.assign(max_elements_, -1);
+    }
     
-//     MinPQ candidates;
-//     std::priority_queue<std::pair<float, uint32_t>> top_candidates;
+    MinPQ candidates;
+    std::priority_queue<std::pair<float, uint32_t>> top_candidates;
 
-//     // int32_t dist_calc_count = 0;
-//     // int32_t cand_elements_count = 0;
-//     // int32_t max_hops = 0;
-//     // auto push_metrics = [&](uint32_t dist_count, uint32_t cand_count, uint32_t hop_count) {
-//     //     if (current_phase_ == Phase::Insertion) {
-//     //         num_dist_calc_layer0_insertion_.push_back(dist_count);
-//     //         num_cand_elements_layer0_insertion_.push_back(cand_count);
-//     //         max_hops_layer0_insertion_.push_back(hop_count);
-//     //     } else {
-//     //         num_dist_calc_layer0_search_.push_back(dist_count);
-//     //         num_cand_elements_layer0_search_.push_back(cand_count);
-//     //         max_hops_layer0_search_.push_back(hop_count);
-//     //     }
-//     // };
+    // int32_t dist_calc_count = 0;
+    // int32_t cand_elements_count = 0;
+    // int32_t max_hops = 0;
+    // auto push_metrics = [&](uint32_t dist_count, uint32_t cand_count, uint32_t hop_count) {
+    //     if (current_phase_ == Phase::Insertion) {
+    //         num_dist_calc_layer0_insertion_.push_back(dist_count);
+    //         num_cand_elements_layer0_insertion_.push_back(cand_count);
+    //         max_hops_layer0_insertion_.push_back(hop_count);
+    //     } else {
+    //         num_dist_calc_layer0_search_.push_back(dist_count);
+    //         num_cand_elements_layer0_search_.push_back(cand_count);
+    //         max_hops_layer0_search_.push_back(hop_count);
+    //     }
+    // };
     
-//     for (uint32_t entry_point : entry_points) {
-//         float d = distance(query.data(), data_.data() + entry_point * dim_);
-//         // if (layer == 0) {
-//         //     dist_calc_count++;
-//         //     hop_counts[entry_point] = 0;
-//         // }
-//         candidates.push({d, entry_point});
-//         // if (layer == 0) {
-//         //     cand_elements_count++;
-//         // }
-//         top_candidates.push({d, entry_point});
-//         visited[entry_point] = true;
-//     }
+    for (uint32_t entry_point : entry_points) {
+        float d = distance(query.data(), data_.data() + entry_point * dim_);
+        // if (layer == 0) {
+        //     dist_calc_count++;
+        //     hop_counts[entry_point] = 0;
+        // }
+        candidates.push({d, entry_point});
+        // if (layer == 0) {
+        //     cand_elements_count++;
+        // }
+        top_candidates.push({d, entry_point});
+        visited[entry_point] = true;
+    }
     
-//     const auto loop_start = std::chrono::steady_clock::now();
-//     while (!candidates.empty()) {
-//         auto current = candidates.top();
-//         candidates.pop();
+    const auto loop_start = std::chrono::steady_clock::now();
+    while (!candidates.empty()) {
+        auto current = candidates.top();
+        candidates.pop();
         
-//         // Compare with the farthest in nearest neighbors.
-//         if (top_candidates.size() >= static_cast<size_t>(ef) && current.first > top_candidates.top().first) {
-//             break;
-//         }
+        // Compare with the farthest in nearest neighbors.
+        if (top_candidates.size() >= static_cast<size_t>(ef) && current.first > top_candidates.top().first) {
+            break;
+        }
         
-//         uint32_t current_node = current.second;
-//         int32_t current_hops = (layer == 0) ? hop_counts[current_node] : 0;
+        uint32_t current_node = current.second;
+        int32_t current_hops = (layer == 0) ? hop_counts[current_node] : 0;
         
-//         const uint32_t* ll = get_neighbor_list_at_level(current_node, layer);
-//         if (!ll) {
-//             continue;
-//         }
-//         uint32_t count = getListCount(ll);
-//         for (uint32_t i = 0; i < count; ++i) {
-//             uint32_t neighbor_id = ll[1 + i];
-//             if (!visited[neighbor_id]) {
-//                 visited[neighbor_id] = true;
-//                 float dist = distance(query.data(), data_.data() + neighbor_id * dim_);
+        const uint32_t* ll = get_neighbor_list_at_level(current_node, layer);
+        if (!ll) {
+            continue;
+        }
+        uint32_t count = getListCount(ll);
+        for (uint32_t i = 0; i < count; ++i) {
+            uint32_t neighbor_id = ll[1 + i];
+            if (!visited[neighbor_id]) {
+                visited[neighbor_id] = true;
+                float dist = distance(query.data(), data_.data() + neighbor_id * dim_);
 
-//                 // if (layer == 0) {
-//                 //     dist_calc_count++;
-//                 //     int32_t neighbor_hops = current_hops + 1;
-//                 //     hop_counts[neighbor_id] = neighbor_hops;
-//                 //     max_hops = std::max(max_hops, neighbor_hops);
-//                 // }
+                // if (layer == 0) {
+                //     dist_calc_count++;
+                //     int32_t neighbor_hops = current_hops + 1;
+                //     hop_counts[neighbor_id] = neighbor_hops;
+                //     max_hops = std::max(max_hops, neighbor_hops);
+                // }
 
-//                 if (top_candidates.size() < static_cast<size_t>(ef) || dist < top_candidates.top().first) {
-//                     candidates.push({dist, neighbor_id});
-//                     // if (layer == 0) {
-//                     //     cand_elements_count++;
-//                     // }
-//                     top_candidates.push({dist, neighbor_id});
+                if (top_candidates.size() < static_cast<size_t>(ef) || dist < top_candidates.top().first) {
+                    candidates.push({dist, neighbor_id});
+                    // if (layer == 0) {
+                    //     cand_elements_count++;
+                    // }
+                    top_candidates.push({dist, neighbor_id});
 
-//                     if (top_candidates.size() > static_cast<size_t>(ef)) {
-//                         top_candidates.pop();
-//                     }
-//                 }
-//             }
-//         }
-//     }
+                    if (top_candidates.size() > static_cast<size_t>(ef)) {
+                        top_candidates.pop();
+                    }
+                }
+            }
+        }
+    }
 
-//     const auto loop_end = std::chrono::steady_clock::now();
-//     const uint64_t loop_ns = static_cast<uint64_t>(
-//         std::chrono::duration_cast<std::chrono::nanoseconds>(loop_end - loop_start).count());
-//     if (layer == 0) {
-//         g_search_layer0_loop_stats.add(loop_ns);
-//     } else {
-//         g_search_layerN_loop_stats.add(loop_ns);
-//     }
+    const auto loop_end = std::chrono::steady_clock::now();
+    const uint64_t loop_ns = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::nanoseconds>(loop_end - loop_start).count());
 
-//     // if (layer == 0) {
-//     //     push_metrics(dist_calc_count, cand_elements_count, max_hops);
-//     // }
+    // if (layer == 0) {
+    //     push_metrics(dist_calc_count, cand_elements_count, max_hops);
+    // }
     
-//     return top_candidates;
-// }
+    return top_candidates;
+}
 
 std::vector<uint32_t> HNSW::selectNeighbors(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int M) {
 
@@ -862,7 +914,7 @@ void HNSW::addPoint(std::vector<float> point, uint32_t label) {
     }
 
     float norm = 0.0f;
-    #pragma omp reduction(+:norm)
+    #pragma omp parallel for reduction(+:norm)
     for (float v : point) {
         norm += v * v;
     }
@@ -891,7 +943,7 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchKNN(std::vector<floa
     }
     
     // Search at layer 0
-    return searchLayer(query, entry_points, std::max(ef, k), 0);
+    return searchBaseLayer(query, entry_points, std::max(ef, k), 0);
 }
 
 void HNSW::setLabelRemapping(std::vector<uint32_t> old_to_new, std::vector<uint32_t> new_to_old) {
