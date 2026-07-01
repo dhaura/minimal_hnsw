@@ -30,13 +30,8 @@ namespace sparse_hnsw {
         std::priority_queue<std::pair<float, uint32_t>> searchKNN(uint32_t query_id, CSRMatrix *query_matrix, int k, int ef = 50);
         void setLabelRemapping(std::vector<uint32_t> old_to_new, std::vector<uint32_t> new_to_old);
         void relabelGroundTruth(std::vector<std::vector<uint32_t>>& groundtruth) const;
-        void printInfo(const std::string& timing_csv_path) const;
+        void printInfo() const;
 
-        // For profiling layer 0 metrics.
-        bool dumpLayer0Counts(const std::string& output_path, const std::string param) const {
-            return false;
-        }
-        
     private:
         CSRMatrix *data_matrix_;    
         int dim_;
@@ -57,40 +52,17 @@ namespace sparse_hnsw {
 
         std::vector<uint8_t> visited_bits_;
         std::vector<uint32_t> visited_list_;
-        
+
         // For Hilbert curve ordering
         std::vector<uint32_t> old_to_new_labels_;
         std::vector<uint32_t> new_to_old_labels_;
-
-        // Profiling metrics for layer 0.
-        std::vector<uint32_t> num_dist_calc_layer0_insertion_;
-        std::vector<uint32_t> num_cand_elements_layer0_insertion_;
-        std::vector<uint32_t> max_hops_layer0_insertion_;
-
-        std::vector<uint32_t> num_dist_calc_layer0_search_;
-        std::vector<uint32_t> num_cand_elements_layer0_search_;
-        std::vector<uint32_t> max_hops_layer0_search_;
 
         bool use_heuristic_;
         bool extend_candidates_;
         bool keep_pruned_;
         bool use_mkl_;
         size_t mklThreshold_;
-        enum class Phase {
-            Insertion,
-            Search
-        };
 
-        Phase current_phase_;
-
-        // Runtime stats for the three inner loops in searchLayer.
-        uint64_t filter_loop_time_ns_ = 0;
-        uint64_t filter_loop_calls_ = 0;
-        uint64_t dist_loop_time_ns_ = 0;
-        uint64_t dist_loop_calls_ = 0;
-        uint64_t candidate_loop_time_ns_ = 0;
-        uint64_t candidate_loop_calls_ = 0;
-        
         std::mt19937 rng_;
         std::uniform_real_distribution<double> level_generator_;
         
