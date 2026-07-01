@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
     std::cout << "Number of OpenMP threads: " << num_omp_threads << "\n";
     std::cout << "Number of MKL threads: " << num_mkl_threads << "\n";
 
-    // Read a dense dataset from file.
+    // Read a sparse dataset from file.
     CSRMatrix *datamatrix = new CSRMatrix(input_filepath, true);
     int dim = datamatrix->ncol;
     int num_points = datamatrix->nrow;

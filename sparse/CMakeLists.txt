@@ -42,6 +42,7 @@ endif()
 
 # Create executables
 add_executable(sparse_hnsw_demo main.cpp)
+add_executable(grassRMA_demo grassRMA_main.cpp)
 
 # Link the library to the executable
 target_link_libraries(sparse_hnsw_demo sparse_hnsw_lib)
@@ -50,13 +51,14 @@ target_link_libraries(sparse_hnsw_demo sparse_hnsw_lib)
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
     target_link_libraries(sparse_hnsw_demo OpenMP::OpenMP_CXX)
+    target_link_libraries(grassRMA_demo OpenMP::OpenMP_CXX)
 endif()
 
 # ---- Perf-friendly build option ----
 option(ENABLE_PERF "Build with perf-friendly flags (symbols + frame pointers)" OFF)
 
 if(ENABLE_PERF)
-    foreach(tgt sparse_hnsw_lib sparse_hnsw_demo)
+    foreach(tgt sparse_hnsw_lib sparse_hnsw_demo grassRMA_demo)
         # Keep debug symbols even in Release; good stacks for perf
         target_compile_options(${tgt} PRIVATE -g -fno-omit-frame-pointer)
         target_link_options(${tgt} PRIVATE -g)
@@ -73,4 +75,8 @@ set_target_properties(sparse_hnsw_demo PROPERTIES
 
 set_target_properties(hnswlib_demo PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)
+
+set_target_properties(grassRMA_demo PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
