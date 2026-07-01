@@ -33,11 +33,6 @@ namespace hnsw {
         void relabelGroundTruth(std::vector<std::vector<uint32_t>>& groundtruth) const;
         void printInfo(const std::string& timing_csv_path) const;
 
-        // For profiling layer 0 metrics.
-        bool dumpLayer0Counts(const std::string& output_path, const std::string param) const {
-            return false;
-        }
-        
     private:
         int dim_;
         int M_;  // maximum number of connections per layer
@@ -63,15 +58,6 @@ namespace hnsw {
         std::vector<uint32_t> old_to_new_labels_;
         std::vector<uint32_t> new_to_old_labels_;
 
-        // Profiling metrics for layer 0.
-        std::vector<uint32_t> num_dist_calc_layer0_insertion_;
-        std::vector<uint32_t> num_cand_elements_layer0_insertion_;
-        std::vector<uint32_t> max_hops_layer0_insertion_;
-
-        std::vector<uint32_t> num_dist_calc_layer0_search_;
-        std::vector<uint32_t> num_cand_elements_layer0_search_;
-        std::vector<uint32_t> max_hops_layer0_search_;
-
         bool use_heuristic_;
         bool extend_candidates_;
         bool keep_pruned_;
@@ -84,14 +70,6 @@ namespace hnsw {
 
         Phase current_phase_;
 
-        // Runtime stats for the three inner loops in searchLayer.
-        uint64_t filter_loop_time_ns_ = 0;
-        uint64_t filter_loop_calls_ = 0;
-        uint64_t dist_loop_time_ns_ = 0;
-        uint64_t dist_loop_calls_ = 0;
-        uint64_t candidate_loop_time_ns_ = 0;
-        uint64_t candidate_loop_calls_ = 0;
-        
         std::mt19937 rng_;
         std::uniform_real_distribution<double> level_generator_;
         
