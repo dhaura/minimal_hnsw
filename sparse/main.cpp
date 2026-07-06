@@ -153,16 +153,8 @@ int main(int argc, char* argv[]) {
     
     auto start_query_time = std::chrono::steady_clock::now();
 
-    std::vector<uint32_t> pred_lables(query_count * k);
-
-    for (int i = 0; i < query_count; i++) {
-        std::priority_queue<std::pair<float, uint32_t>> nns = index.searchKNN(i, querymatrix, k, ef);
-        while (!nns.empty()) {
-            auto nn = nns.top();
-            nns.pop();
-            pred_lables[i * k + (k - nns.size() - 1)] = nn.second;
-        }
-    }
+    std::vector<uint32_t> pred_lables;
+    index.searchKNNBatch(querymatrix, query_count, k, ef, pred_lables);
 
     auto end_query_time = std::chrono::steady_clock::now();
     auto query_time = std::chrono::duration_cast<std::chrono::microseconds>(end_query_time - start_query_time);

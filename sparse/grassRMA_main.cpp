@@ -95,11 +95,9 @@ int main(int argc, char* argv[]) {
     HierarchicalNSW<float> *index =
         new HierarchicalNSW<float>(&space, datamatrix, num_points, M, ef_construction);
     index->ef_ = ef; // Set ef for search
-    
-    // Add points from the dataset to the index
+
     std::cout << "Adding points to the index...\n";
-    
-    #pragma omp parallel for
+
     for (size_t i = 0; i < num_points; ++i) {
         index->addPoint(i, i);
     }
@@ -125,6 +123,7 @@ int main(int argc, char* argv[]) {
     
     std::vector<uint32_t> pred_lables(query_count * k);
 
+    #pragma omp parallel for schedule(dynamic, 64)
     for (int i = 0; i < query_count; i++) {
         std::priority_queue<std::pair<float, labeltype>> nns = index->searchKnn(i, k, querymatrix);
         while (!nns.empty()) {

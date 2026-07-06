@@ -29,9 +29,8 @@ SPARSE_HNSW::SPARSE_HNSW(int dim, CSRMatrix *data_matrix, int M, int ef_construc
     neighbor_list_offsets_.assign(max_elements_, std::numeric_limits<uint32_t>::max());
     element_levels_.assign(max_elements_, 0);
 
-    const size_t num_visited_words = (static_cast<size_t>(max_elements_) + 7) / 8;
-    visited_bits_.assign(num_visited_words, 0);
-    visited_list_.reserve(static_cast<size_t>(max_elements_));
+    insert_scratch_.prepare(max_elements_);
+    insert_scratch_.visited_list.reserve(static_cast<size_t>(max_elements_));
 }
 
 uint32_t* SPARSE_HNSW::get_neighbor_list0(uint32_t node_id) {
@@ -112,37 +111,6 @@ void SPARSE_HNSW::setNeighborsAtLevel(uint32_t node_id, int level, const std::ve
     }
 }
 
-void SPARSE_HNSW::prepareVisited() {
-    const size_t num_visited_words = (static_cast<size_t>(max_elements_) + 7) / 8;
-    if (visited_bits_.size() < num_visited_words) {
-        visited_bits_.resize(num_visited_words, 0);
-    }
-    visited_list_.clear();
-}
-
-bool SPARSE_HNSW::isVisited(uint32_t id) const {
-    const size_t word = static_cast<size_t>(id) >> 3;
-    const uint8_t mask = 1U << (id & 7U);
-    return (visited_bits_[word] & mask) != 0;
-}
-
-void SPARSE_HNSW::markVisited(uint32_t id) {
-    const size_t word = static_cast<size_t>(id) >> 3;
-    const uint8_t mask = 1U << (id & 7U);
-    if ((visited_bits_[word] & mask) == 0) {
-        visited_bits_[word] |= mask;
-        visited_list_.push_back(id);
-    }
-}
-
-void SPARSE_HNSW::clearVisited() {
-    for (uint32_t id : visited_list_) {
-        const size_t word = static_cast<size_t>(id) >> 3;
-        const uint8_t mask = 1U << (id & 7U);
-        visited_bits_[word] &= ~mask;
-    }
-}
-
 float SPARSE_HNSW::distance(const void *pVect1, const void *pVect2, const void *qty_ptr, const void *other_ptr) const {
 
     CSRMatrix *csr_matrix = reinterpret_cast<CSRMatrix *>(const_cast<void *>(qty_ptr));
@@ -193,8 +161,8 @@ int SPARSE_HNSW::getRandomLevel() {
     return static_cast<int>(-log(r) * (1.0 / log(M_)));
 }
 
-std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_t query_id, const void *qty_ptr, std::vector<uint32_t> entry_points, int ef, int layer) {
-    prepareVisited();
+std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_t query_id, const void *qty_ptr, std::vector<uint32_t> entry_points, int ef, int layer, SearchScratch& scratch) const {
+    scratch.prepare(max_elements_);
 
     MinPQ candidates;
     std::priority_queue<std::pair<float, uint32_t>> top_candidates;
@@ -203,7 +171,7 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
         float d = distance(&query_id, &entry_point, data_matrix_, qty_ptr);
         candidates.push({d, entry_point});
         top_candidates.push({d, entry_point});
-        markVisited(entry_point);
+        scratch.markVisited(entry_point);
     }
 
     while (!candidates.empty()) {
@@ -224,8 +192,8 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
         uint32_t count = getListCount(ll);
         for (uint32_t i = 0; i < count; ++i) {
             uint32_t neighbor_id = ll[1 + i];
-            if (!isVisited(neighbor_id)) {
-                markVisited(neighbor_id);
+            if (!scratch.isVisited(neighbor_id)) {
+                scratch.markVisited(neighbor_id);
                 float dist = distance(&query_id, &neighbor_id, data_matrix_, qty_ptr);
 
                 if (top_candidates.size() < static_cast<size_t>(ef) || dist < top_candidates.top().first) {
@@ -240,7 +208,7 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
         }
     }
 
-    clearVisited();
+    scratch.clear();
     return top_candidates;
 }
 
@@ -404,7 +372,7 @@ void SPARSE_HNSW::addPoint(uint32_t node_id, uint32_t label) {
     
     // Search from top layer to target layer
     for (int lc = max_level_; lc > level; --lc) {
-        std::priority_queue<std::pair<float, uint32_t>> nearest = searchLayer(node_id, data_matrix_, entry_points, 1, lc);
+        std::priority_queue<std::pair<float, uint32_t>> nearest = searchLayer(node_id, data_matrix_, entry_points, 1, lc, insert_scratch_);
         if (!nearest.empty()) {
             entry_points.clear();
             while (!nearest.empty()) {
@@ -416,7 +384,7 @@ void SPARSE_HNSW::addPoint(uint32_t node_id, uint32_t label) {
     
     // Insert at all layers from level to 0
     for (int lc = level; lc >= 0; --lc) {
-        std::priority_queue<std::pair<float, uint32_t>> candidates = searchLayer(node_id, data_matrix_, entry_points, ef_construction_, lc);
+        std::priority_queue<std::pair<float, uint32_t>> candidates = searchLayer(node_id, data_matrix_, entry_points, ef_construction_, lc, insert_scratch_);
         if (!candidates.empty()) {
             entry_points.clear();
             std::priority_queue<std::pair<float, uint32_t>> temp = candidates;
@@ -435,7 +403,7 @@ void SPARSE_HNSW::addPoint(uint32_t node_id, uint32_t label) {
     }
 }
 
-std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchKNN(uint32_t query_id, CSRMatrix *query_matrix, int k, int ef) {
+std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchKNN(uint32_t query_id, CSRMatrix *query_matrix, int k, int ef, SearchScratch& scratch) const {
     if (entry_point_ == -1) {
         return {};
     }
@@ -444,7 +412,7 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchKNN(uint32_t 
 
     // Search from top layer to layer 0
     for (int lc = max_level_; lc > 0; --lc) {
-        std::priority_queue<std::pair<float, uint32_t>> nearest = searchLayer(query_id, query_matrix, entry_points, 1, lc);
+        std::priority_queue<std::pair<float, uint32_t>> nearest = searchLayer(query_id, query_matrix, entry_points, 1, lc, scratch);
         if (!nearest.empty()) {
             entry_points.clear();
             while (!nearest.empty()) {
@@ -456,12 +424,40 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchKNN(uint32_t 
 
     // Search at layer 0 with ef >= k candidates, then keep only the k nearest.
     std::priority_queue<std::pair<float, uint32_t>> result =
-        searchLayer(query_id, query_matrix, entry_points, std::max(ef, k), 0);
+        searchLayer(query_id, query_matrix, entry_points, std::max(ef, k), 0, scratch);
     // result is a max-heap on distance; pop the farthest until k remain.
     while (static_cast<int>(result.size()) > k) {
         result.pop();
     }
     return result;
+}
+
+std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchKNN(uint32_t query_id, CSRMatrix *query_matrix, int k, int ef) const {
+    SearchScratch scratch;
+    return searchKNN(query_id, query_matrix, k, ef, scratch);
+}
+
+void SPARSE_HNSW::searchKNNBatch(CSRMatrix *query_matrix, int num_queries, int k, int ef,
+                                 std::vector<uint32_t>& out_labels) const {
+
+    out_labels.assign(static_cast<size_t>(num_queries) * static_cast<size_t>(k), 0);
+
+    #pragma omp parallel
+    {
+        SearchScratch scratch;
+        scratch.prepare(max_elements_);
+
+        #pragma omp for schedule(dynamic, 64)
+        for (int i = 0; i < num_queries; ++i) {
+            std::priority_queue<std::pair<float, uint32_t>> nns =
+                searchKNN(static_cast<uint32_t>(i), query_matrix, k, ef, scratch);
+            const size_t base = static_cast<size_t>(i) * static_cast<size_t>(k);
+            while (!nns.empty()) {
+                out_labels[base + (static_cast<size_t>(k) - nns.size())] = nns.top().second;
+                nns.pop();
+            }
+        }
+    }
 }
 
 void SPARSE_HNSW::setLabelRemapping(std::vector<uint32_t> old_to_new, std::vector<uint32_t> new_to_old) {

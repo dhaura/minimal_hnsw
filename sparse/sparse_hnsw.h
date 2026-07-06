@@ -19,6 +19,39 @@ namespace sparse_hnsw {
         std::greater<std::pair<float,uint32_t>>
     >;
 
+    struct SearchScratch {
+        std::vector<uint8_t> visited_bits;
+        std::vector<uint32_t> visited_list;
+
+        void prepare(int max_elements) {
+            const size_t num_words = (static_cast<size_t>(max_elements) + 7) / 8;
+            if (visited_bits.size() < num_words) {
+                visited_bits.assign(num_words, 0);
+            }
+            visited_list.clear();
+        }
+
+        bool isVisited(uint32_t id) const {
+            return (visited_bits[static_cast<size_t>(id) >> 3] & (1U << (id & 7U))) != 0;
+        }
+
+        void markVisited(uint32_t id) {
+            const size_t word = static_cast<size_t>(id) >> 3;
+            const uint8_t mask = 1U << (id & 7U);
+            if ((visited_bits[word] & mask) == 0) {
+                visited_bits[word] |= mask;
+                visited_list.push_back(id);
+            }
+        }
+
+        void clear() {
+            for (uint32_t id : visited_list) {
+                visited_bits[static_cast<size_t>(id) >> 3] &= ~(1U << (id & 7U));
+            }
+            visited_list.clear();
+        }
+    };
+
     class SPARSE_HNSW {
     public:
         SPARSE_HNSW(int dim, CSRMatrix *data_matrix, int M = 16, int ef_construction = 200, int max_elements = 1000, 
@@ -27,7 +60,9 @@ namespace sparse_hnsw {
         
         float distance(const void *pVect1, const void *pVect2, const void *qty_ptr, const void *other_ptr) const;
         void addPoint(uint32_t node_id, uint32_t label);
-        std::priority_queue<std::pair<float, uint32_t>> searchKNN(uint32_t query_id, CSRMatrix *query_matrix, int k, int ef = 50);
+        std::priority_queue<std::pair<float, uint32_t>> searchKNN(uint32_t query_id, CSRMatrix *query_matrix, int k, int ef = 50) const;
+        void searchKNNBatch(CSRMatrix *query_matrix, int num_queries, int k, int ef,
+                            std::vector<uint32_t>& out_labels) const;
         void setLabelRemapping(std::vector<uint32_t> old_to_new, std::vector<uint32_t> new_to_old);
         void relabelGroundTruth(std::vector<std::vector<uint32_t>>& groundtruth) const;
         void printInfo() const;
@@ -50,8 +85,8 @@ namespace sparse_hnsw {
         std::vector<uint32_t> neighbor_list_offsets_;       // per-node start offset into neighbor_lists_flat_
         std::vector<int> element_levels_;
 
-        std::vector<uint8_t> visited_bits_;
-        std::vector<uint32_t> visited_list_;
+        // Scratch reused across the insertion path.
+        SearchScratch insert_scratch_;
 
         // For Hilbert curve ordering
         std::vector<uint32_t> old_to_new_labels_;
@@ -77,11 +112,8 @@ namespace sparse_hnsw {
         void setListCount(uint32_t* ptr, uint32_t size);
         std::vector<uint32_t> getNeighborsAtLevel(uint32_t node_id, int level) const;
         void setNeighborsAtLevel(uint32_t node_id, int level, const std::vector<uint32_t>& neighbors, int max_degree);
-        void prepareVisited();
-        bool isVisited(uint32_t id) const;
-        void markVisited(uint32_t id);
-        void clearVisited();
-        std::priority_queue<std::pair<float, uint32_t>> searchLayer(uint32_t query_id, const void *qty_ptr, std::vector<uint32_t> entry_points, int ef, int layer);
+        std::priority_queue<std::pair<float, uint32_t>> searchLayer(uint32_t query_id, const void *qty_ptr, std::vector<uint32_t> entry_points, int ef, int layer, SearchScratch& scratch) const;
+        std::priority_queue<std::pair<float, uint32_t>> searchKNN(uint32_t query_id, CSRMatrix *query_matrix, int k, int ef, SearchScratch& scratch) const;
         void connectNeighbors(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int level, int M);
         std::vector<uint32_t> selectNeighbors(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int M);
         std::vector<uint32_t> selectNeighborsHeuristic(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int M, int level);

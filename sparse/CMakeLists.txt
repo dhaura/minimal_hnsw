@@ -50,6 +50,7 @@ target_link_libraries(sparse_hnsw_demo sparse_hnsw_lib)
 # Link OpenMP for parallelization
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
+    target_link_libraries(sparse_hnsw_lib PUBLIC OpenMP::OpenMP_CXX)
     target_link_libraries(sparse_hnsw_demo OpenMP::OpenMP_CXX)
     target_link_libraries(grassRMA_demo OpenMP::OpenMP_CXX)
 endif()
