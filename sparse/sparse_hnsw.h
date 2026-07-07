@@ -22,6 +22,7 @@ namespace sparse_hnsw {
     struct SearchScratch {
         std::vector<uint8_t> visited_bits;
         std::vector<uint32_t> visited_list;
+        std::vector<uint32_t> filtered_neighbors;
 
         void prepare(int max_elements) {
             const size_t num_words = (static_cast<size_t>(max_elements) + 7) / 8;
@@ -29,6 +30,7 @@ namespace sparse_hnsw {
                 visited_bits.assign(num_words, 0);
             }
             visited_list.clear();
+            filtered_neighbors.clear();
         }
 
         bool isVisited(uint32_t id) const {

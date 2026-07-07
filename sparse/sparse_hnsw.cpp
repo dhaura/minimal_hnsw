@@ -197,39 +197,57 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
         const IndiceDataPair* vec_base = data_matrix_->indices_data;
         const uint8_t* visited_bytes = scratch.visited_bits.data();
 
-        for (uint32_t i = 0; i < count && i < 2; ++i) {
+        for (uint32_t i = 0; i < count && i < 4; ++i) {
             __builtin_prefetch(visited_bytes + (neighbors[i] >> 3), 0, 3);
-            __builtin_prefetch(indptr + neighbors[i], 0, 3);
         }
 
-        for (uint32_t i = 0; i < count; ++i) {
-            uint32_t neighbor_id = neighbors[i];
+        scratch.filtered_neighbors.clear();
+        scratch.filtered_neighbors.reserve(count);
 
-            if (i + 2 < count) {
-                __builtin_prefetch(visited_bytes + (neighbors[i + 2] >> 3), 0, 3);
-                __builtin_prefetch(indptr + neighbors[i + 2], 0, 3);
+        // Filter unvisited neighbors.
+        for (uint32_t i = 0; i < count; ++i) {
+            if (i + 4 < count) {
+                __builtin_prefetch(visited_bytes + (neighbors[i + 4] >> 3), 0, 3);
             }
-            if (i + 1 < count) {
-                const char* next_vec = reinterpret_cast<const char*>(vec_base + indptr[neighbors[i + 1]]);
+            uint32_t neighbor_id = neighbors[i];
+            if (!scratch.isVisited(neighbor_id)) {
+                scratch.markVisited(neighbor_id);
+                scratch.filtered_neighbors.push_back(neighbor_id);
+                __builtin_prefetch(indptr + neighbor_id, 0, 3);
+            }
+        }
+
+        const uint32_t nfilter = static_cast<uint32_t>(scratch.filtered_neighbors.size());
+        const uint32_t* filtered = scratch.filtered_neighbors.data();
+
+        for (uint32_t j = 0; j < nfilter; ++j) {
+            const char* vec = reinterpret_cast<const char*>(vec_base + indptr[filtered[j]]);
+            __builtin_prefetch(vec, 0, 2);
+            __builtin_prefetch(vec + 64, 0, 2);
+        }
+
+        // Process unvisited neighbors.
+        for (uint32_t j = 0; j < nfilter; ++j) {
+            uint32_t neighbor_id = filtered[j];
+
+            if (j + 1 < nfilter) {
+                const char* next_vec = reinterpret_cast<const char*>(vec_base + indptr[filtered[j + 1]]);
                 __builtin_prefetch(next_vec, 0, 3);
                 __builtin_prefetch(next_vec + 64, 0, 3);
                 __builtin_prefetch(next_vec + 128, 0, 3);
                 __builtin_prefetch(next_vec + 192, 0, 3);
             }
 
-            if (!scratch.isVisited(neighbor_id)) {
-                scratch.markVisited(neighbor_id);
-                float dist = distance(&query_id, &neighbor_id, data_matrix_, qty_ptr);
+            float dist = distance(&query_id, &neighbor_id, data_matrix_, qty_ptr);
 
-                if (top_candidates.size() < static_cast<size_t>(ef) || dist < top_candidates.top().first) {
-                    candidates.push({dist, neighbor_id});
-                    // The best pending candidate is the likely next expansion.
-                    __builtin_prefetch(get_neighbor_list_at_level(candidates.top().second, layer), 0, 3);
-                    top_candidates.push({dist, neighbor_id});
+            if (top_candidates.size() < static_cast<size_t>(ef) || dist < top_candidates.top().first) {
+                candidates.push({dist, neighbor_id});
+                // The best pending candidate is the likely next expansion.
+                __builtin_prefetch(get_neighbor_list_at_level(candidates.top().second, layer), 0, 3);
+                top_candidates.push({dist, neighbor_id});
 
-                    if (top_candidates.size() > static_cast<size_t>(ef)) {
-                        top_candidates.pop();
-                    }
+                if (top_candidates.size() > static_cast<size_t>(ef)) {
+                    top_candidates.pop();
                 }
             }
         }
