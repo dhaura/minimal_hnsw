@@ -60,6 +60,15 @@ LoopTimingStats g_distance_loop_stats;
 LoopTimingStats g_cand_update_loop_stats;
 
 std::vector<int> g_nfilter_stats;
+
+// Prefetch every cache line of [p, p + bytes) into the cache hierarchy.
+inline void prefetchRange(const void* p, size_t bytes) {
+    const char* c = static_cast<const char*>(p);
+    const char* end = c + bytes;
+    for (; c < end; c += 64) {
+        _mm_prefetch(c, _MM_HINT_T0);
+    }
+}
 } // namespace
 
 HNSW::HNSW(int dim, int M, int ef_construction, int max_elements, 
@@ -307,13 +316,13 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchBaseLayer(std::vecto
             }
             candidate_batch.push_back(current.second);
             candidates.pop();
+            if (const uint32_t* ll = get_neighbor_list_at_level(current.second, layer)) {
+                prefetchRange(ll, (1 + static_cast<size_t>(max_degree)) * sizeof(uint32_t));
+            }
         }
         
-        // For each candidate in the batch, gather their neighbors and filter out those that have already been visited.
         const size_t vbase = visited_list_.size();
         const size_t ub = batch_size * max_degree;
-        // Size (not just reserve) to the upper bound so the parallel writes below land in
-        // live elements; we shrink back to the real count after the region.
         filtered_neighbors.resize(ub);
         visited_list_.resize(vbase + ub);
 
@@ -329,6 +338,8 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchBaseLayer(std::vecto
                 for (uint32_t nb : getNeighborsAtLevel(candidate_batch[i], layer)) {
                     if (isVisited(nb)) continue;
                     if (tryMarkVisited(nb)) {
+                        prefetchRange(data_.data() + static_cast<size_t>(nb) * dim_,
+                                      static_cast<size_t>(dim_) * sizeof(float));
                         local.push_back(nb);
                     }
                 }
@@ -403,8 +414,13 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchBaseLayer(std::vecto
         #endif
             // Compute distances from the query to each of the filtered neighbors in parallel using only OMP without MKL.
             auto distance_calc_start = std::chrono::steady_clock::now();
+            constexpr size_t kPrefetchAhead = 4;
             #pragma omp parallel for schedule(static)
             for (size_t i = 0; i < filtered_neighbors.size(); ++i) {
+                if (i + kPrefetchAhead < filtered_neighbors.size()) {
+                    prefetchRange(data_.data() + static_cast<size_t>(filtered_neighbors[i + kPrefetchAhead]) * dim_,
+                                  static_cast<size_t>(dim_) * sizeof(float));
+                }
                 uint32_t neighbor_id = filtered_neighbors[i];
                 float* neighbor_data = data_.data() + neighbor_id * dim_;
                 float dist = distance(query_data, neighbor_data);
@@ -479,8 +495,16 @@ std::priority_queue<std::pair<float, uint32_t>> HNSW::searchLayer(std::vector<fl
             continue;
         }
         uint32_t count = getListCount(ll);
+        if (count > 0) {
+            prefetchRange(data_.data() + static_cast<size_t>(ll[1]) * dim_,
+                          static_cast<size_t>(dim_) * sizeof(float));
+        }
         for (uint32_t i = 0; i < count; ++i) {
             uint32_t neighbor_id = ll[1 + i];
+            if (i + 1 < count) {
+                prefetchRange(data_.data() + static_cast<size_t>(ll[2 + i]) * dim_,
+                              static_cast<size_t>(dim_) * sizeof(float));
+            }
             if (!visited[neighbor_id]) {
                 visited[neighbor_id] = true;
                 float dist = distance(query.data(), data_.data() + neighbor_id * dim_);
