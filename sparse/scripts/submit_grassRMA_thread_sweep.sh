@@ -20,8 +20,9 @@ fi
 mkdir -p "$TMP_DIR" "$SCRIPT_DIR/logs"
 
 for t in "${THREAD_COUNTS[@]}"; do
+  cpus=$((2 * t)); [ "$cpus" -gt 256 ] && cpus=256
   job_script="$TMP_DIR/grassRMA_thread_sweep_t${t}.sh"
-  sed "s/{{THREADS}}/${t}/g" "$TEMPLATE" > "$job_script"
+  sed -e "s/{{THREADS}}/${t}/g" -e "s/{{CPUS}}/${cpus}/g" "$TEMPLATE" > "$job_script"
 
   # Submit from SCRIPT_DIR so the relative logs/ path in #SBATCH --output works.
   job_id=$(cd "$SCRIPT_DIR" && sbatch --parsable "$job_script")

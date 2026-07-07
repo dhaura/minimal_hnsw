@@ -3,6 +3,7 @@
 #ifndef MATRIX_HPP_
 #define MATRIX_HPP_
 #include <cstddef>
+#include <cstdint>
 #include <iostream>
 #include <fstream>
 #include <cmath>
@@ -10,10 +11,13 @@
 #include <cstring>
 #include <assert.h>
 
+// Compact 4-byte entry: column indices fit uint16_t as long as ncol <= 65536
+// (checked at load time), and values are stored as IEEE fp16 (the F16C unit
+// converts to fp32 on use). Halves the bytes streamed per distance call.
 struct IndiceDataPair
 {
-  int32_t indice;
-  float data;
+  uint16_t indice;
+  _Float16 data;
   bool operator>(const IndiceDataPair &s2)
   {
     return this->indice > s2.indice;
@@ -73,6 +77,13 @@ public:
     global_nrow = nrow;
     global_nnz = nnz;
 
+    if (ncol > 65536)
+    {
+      std::cerr << "CSRMatrix: ncol=" << ncol
+                << " exceeds the uint16_t index range of IndiceDataPair." << std::endl;
+      exit(1);
+    }
+
     indptr = new int64_t[nrow + 1];
     infile.read((char *)indptr, (nrow + 1) * sizeof(int64_t));
     indices_data = new IndiceDataPair[nnz];
@@ -84,7 +95,7 @@ public:
 
       for (int64_t i = 0; i < nnz; ++i)
       {
-        indices_data[i].indice = indices[i];
+        indices_data[i].indice = static_cast<uint16_t>(indices[i]);
       }
       delete[] indices;
 
@@ -94,13 +105,15 @@ public:
 
       for (int64_t i = 0; i < nnz; ++i)
       {
-        indices_data[i].data = data[i];
+        indices_data[i].data = static_cast<_Float16>(data[i]);
       }
 
       delete[] data;
     }
     else
     {
+      // Raw layout read/write (see save()): only compatible with files saved
+      // by a build using the same 4-byte IndiceDataPair.
       infile.read((char *)indices_data, nnz * sizeof(IndiceDataPair));
     }
   }
@@ -118,8 +131,8 @@ public:
 
     for (int64_t i = 0; i < nnz; ++i)
     {
-      indices_data[i].indice = indices_[i];
-      indices_data[i].data = data_[i];
+      indices_data[i].indice = static_cast<uint16_t>(indices_[i]);
+      indices_data[i].data = static_cast<_Float16>(data_[i]);
     }
 
     memcpy(indptr, indptr_, sizeof(uint64_t) * (nrow + 1));

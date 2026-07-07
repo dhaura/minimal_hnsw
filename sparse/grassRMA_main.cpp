@@ -123,7 +123,7 @@ int main(int argc, char* argv[]) {
     
     std::vector<uint32_t> pred_lables(query_count * k);
 
-    #pragma omp parallel for schedule(dynamic, 64)
+    #pragma omp parallel for schedule(dynamic, 4)
     for (int i = 0; i < query_count; i++) {
         std::priority_queue<std::pair<float, labeltype>> nns = index->searchKnn(i, k, querymatrix);
         while (!nns.empty()) {

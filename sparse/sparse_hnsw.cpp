@@ -147,7 +147,9 @@ float SPARSE_HNSW::distance(const void *pVect1, const void *pVect2, const void *
     {
         const int32_t q_col = q_indices->indice;
         const int32_t p_col = p_indices->indice;
-        res += (q_col == p_col) ? q_indices->data * p_indices->data : 0.0f;
+        // Convert both fp16 operands up front so the product is computed and
+        // accumulated in fp32 rather than rounded through fp16.
+        res += (q_col == p_col) ? static_cast<float>(q_indices->data) * static_cast<float>(p_indices->data) : 0.0f;
         q_indices += (q_col <= p_col);
         p_indices += (p_col <= q_col);
     }
@@ -190,14 +192,39 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
             continue;
         }
         uint32_t count = getListCount(ll);
+        const uint32_t* neighbors = ll + 1;
+        const int64_t* indptr = data_matrix_->indptr;
+        const IndiceDataPair* vec_base = data_matrix_->indices_data;
+        const uint8_t* visited_bytes = scratch.visited_bits.data();
+
+        for (uint32_t i = 0; i < count && i < 2; ++i) {
+            __builtin_prefetch(visited_bytes + (neighbors[i] >> 3), 0, 3);
+            __builtin_prefetch(indptr + neighbors[i], 0, 3);
+        }
+
         for (uint32_t i = 0; i < count; ++i) {
-            uint32_t neighbor_id = ll[1 + i];
+            uint32_t neighbor_id = neighbors[i];
+
+            if (i + 2 < count) {
+                __builtin_prefetch(visited_bytes + (neighbors[i + 2] >> 3), 0, 3);
+                __builtin_prefetch(indptr + neighbors[i + 2], 0, 3);
+            }
+            if (i + 1 < count) {
+                const char* next_vec = reinterpret_cast<const char*>(vec_base + indptr[neighbors[i + 1]]);
+                __builtin_prefetch(next_vec, 0, 3);
+                __builtin_prefetch(next_vec + 64, 0, 3);
+                __builtin_prefetch(next_vec + 128, 0, 3);
+                __builtin_prefetch(next_vec + 192, 0, 3);
+            }
+
             if (!scratch.isVisited(neighbor_id)) {
                 scratch.markVisited(neighbor_id);
                 float dist = distance(&query_id, &neighbor_id, data_matrix_, qty_ptr);
 
                 if (top_candidates.size() < static_cast<size_t>(ef) || dist < top_candidates.top().first) {
                     candidates.push({dist, neighbor_id});
+                    // The best pending candidate is the likely next expansion.
+                    __builtin_prefetch(get_neighbor_list_at_level(candidates.top().second, layer), 0, 3);
                     top_candidates.push({dist, neighbor_id});
 
                     if (top_candidates.size() > static_cast<size_t>(ef)) {
@@ -447,7 +474,7 @@ void SPARSE_HNSW::searchKNNBatch(CSRMatrix *query_matrix, int num_queries, int k
         SearchScratch scratch;
         scratch.prepare(max_elements_);
 
-        #pragma omp for schedule(dynamic, 64)
+        #pragma omp for schedule(dynamic, 4)
         for (int i = 0; i < num_queries; ++i) {
             std::priority_queue<std::pair<float, uint32_t>> nns =
                 searchKNN(static_cast<uint32_t>(i), query_matrix, k, ef, scratch);
