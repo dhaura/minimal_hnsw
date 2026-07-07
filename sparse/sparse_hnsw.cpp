@@ -18,16 +18,27 @@ using namespace sparse_hnsw;
 
 SPARSE_HNSW::SPARSE_HNSW(int dim, CSRMatrix *data_matrix, int M, int ef_construction, int max_elements, 
     bool use_heuristic, bool extend_candidates, bool keep_pruned, bool use_mkl, size_t mklThreshold)
-    : data_matrix_(data_matrix), dim_(dim), M_(M), ef_construction_(ef_construction), max_elements_(max_elements), 
+    : data_matrix_(data_matrix), dim_(dim), M_(M), ef_construction_(ef_construction), max_elements_(max_elements),
       use_heuristic_(use_heuristic), extend_candidates_(extend_candidates), keep_pruned_(keep_pruned), use_mkl_(use_mkl),
       mklThreshold_(mklThreshold), max_level_(0), entry_point_(-1),
-      rng_(42), level_generator_(0.0, 1.0) {
+      rng_(42), level_generator_(0.0, 1.0), link_locks_(max_elements) {
     size_neighbor_list_level0_ = static_cast<uint32_t>(2 * M_ + 1);  // count + maxM0 neighbors
     size_neighbor_list_per_element_ = static_cast<uint32_t>(M_ + 1); // count + maxM neighbors
     level0_neighbor_lists_.assign(static_cast<size_t>(max_elements_) * size_neighbor_list_level0_, 0);
-    neighbor_lists_.clear();
     neighbor_list_offsets_.assign(max_elements_, std::numeric_limits<uint32_t>::max());
     element_levels_.assign(max_elements_, 0);
+
+    // Precompute the max level for each element and allocate the upper layer neighbor lists.
+    size_t upper_words = 0;
+    for (int i = 0; i < max_elements_; ++i) {
+        int level = getRandomLevel();
+        element_levels_[i] = level;
+        if (level > 0) {
+            neighbor_list_offsets_[i] = static_cast<uint32_t>(upper_words);
+            upper_words += static_cast<size_t>(level) * size_neighbor_list_per_element_;
+        }
+    }
+    neighbor_lists_.assign(upper_words, 0);
 
     insert_scratch_.prepare(max_elements_);
     insert_scratch_.visited_list.reserve(static_cast<size_t>(max_elements_));
@@ -163,7 +174,7 @@ int SPARSE_HNSW::getRandomLevel() {
     return static_cast<int>(-log(r) * (1.0 / log(M_)));
 }
 
-std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_t query_id, const void *qty_ptr, std::vector<uint32_t> entry_points, int ef, int layer, SearchScratch& scratch) const {
+std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_t query_id, const void *qty_ptr, std::vector<uint32_t> entry_points, int ef, int layer, SearchScratch& scratch, bool lock_links) const {
     scratch.prepare(max_elements_);
 
     MinPQ candidates;
@@ -191,29 +202,35 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
         if (!ll) {
             continue;
         }
-        uint32_t count = getListCount(ll);
         const uint32_t* neighbors = ll + 1;
         const int64_t* indptr = data_matrix_->indptr;
         const IndiceDataPair* vec_base = data_matrix_->indices_data;
         const uint8_t* visited_bytes = scratch.visited_bits.data();
 
-        for (uint32_t i = 0; i < count && i < 4; ++i) {
-            __builtin_prefetch(visited_bytes + (neighbors[i] >> 3), 0, 3);
-        }
-
         scratch.filtered_neighbors.clear();
-        scratch.filtered_neighbors.reserve(count);
 
-        // Filter unvisited neighbors.
-        for (uint32_t i = 0; i < count; ++i) {
-            if (i + 4 < count) {
-                __builtin_prefetch(visited_bytes + (neighbors[i + 4] >> 3), 0, 3);
+        {
+            std::unique_lock<std::mutex> link_guard(link_locks_[current_node], std::defer_lock);
+            if (lock_links) {
+                link_guard.lock();
             }
-            uint32_t neighbor_id = neighbors[i];
-            if (!scratch.isVisited(neighbor_id)) {
-                scratch.markVisited(neighbor_id);
-                scratch.filtered_neighbors.push_back(neighbor_id);
-                __builtin_prefetch(indptr + neighbor_id, 0, 3);
+            uint32_t count = getListCount(ll);
+            scratch.filtered_neighbors.reserve(count);
+
+            for (uint32_t i = 0; i < count && i < 4; ++i) {
+                __builtin_prefetch(visited_bytes + (neighbors[i] >> 3), 0, 3);
+            }
+
+            for (uint32_t i = 0; i < count; ++i) {
+                if (i + 4 < count) {
+                    __builtin_prefetch(visited_bytes + (neighbors[i + 4] >> 3), 0, 3);
+                }
+                uint32_t neighbor_id = neighbors[i];
+                if (!scratch.isVisited(neighbor_id)) {
+                    scratch.markVisited(neighbor_id);
+                    scratch.filtered_neighbors.push_back(neighbor_id);
+                    __builtin_prefetch(indptr + neighbor_id, 0, 3);
+                }
             }
         }
 
@@ -281,8 +298,8 @@ std::vector<uint32_t> SPARSE_HNSW::selectNeighbors(uint32_t node_id, std::priori
     return selected_candidates;
 }
 
-std::vector<uint32_t> SPARSE_HNSW::selectNeighborsHeuristic(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int M, int level) {
-    
+std::vector<uint32_t> SPARSE_HNSW::selectNeighborsHeuristic(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int M, int level, bool allow_extend) {
+
    if (candidates.size() <= static_cast<size_t>(M)) {
         std::priority_queue<std::pair<float, uint32_t>> temp = candidates;
         std::vector<uint32_t> result;
@@ -300,12 +317,17 @@ std::vector<uint32_t> SPARSE_HNSW::selectNeighborsHeuristic(uint32_t node_id, st
     }
     std::vector<uint32_t> results_set;
     
-    if (extend_candidates_) {
+    if (allow_extend && extend_candidates_) {
         MinPQ temp = working_set;
         while (!temp.empty()) {
             uint32_t candidate = temp.top().second;
             temp.pop();
-            for (uint32_t neighbor : getNeighborsAtLevel(candidate, level)) {
+            std::vector<uint32_t> candidate_neighbors;
+            {
+                std::lock_guard<std::mutex> link_guard(link_locks_[candidate]);
+                candidate_neighbors = getNeighborsAtLevel(candidate, level);
+            }
+            for (uint32_t neighbor : candidate_neighbors) {
                 if (neighbor != node_id) { // Ideally should check in working_set if the neighbor is already there.
                     float dist = distance(&node_id, &neighbor, data_matrix_, nullptr);
                     working_set.push({dist, neighbor});
@@ -348,10 +370,13 @@ std::vector<uint32_t> SPARSE_HNSW::selectNeighborsHeuristic(uint32_t node_id, st
 void SPARSE_HNSW::connectNeighbors(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int level, int M) {
 
     std::vector<uint32_t> selected_neighbors = use_heuristic_
-        ? selectNeighborsHeuristic(node_id, std::move(candidates), M, level)
+        ? selectNeighborsHeuristic(node_id, std::move(candidates), M, level, true)
         : selectNeighbors(node_id, std::move(candidates), M);
 
-    setNeighborsAtLevel(node_id, level, selected_neighbors, M);
+    {
+        std::lock_guard<std::mutex> link_guard(link_locks_[node_id]);
+        setNeighborsAtLevel(node_id, level, selected_neighbors, M);
+    }
 
     const int neighbor_max_degree = (level == 0) ? (2 * M_) : M_;
 
@@ -362,6 +387,7 @@ void SPARSE_HNSW::connectNeighbors(uint32_t node_id, std::priority_queue<std::pa
         if (!ll) {
             continue;
         }
+        std::lock_guard<std::mutex> link_guard(link_locks_[neighbor]);
         uint32_t cnt = getListCount(ll);
 
         // Skip if node_id is already linked.
@@ -377,11 +403,9 @@ void SPARSE_HNSW::connectNeighbors(uint32_t node_id, std::priority_queue<std::pa
         }
 
         if (static_cast<int>(cnt) < neighbor_max_degree) {
-            // Room for one more: append in place.
             ll[1 + cnt] = node_id;
             setListCount(ll, cnt + 1);
         } else {
-            // Full: re-select among the existing neighbors plus node_id.
             std::priority_queue<std::pair<float, uint32_t>> econn_candidates;
             econn_candidates.push({distance(&neighbor, &node_id, data_matrix_, nullptr), node_id});
             for (uint32_t i = 0; i < cnt; ++i) {
@@ -389,7 +413,7 @@ void SPARSE_HNSW::connectNeighbors(uint32_t node_id, std::priority_queue<std::pa
                 econn_candidates.push({distance(&neighbor, &other, data_matrix_, nullptr), other});
             }
             std::vector<uint32_t> reduced_neighbors = use_heuristic_
-                ? selectNeighborsHeuristic(neighbor, std::move(econn_candidates), neighbor_max_degree, level)
+                ? selectNeighborsHeuristic(neighbor, std::move(econn_candidates), neighbor_max_degree, level, false)
                 : selectNeighbors(neighbor, std::move(econn_candidates), neighbor_max_degree);
             setNeighborsAtLevel(neighbor, level, reduced_neighbors, neighbor_max_degree);
         }
@@ -397,27 +421,29 @@ void SPARSE_HNSW::connectNeighbors(uint32_t node_id, std::priority_queue<std::pa
 }
 
 void SPARSE_HNSW::addPoint(uint32_t node_id, uint32_t label) {
-    int level = getRandomLevel();
+    addPointInternal(node_id, label, insert_scratch_);
+}
 
-    element_levels_[label] = level;
-    if (level > 0) {
-        neighbor_list_offsets_[label] = static_cast<uint32_t>(neighbor_lists_.size());
-        neighbor_lists_.resize(neighbor_lists_.size() + static_cast<size_t>(level) * size_neighbor_list_per_element_, 0);
-    } else {
-        neighbor_list_offsets_[label] = std::numeric_limits<uint32_t>::max();
-    }
-    
+void SPARSE_HNSW::addPointInternal(uint32_t node_id, uint32_t label, SearchScratch& scratch) {
+    int level = element_levels_[label];
+
+    std::unique_lock<std::mutex> global_guard(global_lock_);
     if (entry_point_ == -1) {
         entry_point_ = label;
         max_level_ = level;
         return;
     }
-    
-    std::vector<uint32_t> entry_points = {entry_point_};
-    
+    int max_level_copy = max_level_;
+    uint32_t entry_point_copy = entry_point_;
+    if (level <= max_level_copy) {
+        global_guard.unlock();
+    }
+
+    std::vector<uint32_t> entry_points = {entry_point_copy};
+
     // Search from top layer to target layer
-    for (int lc = max_level_; lc > level; --lc) {
-        std::priority_queue<std::pair<float, uint32_t>> nearest = searchLayer(node_id, data_matrix_, entry_points, 1, lc, insert_scratch_);
+    for (int lc = max_level_copy; lc > level; --lc) {
+        std::priority_queue<std::pair<float, uint32_t>> nearest = searchLayer(node_id, data_matrix_, entry_points, 1, lc, scratch, true);
         if (!nearest.empty()) {
             entry_points.clear();
             while (!nearest.empty()) {
@@ -426,10 +452,10 @@ void SPARSE_HNSW::addPoint(uint32_t node_id, uint32_t label) {
             }
         }
     }
-    
+
     // Insert at all layers from level to 0
     for (int lc = level; lc >= 0; --lc) {
-        std::priority_queue<std::pair<float, uint32_t>> candidates = searchLayer(node_id, data_matrix_, entry_points, ef_construction_, lc, insert_scratch_);
+        std::priority_queue<std::pair<float, uint32_t>> candidates = searchLayer(node_id, data_matrix_, entry_points, ef_construction_, lc, scratch, true);
         if (!candidates.empty()) {
             entry_points.clear();
             std::priority_queue<std::pair<float, uint32_t>> temp = candidates;
@@ -441,10 +467,30 @@ void SPARSE_HNSW::addPoint(uint32_t node_id, uint32_t label) {
 
         connectNeighbors(label, std::move(candidates), lc, M_);
     }
-    
-    if (level > max_level_) {
+
+    if (level > max_level_copy) {
         max_level_ = level;
         entry_point_ = label;
+    }
+}
+
+void SPARSE_HNSW::addPointsBatch(int num_points) {
+    int start = 0;
+    if (entry_point_ == -1 && num_points > 0) {
+        // Seed the graph serially so every parallel insert has an entry point.
+        addPointInternal(0, 0, insert_scratch_);
+        start = 1;
+    }
+
+    #pragma omp parallel
+    {
+        SearchScratch scratch;
+        scratch.prepare(max_elements_);
+
+        #pragma omp for schedule(dynamic, 16)
+        for (int i = start; i < num_points; ++i) {
+            addPointInternal(static_cast<uint32_t>(i), static_cast<uint32_t>(i), scratch);
+        }
     }
 }
 

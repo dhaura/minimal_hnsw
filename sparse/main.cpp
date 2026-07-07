@@ -129,10 +129,8 @@ int main(int argc, char* argv[]) {
     
     // Add points from the dataset to the index.
     std::cout << "Adding points to the index...\n";
-    
-    for (size_t i = 0; i < num_points; ++i) {
-        index.addPoint(i, i);
-    }
+
+    index.addPointsBatch(num_points);
 
     auto end_index_time = std::chrono::steady_clock::now();
     auto index_time = std::chrono::duration_cast<std::chrono::microseconds>(end_index_time - start_index_time);

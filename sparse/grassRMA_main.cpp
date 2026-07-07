@@ -98,8 +98,11 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Adding points to the index...\n";
 
-    for (size_t i = 0; i < num_points; ++i) {
-        index->addPoint(i, i);
+    // hnswlib's addPoint is thread-safe (per-element link locks + a global
+    // entry-point mutex), so parallel insertion only needs this pragma.
+    #pragma omp parallel for schedule(dynamic, 16)
+    for (int64_t i = 0; i < static_cast<int64_t>(num_points); ++i) {
+        index->addPoint(static_cast<uint32_t>(i), static_cast<size_t>(i));
     }
 
     auto end_index_time = std::chrono::steady_clock::now();

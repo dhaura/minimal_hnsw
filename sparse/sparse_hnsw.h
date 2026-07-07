@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <string>
 #include <utility>
+#include <mutex>
 
 namespace sparse_hnsw {
     using MinPQ = std::priority_queue<
@@ -62,6 +63,7 @@ namespace sparse_hnsw {
         
         float distance(const void *pVect1, const void *pVect2, const void *qty_ptr, const void *other_ptr) const;
         void addPoint(uint32_t node_id, uint32_t label);
+        void addPointsBatch(int num_points);
         std::priority_queue<std::pair<float, uint32_t>> searchKNN(uint32_t query_id, CSRMatrix *query_matrix, int k, int ef = 50) const;
         void searchKNNBatch(CSRMatrix *query_matrix, int num_queries, int k, int ef,
                             std::vector<uint32_t>& out_labels) const;
@@ -87,8 +89,13 @@ namespace sparse_hnsw {
         std::vector<uint32_t> neighbor_list_offsets_;       // per-node start offset into neighbor_lists_flat_
         std::vector<int> element_levels_;
 
-        // Scratch reused across the insertion path.
+        // Scratch reused across the serial insertion path.
         SearchScratch insert_scratch_;
+
+        // Oone mutex per element guarding its neighbor lists.
+        // A global mutex for entry_point_ / max_level_.
+        mutable std::vector<std::mutex> link_locks_;
+        std::mutex global_lock_;
 
         // For Hilbert curve ordering
         std::vector<uint32_t> old_to_new_labels_;
@@ -114,11 +121,12 @@ namespace sparse_hnsw {
         void setListCount(uint32_t* ptr, uint32_t size);
         std::vector<uint32_t> getNeighborsAtLevel(uint32_t node_id, int level) const;
         void setNeighborsAtLevel(uint32_t node_id, int level, const std::vector<uint32_t>& neighbors, int max_degree);
-        std::priority_queue<std::pair<float, uint32_t>> searchLayer(uint32_t query_id, const void *qty_ptr, std::vector<uint32_t> entry_points, int ef, int layer, SearchScratch& scratch) const;
+        std::priority_queue<std::pair<float, uint32_t>> searchLayer(uint32_t query_id, const void *qty_ptr, std::vector<uint32_t> entry_points, int ef, int layer, SearchScratch& scratch, bool lock_links = false) const;
         std::priority_queue<std::pair<float, uint32_t>> searchKNN(uint32_t query_id, CSRMatrix *query_matrix, int k, int ef, SearchScratch& scratch) const;
+        void addPointInternal(uint32_t node_id, uint32_t label, SearchScratch& scratch);
         void connectNeighbors(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int level, int M);
         std::vector<uint32_t> selectNeighbors(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int M);
-        std::vector<uint32_t> selectNeighborsHeuristic(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int M, int level);
+        std::vector<uint32_t> selectNeighborsHeuristic(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int M, int level, bool allow_extend);
     };
 }
 
