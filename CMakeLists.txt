@@ -7,3 +7,5 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Add subdirectory for dense implementation
 add_subdirectory(dense)
+# Add subdirectory for sparse implementation
+add_subdirectory(sparse)

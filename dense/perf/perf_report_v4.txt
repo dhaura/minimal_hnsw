@@ -1,0 +1,299 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 301  of event 'cycles:Pu'
+# Event count (approx.): 10453577742
+#
+# Children      Self  Command    Shared Object         Symbol                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+# ........  ........  .........  ....................  ......................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+#
+    78.85%     0.00%  hnsw_demo  libc.so.6             [.] __libc_start_call_main
+            |
+            ---__libc_start_call_main
+               main
+               |          
+               |--77.87%--hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+               |          |          
+               |          |--54.18%--hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+               |          |          |          
+               |          |          |--9.80%--std::pair<std::__detail::_Node_iterator<int, true, false>, bool> std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique<int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > >(int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > const&) [clone .isra.0]
+               |          |          |          |          
+               |          |          |           --5.41%--std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<int, false>*, unsigned long)
+               |          |          |          
+               |          |          |--4.40%--std::__detail::_Map_base<int, std::pair<int const, float>, std::allocator<std::pair<int const, float> >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true>, true>::operator[](int const&)
+               |          |          |          |          
+               |          |          |           --4.06%--std::_Hashtable<int, std::pair<int const, float>, std::allocator<std::pair<int const, float> >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<std::pair<int const, float>, false>*, unsigned long)
+               |          |          |          
+               |          |           --0.68%--malloc
+               |          |          
+               |          |--13.52%--hnsw::HNSW::distance(std::vector<float, std::allocator<float> > const&, std::vector<float, std::allocator<float> > const&) const
+               |          |          
+               |          |--7.46%--hnsw::HNSW::connectNeighbors(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+               |          |          |          
+               |          |          |--5.77%--hnsw::HNSW::distance(std::vector<float, std::allocator<float> > const&, std::vector<float, std::allocator<float> > const&) const
+               |          |          |          
+               |          |           --1.69%--hnsw::HNSW::selectNeighborsHeuristic(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+               |          |          
+               |          |--0.68%--operator delete(void*)
+               |          |          
+               |           --0.68%--cfree@GLIBC_2.2.5
+               |          
+                --0.99%--hnsw::HNSW::searchKNN(std::vector<float, std::allocator<float> > const&, int, int)
+                          hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+
+    78.85%     0.00%  hnsw_demo  hnsw_demo             [.] main
+            |
+            ---main
+               |          
+               |--77.87%--hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+               |          |          
+               |          |--54.18%--hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+               |          |          |          
+               |          |          |--9.80%--std::pair<std::__detail::_Node_iterator<int, true, false>, bool> std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique<int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > >(int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > const&) [clone .isra.0]
+               |          |          |          |          
+               |          |          |           --5.41%--std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<int, false>*, unsigned long)
+               |          |          |          
+               |          |          |--4.40%--std::__detail::_Map_base<int, std::pair<int const, float>, std::allocator<std::pair<int const, float> >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true>, true>::operator[](int const&)
+               |          |          |          |          
+               |          |          |           --4.06%--std::_Hashtable<int, std::pair<int const, float>, std::allocator<std::pair<int const, float> >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<std::pair<int const, float>, false>*, unsigned long)
+               |          |          |          
+               |          |           --0.68%--malloc
+               |          |          
+               |          |--13.52%--hnsw::HNSW::distance(std::vector<float, std::allocator<float> > const&, std::vector<float, std::allocator<float> > const&) const
+               |          |          
+               |          |--7.46%--hnsw::HNSW::connectNeighbors(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+               |          |          |          
+               |          |          |--5.77%--hnsw::HNSW::distance(std::vector<float, std::allocator<float> > const&, std::vector<float, std::allocator<float> > const&) const
+               |          |          |          
+               |          |           --1.69%--hnsw::HNSW::selectNeighborsHeuristic(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+               |          |          
+               |          |--0.68%--operator delete(void*)
+               |          |          
+               |           --0.68%--cfree@GLIBC_2.2.5
+               |          
+                --0.99%--hnsw::HNSW::searchKNN(std::vector<float, std::allocator<float> > const&, int, int)
+                          hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+
+    77.87%     1.01%  hnsw_demo  hnsw_demo             [.] hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+            |          
+            |--76.85%--hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+            |          |          
+            |          |--54.18%--hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+            |          |          |          
+            |          |          |--9.80%--std::pair<std::__detail::_Node_iterator<int, true, false>, bool> std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique<int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > >(int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > const&) [clone .isra.0]
+            |          |          |          |          
+            |          |          |           --5.41%--std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<int, false>*, unsigned long)
+            |          |          |          
+            |          |          |--4.40%--std::__detail::_Map_base<int, std::pair<int const, float>, std::allocator<std::pair<int const, float> >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true>, true>::operator[](int const&)
+            |          |          |          |          
+            |          |          |           --4.06%--std::_Hashtable<int, std::pair<int const, float>, std::allocator<std::pair<int const, float> >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<std::pair<int const, float>, false>*, unsigned long)
+            |          |          |          
+            |          |           --0.68%--malloc
+            |          |          
+            |          |--13.52%--hnsw::HNSW::distance(std::vector<float, std::allocator<float> > const&, std::vector<float, std::allocator<float> > const&) const
+            |          |          
+            |          |--7.46%--hnsw::HNSW::connectNeighbors(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+            |          |          |          
+            |          |          |--5.77%--hnsw::HNSW::distance(std::vector<float, std::allocator<float> > const&, std::vector<float, std::allocator<float> > const&) const
+            |          |          |          
+            |          |           --1.69%--hnsw::HNSW::selectNeighborsHeuristic(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+            |          |          
+            |          |--0.68%--operator delete(void*)
+            |          |          
+            |           --0.68%--cfree@GLIBC_2.2.5
+            |          
+             --1.01%--__libc_start_call_main
+                       main
+                       hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+
+    55.17%    39.63%  hnsw_demo  hnsw_demo             [.] hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+            |          
+            |--39.63%--__libc_start_call_main
+            |          main
+            |          |          
+            |          |--38.97%--hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+            |          |          hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+            |          |          
+            |           --0.66%--hnsw::HNSW::searchKNN(std::vector<float, std::allocator<float> > const&, int, int)
+            |                     hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+            |          
+             --15.54%--hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+                       |          
+                       |--10.13%--std::pair<std::__detail::_Node_iterator<int, true, false>, bool> std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique<int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > >(int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > const&) [clone .isra.0]
+                       |          |          
+                       |          |--5.41%--std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<int, false>*, unsigned long)
+                       |          |          
+                       |           --0.67%--__memset_avx2_unaligned_erms
+                       |          
+                       |--4.40%--std::__detail::_Map_base<int, std::pair<int const, float>, std::allocator<std::pair<int const, float> >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true>, true>::operator[](int const&)
+                       |          |          
+                       |           --4.06%--std::_Hashtable<int, std::pair<int const, float>, std::allocator<std::pair<int const, float> >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<std::pair<int const, float>, false>*, unsigned long)
+                       |          
+                        --0.68%--malloc
+
+    19.29%    19.29%  hnsw_demo  hnsw_demo             [.] hnsw::HNSW::distance(std::vector<float, std::allocator<float> > const&, std::vector<float, std::allocator<float> > const&) const
+            |
+            ---__libc_start_call_main
+               main
+               hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+               |          
+               |--13.52%--hnsw::HNSW::distance(std::vector<float, std::allocator<float> > const&, std::vector<float, std::allocator<float> > const&) const
+               |          
+                --5.77%--hnsw::HNSW::connectNeighbors(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+                          hnsw::HNSW::distance(std::vector<float, std::allocator<float> > const&, std::vector<float, std::allocator<float> > const&) const
+
+    10.13%     4.06%  hnsw_demo  hnsw_demo             [.] std::pair<std::__detail::_Node_iterator<int, true, false>, bool> std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique<int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > >(int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > const&) [clone .isra.0]
+            |          
+            |--6.08%--std::pair<std::__detail::_Node_iterator<int, true, false>, bool> std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique<int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > >(int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > const&) [clone .isra.0]
+            |          |          
+            |          |--5.41%--std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<int, false>*, unsigned long)
+            |          |          
+            |           --0.67%--__memset_avx2_unaligned_erms
+            |          
+             --4.06%--__libc_start_call_main
+                       main
+                       hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+                       hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+                       std::pair<std::__detail::_Node_iterator<int, true, false>, bool> std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique<int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > >(int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > const&) [clone .isra.0]
+
+     8.12%     8.12%  hnsw_demo  libc.so.6             [.] _int_malloc
+            |          
+            |--6.76%--0
+            |          _int_malloc
+            |          
+             --1.01%--_int_malloc
+
+     7.46%     0.00%  hnsw_demo  hnsw_demo             [.] hnsw::HNSW::connectNeighbors(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+            |
+            ---hnsw::HNSW::connectNeighbors(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+               |          
+               |--5.77%--hnsw::HNSW::distance(std::vector<float, std::allocator<float> > const&, std::vector<float, std::allocator<float> > const&) const
+               |          
+                --1.69%--hnsw::HNSW::selectNeighborsHeuristic(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+
+     7.44%     0.00%  hnsw_demo  [unknown]             [.] 0000000000000000
+            |
+            ---0
+               |          
+               |--6.76%--_int_malloc
+               |          
+                --0.68%--unlink_chunk.isra.0
+
+     5.41%     5.41%  hnsw_demo  hnsw_demo             [.] std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<int, false>*, unsigned long)
+            |
+            ---__libc_start_call_main
+               main
+               hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+               hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+               std::pair<std::__detail::_Node_iterator<int, true, false>, bool> std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique<int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > >(int const&, int const&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<int, false> > > const&) [clone .isra.0]
+               std::_Hashtable<int, int, std::allocator<int>, std::__detail::_Identity, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<int, false>*, unsigned long)
+
+     5.07%     5.07%  hnsw_demo  libc.so.6             [.] malloc_consolidate
+            |
+            ---malloc_consolidate
+
+     4.73%     0.68%  hnsw_demo  hnsw_demo             [.] std::__detail::_Map_base<int, std::pair<int const, float>, std::allocator<std::pair<int const, float> >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true>, true>::operator[](int const&)
+            |          
+            |--4.06%--std::__detail::_Map_base<int, std::pair<int const, float>, std::allocator<std::pair<int const, float> >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true>, true>::operator[](int const&)
+            |          std::_Hashtable<int, std::pair<int const, float>, std::allocator<std::pair<int const, float> >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<std::pair<int const, float>, false>*, unsigned long)
+            |          
+             --0.68%--__libc_start_call_main
+                       main
+                       hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+
+     4.06%     4.06%  hnsw_demo  hnsw_demo             [.] std::_Hashtable<int, std::pair<int const, float>, std::allocator<std::pair<int const, float> >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<std::pair<int const, float>, false>*, unsigned long)
+            |
+            ---__libc_start_call_main
+               main
+               hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+               hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+               std::__detail::_Map_base<int, std::pair<int const, float>, std::allocator<std::pair<int const, float> >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true>, true>::operator[](int const&)
+               std::_Hashtable<int, std::pair<int const, float>, std::allocator<std::pair<int const, float> >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<std::pair<int const, float>, false>*, unsigned long)
+
+     3.72%     3.72%  hnsw_demo  libc.so.6             [.] _int_free
+            |
+            ---_int_free
+
+     2.37%     2.37%  hnsw_demo  libc.so.6             [.] malloc
+            |          
+            |--1.69%--malloc
+            |          
+             --0.68%--__libc_start_call_main
+                       main
+                       hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+                       hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+                       malloc
+
+     1.69%     1.69%  hnsw_demo  hnsw_demo             [.] hnsw::HNSW::selectNeighborsHeuristic(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+            |
+            ---__libc_start_call_main
+               main
+               hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+               hnsw::HNSW::connectNeighbors(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+               hnsw::HNSW::selectNeighborsHeuristic(int, std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>, std::allocator<std::pair<float, int> > >, std::greater<std::pair<float, int> > > const&, int, int)
+
+     1.69%     1.69%  hnsw_demo  libc.so.6             [.] cfree@GLIBC_2.2.5
+            |          
+            |--1.01%--cfree@GLIBC_2.2.5
+            |          
+             --0.68%--__libc_start_call_main
+                       main
+                       hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+                       cfree@GLIBC_2.2.5
+
+     1.35%     1.35%  hnsw_demo  libc.so.6             [.] unlink_chunk.isra.0
+            |          
+            |--0.68%--0
+            |          unlink_chunk.isra.0
+            |          
+             --0.68%--unlink_chunk.isra.0
+
+     0.99%     0.00%  hnsw_demo  hnsw_demo             [.] hnsw::HNSW::searchKNN(std::vector<float, std::allocator<float> > const&, int, int)
+            |
+            ---hnsw::HNSW::searchKNN(std::vector<float, std::allocator<float> > const&, int, int)
+               hnsw::HNSW::searchLayer(std::vector<float, std::allocator<float> > const&, std::vector<int, std::allocator<int> > const&, int, int)
+
+     0.68%     0.68%  hnsw_demo  libstdc++.so.6.0.33   [.] operator delete(void*)
+            |
+            ---__libc_start_call_main
+               main
+               hnsw::HNSW::addPoint(std::vector<float, std::allocator<float> > const&, int)
+               operator delete(void*)
+
+     0.67%     0.67%  hnsw_demo  libc.so.6             [.] __memset_avx2_unaligned_erms
+            |
+            ---__libc_start_call_main
+               main
+
+     0.34%     0.34%  hnsw_demo  libstdc++.so.6.0.33   [.] operator new(unsigned long)
+     0.34%     0.00%  hnsw_demo  [unknown]             [.] 0x0000000000000001
+     0.19%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffffa9c00c22
+     0.19%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffffa9a66a99
+     0.19%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffffa8ea69df
+     0.19%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffffa9149e99
+     0.18%     0.18%  hnsw_demo  [unknown]             [k] 0xffffffffa9149c63
+     0.18%     0.00%  hnsw_demo  [unknown]             [k] 0x00007f90f397f5c0
+     0.18%     0.00%  hnsw_demo  ld-linux-x86-64.so.2  [.] _dl_map_object
+     0.18%     0.00%  hnsw_demo  ld-linux-x86-64.so.2  [.] _dl_map_object_from_fd
+     0.00%     0.00%  hnsw_demo  ld-linux-x86-64.so.2  [.] _dl_start_user
+     0.00%     0.00%  hnsw_demo  ld-linux-x86-64.so.2  [.] _dl_start
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffffa91248ef
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffffa91497a9
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffffa91477cf
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffffa91a287b
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffffa917c6f7
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffffa917b678
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffffa9c00c00
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffffa8ea68de
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffffa9152ece
+     0.00%     0.00%  hnsw_demo  [unknown]             [.] 0xffffffffa9148a0c
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffffa9148a1b
+     0.00%     0.00%  hnsw_demo  [unknown]             [k] 0xffffffffa8ea6852
+     0.00%     0.00%  hnsw_demo  ld-linux-x86-64.so.2  [.] _start
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#

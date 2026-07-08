@@ -54,5 +54,10 @@ Makefile
 # Large data files
 */data/*
 
+# Temporary files
+*/tmp/*
+
 # Other library files
 dense/hnswlib/*
+dense/faiss/*
+sparse/GrassRMA/*

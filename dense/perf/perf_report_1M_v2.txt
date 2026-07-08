@@ -1,0 +1,456 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 29K of event 'cycles:Pu'
+# Event count (approx.): 1032965476129
+#
+# Children      Self  Command       Shared Object         Symbol                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+# ........  ........  ............  ....................  ......................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+#
+    99.76%     0.00%  hnswlib_demo  libgomp.so.1.0.0      [.] GOMP_parallel
+            |
+            ---GOMP_parallel
+               |          
+               |--98.98%--main._omp_fn.0
+               |          |          
+               |           --98.93%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, bool)
+               |                     |          
+               |                     |--97.10%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+               |                     |          |          
+               |                     |          |--58.23%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+               |                     |          |          
+               |                     |          |--23.61%--hnswlib::HierarchicalNSW<float>::searchBaseLayer(unsigned int, void const*, int)
+               |                     |          |          
+               |                     |          |--9.88%--hnswlib::HierarchicalNSW<float>::mutuallyConnectNewElement(void const*, unsigned int, std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, int, bool) [clone .isra.0]
+               |                     |          |          |          
+               |                     |          |          |--5.38%--hnswlib::HierarchicalNSW<float>::getNeighborsByHeuristic2(std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, unsigned long)
+               |                     |          |          |          
+               |                     |          |           --4.14%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+               |                     |          |          
+               |                     |           --4.81%--pthread_mutex_lock@@GLIBC_2.2.5
+               |                     |          
+               |                      --1.58%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+               |          
+                --0.79%--main._omp_fn.1
+                          |          
+                           --0.57%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+
+    98.98%     0.00%  hnswlib_demo  [unknown]             [.] 0x40a00000420c0000
+            |
+            ---0x40a00000420c0000
+               0x430ac0
+               0x7f4341c5e610
+               0x42e8b0
+               GOMP_parallel
+               main._omp_fn.0
+               |          
+                --98.93%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, bool)
+                          |          
+                          |--97.10%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+                          |          |          
+                          |          |--58.23%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+                          |          |          
+                          |          |--23.61%--hnswlib::HierarchicalNSW<float>::searchBaseLayer(unsigned int, void const*, int)
+                          |          |          
+                          |          |--9.88%--hnswlib::HierarchicalNSW<float>::mutuallyConnectNewElement(void const*, unsigned int, std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, int, bool) [clone .isra.0]
+                          |          |          |          
+                          |          |          |--5.38%--hnswlib::HierarchicalNSW<float>::getNeighborsByHeuristic2(std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, unsigned long)
+                          |          |          |          
+                          |          |           --4.14%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+                          |          |          
+                          |           --4.81%--pthread_mutex_lock@@GLIBC_2.2.5
+                          |          
+                           --1.58%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+
+    98.98%     0.00%  hnswlib_demo  [unknown]             [.] 0x0000000000430ac0
+            |
+            ---0x430ac0
+               0x7f4341c5e610
+               0x42e8b0
+               GOMP_parallel
+               main._omp_fn.0
+               |          
+                --98.93%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, bool)
+                          |          
+                          |--97.10%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+                          |          |          
+                          |          |--58.23%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+                          |          |          
+                          |          |--23.61%--hnswlib::HierarchicalNSW<float>::searchBaseLayer(unsigned int, void const*, int)
+                          |          |          
+                          |          |--9.88%--hnswlib::HierarchicalNSW<float>::mutuallyConnectNewElement(void const*, unsigned int, std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, int, bool) [clone .isra.0]
+                          |          |          |          
+                          |          |          |--5.38%--hnswlib::HierarchicalNSW<float>::getNeighborsByHeuristic2(std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, unsigned long)
+                          |          |          |          
+                          |          |           --4.14%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+                          |          |          
+                          |           --4.81%--pthread_mutex_lock@@GLIBC_2.2.5
+                          |          
+                           --1.58%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+
+    98.98%     0.00%  hnswlib_demo  [unknown]             [.] 0x00007f4341c5e610
+            |
+            ---0x7f4341c5e610
+               0x42e8b0
+               GOMP_parallel
+               main._omp_fn.0
+               |          
+                --98.93%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, bool)
+                          |          
+                          |--97.10%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+                          |          |          
+                          |          |--58.23%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+                          |          |          
+                          |          |--23.61%--hnswlib::HierarchicalNSW<float>::searchBaseLayer(unsigned int, void const*, int)
+                          |          |          
+                          |          |--9.88%--hnswlib::HierarchicalNSW<float>::mutuallyConnectNewElement(void const*, unsigned int, std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, int, bool) [clone .isra.0]
+                          |          |          |          
+                          |          |          |--5.38%--hnswlib::HierarchicalNSW<float>::getNeighborsByHeuristic2(std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, unsigned long)
+                          |          |          |          
+                          |          |           --4.14%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+                          |          |          
+                          |           --4.81%--pthread_mutex_lock@@GLIBC_2.2.5
+                          |          
+                           --1.58%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+
+    98.98%     0.00%  hnswlib_demo  [unknown]             [.] 0x000000000042e8b0
+            |
+            ---0x42e8b0
+               GOMP_parallel
+               main._omp_fn.0
+               |          
+                --98.93%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, bool)
+                          |          
+                          |--97.10%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+                          |          |          
+                          |          |--58.23%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+                          |          |          
+                          |          |--23.61%--hnswlib::HierarchicalNSW<float>::searchBaseLayer(unsigned int, void const*, int)
+                          |          |          
+                          |          |--9.88%--hnswlib::HierarchicalNSW<float>::mutuallyConnectNewElement(void const*, unsigned int, std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, int, bool) [clone .isra.0]
+                          |          |          |          
+                          |          |          |--5.38%--hnswlib::HierarchicalNSW<float>::getNeighborsByHeuristic2(std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, unsigned long)
+                          |          |          |          
+                          |          |           --4.14%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+                          |          |          
+                          |           --4.81%--pthread_mutex_lock@@GLIBC_2.2.5
+                          |          
+                           --1.58%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+
+    98.98%     0.02%  hnswlib_demo  hnswlib_demo          [.] main._omp_fn.0
+            |          
+             --98.96%--main._omp_fn.0
+                       |          
+                        --98.93%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, bool)
+                                  |          
+                                  |--97.10%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+                                  |          |          
+                                  |          |--58.23%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+                                  |          |          
+                                  |          |--23.61%--hnswlib::HierarchicalNSW<float>::searchBaseLayer(unsigned int, void const*, int)
+                                  |          |          
+                                  |          |--9.88%--hnswlib::HierarchicalNSW<float>::mutuallyConnectNewElement(void const*, unsigned int, std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, int, bool) [clone .isra.0]
+                                  |          |          |          
+                                  |          |          |--5.38%--hnswlib::HierarchicalNSW<float>::getNeighborsByHeuristic2(std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, unsigned long)
+                                  |          |          |          
+                                  |          |           --4.14%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+                                  |          |          
+                                  |           --4.81%--pthread_mutex_lock@@GLIBC_2.2.5
+                                  |          
+                                   --1.58%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+
+    98.93%     0.00%  hnswlib_demo  hnswlib_demo          [.] hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, bool)
+            |
+            ---hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, bool)
+               |          
+               |--97.10%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+               |          |          
+               |          |--58.23%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+               |          |          
+               |          |--23.61%--hnswlib::HierarchicalNSW<float>::searchBaseLayer(unsigned int, void const*, int)
+               |          |          
+               |          |--9.88%--hnswlib::HierarchicalNSW<float>::mutuallyConnectNewElement(void const*, unsigned int, std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, int, bool) [clone .isra.0]
+               |          |          |          
+               |          |          |--5.38%--hnswlib::HierarchicalNSW<float>::getNeighborsByHeuristic2(std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, unsigned long)
+               |          |          |          
+               |          |           --4.14%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+               |          |          
+               |           --4.81%--pthread_mutex_lock@@GLIBC_2.2.5
+               |          
+                --1.58%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+
+    97.10%     0.37%  hnswlib_demo  hnswlib_demo          [.] hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+            |          
+             --96.74%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+                       |          
+                       |--58.23%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+                       |          
+                       |--23.61%--hnswlib::HierarchicalNSW<float>::searchBaseLayer(unsigned int, void const*, int)
+                       |          
+                       |--9.88%--hnswlib::HierarchicalNSW<float>::mutuallyConnectNewElement(void const*, unsigned int, std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, int, bool) [clone .isra.0]
+                       |          |          
+                       |          |--5.38%--hnswlib::HierarchicalNSW<float>::getNeighborsByHeuristic2(std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, unsigned long)
+                       |          |          
+                       |           --4.14%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+                       |          
+                        --4.81%--pthread_mutex_lock@@GLIBC_2.2.5
+
+    64.53%    64.51%  hnswlib_demo  hnswlib_demo          [.] hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+            |          
+            |--63.94%--0x40a00000420c0000
+            |          0x430ac0
+            |          0x7f4341c5e610
+            |          0x42e8b0
+            |          GOMP_parallel
+            |          main._omp_fn.0
+            |          hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, bool)
+            |          |          
+            |          |--62.36%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+            |          |          |          
+            |          |          |--58.22%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+            |          |          |          
+            |          |           --4.14%--hnswlib::HierarchicalNSW<float>::mutuallyConnectNewElement(void const*, unsigned int, std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, int, bool) [clone .isra.0]
+            |          |                     hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+            |          |          
+            |           --1.58%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+            |          
+             --0.57%--0xff89495354415541
+                       hnswlib::HierarchicalNSW<float>::searchKnn(void const*, unsigned long, hnswlib::BaseFilterFunctor*) const
+                       0xf4240
+                       0x7ffc07da2bd0
+                       GOMP_parallel
+                       main._omp_fn.1
+                       hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+
+    23.61%    23.60%  hnswlib_demo  hnswlib_demo          [.] hnswlib::HierarchicalNSW<float>::searchBaseLayer(unsigned int, void const*, int)
+            |          
+             --23.60%--0x40a00000420c0000
+                       0x430ac0
+                       0x7f4341c5e610
+                       0x42e8b0
+                       GOMP_parallel
+                       main._omp_fn.0
+                       hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, bool)
+                       hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+                       hnswlib::HierarchicalNSW<float>::searchBaseLayer(unsigned int, void const*, int)
+
+     9.88%     0.33%  hnswlib_demo  hnswlib_demo          [.] hnswlib::HierarchicalNSW<float>::mutuallyConnectNewElement(void const*, unsigned int, std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, int, bool) [clone .isra.0]
+            |          
+             --9.55%--hnswlib::HierarchicalNSW<float>::mutuallyConnectNewElement(void const*, unsigned int, std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, int, bool) [clone .isra.0]
+                       |          
+                       |--5.38%--hnswlib::HierarchicalNSW<float>::getNeighborsByHeuristic2(std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, unsigned long)
+                       |          
+                        --4.14%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+
+     5.38%     5.33%  hnswlib_demo  hnswlib_demo          [.] hnswlib::HierarchicalNSW<float>::getNeighborsByHeuristic2(std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, unsigned long)
+            |          
+             --5.33%--0x40a00000420c0000
+                       0x430ac0
+                       0x7f4341c5e610
+                       0x42e8b0
+                       GOMP_parallel
+                       main._omp_fn.0
+                       hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, bool)
+                       hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+                       hnswlib::HierarchicalNSW<float>::mutuallyConnectNewElement(void const*, unsigned int, std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, int, bool) [clone .isra.0]
+                       hnswlib::HierarchicalNSW<float>::getNeighborsByHeuristic2(std::priority_queue<std::pair<float, unsigned int>, std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >, hnswlib::HierarchicalNSW<float>::CompareByFirst>&, unsigned long)
+
+     5.00%     5.00%  hnswlib_demo  libc.so.6             [.] pthread_mutex_lock@@GLIBC_2.2.5
+            |
+            ---0x40a00000420c0000
+               0x430ac0
+               0x7f4341c5e610
+               0x42e8b0
+               GOMP_parallel
+               main._omp_fn.0
+               |          
+                --4.98%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, bool)
+                          |          
+                           --4.81%--hnswlib::HierarchicalNSW<float>::addPoint(void const*, unsigned long, int) [clone .isra.0]
+                                     pthread_mutex_lock@@GLIBC_2.2.5
+
+     0.79%     0.00%  hnswlib_demo  [unknown]             [.] 0xff89495354415541
+            |
+            ---0xff89495354415541
+               hnswlib::HierarchicalNSW<float>::searchKnn(void const*, unsigned long, hnswlib::BaseFilterFunctor*) const
+               0xf4240
+               0x7ffc07da2bd0
+               GOMP_parallel
+               main._omp_fn.1
+               |          
+                --0.57%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+
+     0.79%     0.21%  hnswlib_demo  hnswlib_demo          [.] hnswlib::HierarchicalNSW<float>::searchKnn(void const*, unsigned long, hnswlib::BaseFilterFunctor*) const
+            |          
+             --0.58%--hnswlib::HierarchicalNSW<float>::searchKnn(void const*, unsigned long, hnswlib::BaseFilterFunctor*) const
+                       0xf4240
+                       0x7ffc07da2bd0
+                       GOMP_parallel
+                       main._omp_fn.1
+                       |          
+                        --0.57%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+
+     0.79%     0.00%  hnswlib_demo  [unknown]             [.] 0x00000000000f4240
+            |
+            ---0xf4240
+               0x7ffc07da2bd0
+               GOMP_parallel
+               main._omp_fn.1
+               |          
+                --0.57%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+
+     0.79%     0.00%  hnswlib_demo  [JIT] tid 268576      [.] 0x00007ffc07da2bd0
+            |
+            ---0x7ffc07da2bd0
+               GOMP_parallel
+               main._omp_fn.1
+               |          
+                --0.57%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+
+     0.79%     0.00%  hnswlib_demo  hnswlib_demo          [.] main._omp_fn.1
+            |
+            ---main._omp_fn.1
+               |          
+                --0.57%--hnswlib::L2SqrSIMD16ExtAVX(void const*, void const*, void const*)
+
+     0.10%     0.10%  hnswlib_demo  libc.so.6             [.] __GI___pthread_mutex_unlock_usercnt
+     0.08%     0.08%  hnswlib_demo  libc.so.6             [.] malloc
+     0.07%     0.07%  hnswlib_demo  libc.so.6             [.] cfree@GLIBC_2.2.5
+     0.07%     0.07%  hnswlib_demo  libc.so.6             [.] pthread_mutex_unlock@@GLIBC_2.2.5
+     0.06%     0.00%  hnswlib_demo  [unknown]             [k] 0000000000000000
+     0.05%     0.05%  hnswlib_demo  libc.so.6             [.] _int_free
+     0.05%     0.02%  hnswlib_demo  libc.so.6             [.] _int_malloc
+     0.04%     0.04%  hnswlib_demo  libm.so.6             [.] __ieee754_log_fma
+     0.04%     0.04%  hnswlib_demo  hnswlib_demo          [.] void std::vector<std::pair<float, unsigned int>, std::allocator<std::pair<float, unsigned int> > >::_M_realloc_append<std::pair<float, unsigned int> const&>(std::pair<float, unsigned int> const&)
+     0.02%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb2800c22
+     0.02%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb2666a99
+     0.02%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1aa6bf8
+     0.02%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1d49e99
+     0.02%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1d497a9
+     0.02%     0.02%  hnswlib_demo  libc.so.6             [.] _int_free_merge_chunk
+     0.02%     0.02%  hnswlib_demo  libstdc++.so.6.0.33   [.] operator delete(void*)
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1d47692
+     0.01%     0.01%  hnswlib_demo  libc.so.6             [.] _int_free_create_chunk
+     0.01%     0.01%  hnswlib_demo  libstdc++.so.6.0.33   [.] operator new(unsigned long)
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1da287b
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1d7c6f7
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1d7b572
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb2800f86
+     0.01%     0.01%  hnswlib_demo  libc.so.6             [.] __memmove_avx_unaligned_erms
+     0.01%     0.01%  hnswlib_demo  hnswlib_demo          [.] operator delete(void*)@plt
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0x0000000000000811
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb2800134
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb265fceb
+     0.01%     0.01%  hnswlib_demo  [unknown]             [k] 0xffffffffb264d707
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1d769e8
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1d74093
+     0.01%     0.00%  hnswlib_demo  libstdc++.so.6.0.33   [.] std::__basic_file<char>::xsgetn(char*, long)
+     0.01%     0.00%  hnswlib_demo  libc.so.6             [.] read
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1dfc595
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1dfbd17
+     0.01%     0.01%  hnswlib_demo  [unknown]             [k] 0xffffffffb2666f45
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb2665d7a
+     0.01%     0.01%  hnswlib_demo  hnswlib_demo          [.] void std::__adjust_heap<__gnu_cxx::__normal_iterator<std::pair<float, unsigned long>*, std::vector<std::pair<float, unsigned long>, std::allocator<std::pair<float, unsigned long> > > >, long, std::pair<float, unsigned long>, __gnu_cxx::__ops::_Iter_comp_iter<std::less<std::pair<float, unsigned long> > > >(__gnu_cxx::__normal_iterator<std::pair<float, unsigned long>*, std::vector<std::pair<float, unsigned long>, std::allocator<std::pair<float, unsigned long> > > >, long, long, std::pair<float, unsigned long>, __gnu_cxx::__ops::_Iter_comp_iter<std::less<std::pair<float, unsigned long> > >) [clone .isra.0]
+     0.01%     0.01%  hnswlib_demo  libc.so.6             [.] unlink_chunk.isra.0
+     0.01%     0.01%  hnswlib_demo  [unknown]             [k] 0xffffffffb2800f70
+     0.01%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffc31be0d6
+     0.00%     0.00%  hnswlib_demo  libc.so.6             [.] __libc_start_call_main
+     0.00%     0.00%  hnswlib_demo  hnswlib_demo          [.] main
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffc2b4778c
+     0.00%     0.00%  hnswlib_demo  libc.so.6             [.] __memset_avx2_unaligned_erms
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb2662bfb
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb2800f7b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1b9ceb4
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb2665de2
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1a8552a
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1b999c1
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb2800c03
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1d476b1
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffc310e820
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1ddd64b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1ddd65c
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb2904104
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb2904110
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1da2825
+     0.00%     0.00%  hnswlib_demo  ld-linux-x86-64.so.2  [.] strcmp
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x00312e6f732e6f73
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffc3100a75
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffc3219c85
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1d49742
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffc31be082
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1d494af
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1d7702d
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1d77519
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1d7b4e7
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffc3219eb9
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffc31be351
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffc31be013
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1aa6a8d
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1d48cba
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1d4943c
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1d7b40f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1b41b03
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffc2b3df38
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffc31be10e
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffc2b3df9a
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1d47642
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1dd5afb
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1dd5aed
+     0.00%     0.00%  hnswlib_demo  hnswlib_demo          [.] void std::vector<std::vector<float, std::allocator<float> >, std::allocator<std::vector<float, std::allocator<float> > > >::_M_realloc_append<std::vector<float, std::allocator<float> > >(std::vector<float, std::allocator<float> >&&)
+     0.00%     0.00%  hnswlib_demo  hnswlib_demo          [.] readfvecs(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::vector<std::vector<float, std::allocator<float> >, std::allocator<std::vector<float, std::allocator<float> > > >&)
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb267a0a4
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1d76f8d
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1d76619
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1ddc25c
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1d4941a
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1d494b6
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1da285f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1d49487
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1d49f63
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffc2b47760
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffc2b47797
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1d248ce
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1d7b678
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1d492a0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffc3100ae5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffc2b47764
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffc3219df0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffc2b319e1
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffc3219ca5
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffc310cc45
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffc31be0fe
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffc2b3ed35
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1ddc222
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1dd99fc
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1dd9986
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1df8dc5
+     0.00%     0.00%  hnswlib_demo  libc.so.6             [.] __open64_nocancel
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffc310e81b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1d7670c
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb2666a32
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1d49f1c
+     0.00%     0.00%  hnswlib_demo  ld-linux-x86-64.so.2  [.] _dl_start_user
+     0.00%     0.00%  hnswlib_demo  ld-linux-x86-64.so.2  [.] _dl_sysdep_parse_arguments
+     0.00%     0.00%  hnswlib_demo  libsci_gnu_mp.so.6.0  [.] openblas_openblas_read_env_skl
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1b41ae8
+     0.00%     0.00%  hnswlib_demo  ld-linux-x86-64.so.2  [.] _dl_start
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1d48a0f
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1aa68de
+     0.00%     0.00%  hnswlib_demo  libc.so.6             [.] getenv
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x474b505f44455849
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0x00007ffc07dac3a1
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1aa69df
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1d765b0
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1d477cf
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1d426f1
+     0.00%     0.00%  hnswlib_demo  ld-linux-x86-64.so.2  [.] _start
+     0.00%     0.00%  hnswlib_demo  [unknown]             [k] 0xffffffffb1d49f7b
+     0.00%     0.00%  hnswlib_demo  [unknown]             [.] 0xffffffffb1d49766
+     0.00%     0.00%  hnswlib_demo  ld-linux-x86-64.so.2  [.] _dl_fixup
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#

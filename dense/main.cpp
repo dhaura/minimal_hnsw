@@ -1,10 +1,25 @@
 #include "hnsw.h"
+#include "hilbert_ordering.h"
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <cmath>
 #include <iomanip>
 #include <chrono>
+#include <omp.h>
+
+#if defined(__has_include)
+#if __has_include(<mkl.h>)
+#include <mkl.h>
+#define HNSW_HAS_MKL 1
+#endif
+#endif
+
+#ifndef HNSW_HAS_MKL
+#define HNSW_HAS_MKL 0
+#endif
+
+using namespace hnsw;
 
 int readfvecs(const std::string& filename, std::vector<std::vector<float>>& data) {
     std::ifstream file(filename, std::ios::binary);
@@ -27,7 +42,7 @@ int readfvecs(const std::string& filename, std::vector<std::vector<float>>& data
     return dim;
 }
 
-int readivecs(const std::string& filename, std::vector<std::vector<int>>& data) {
+int readivecs(const std::string& filename, std::vector<std::vector<uint32_t>>& data) {
     std::ifstream file(filename, std::ios::binary);
     if (!file) {
         std::cerr << "Error opening file: " << filename << std::endl;
@@ -39,8 +54,8 @@ int readivecs(const std::string& filename, std::vector<std::vector<int>>& data) 
         file.read(reinterpret_cast<char*>(&dim), sizeof(int));
         if (!file) break; // Check if we reached the end of the file.
 
-        std::vector<int> vec(dim);
-        file.read(reinterpret_cast<char*>(vec.data()), dim * sizeof(int));
+        std::vector<uint32_t> vec(dim);
+        file.read(reinterpret_cast<char*>(vec.data()), dim * sizeof(uint32_t));
         if (!file) break; // Check if we successfully read the vector.
 
         data.push_back(std::move(vec));
@@ -74,24 +89,39 @@ int main(int argc, char* argv[]) {
     std::cout << "Minimal HNSW Demo\n";
     std::cout << "=================\n\n";
 
-     if (argc < 12)
+    if (argc < 14)
     {
-        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <distance_metric> <use_heuristic> <extend_candidates> <keep_pruned> <input_filepath> <query_filepath> <gt_filepath> <file_type>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <use_mkl> <mklThreshold> <input_filepath> <query_filepath> <gt_filepath> <file_type> <timing_csv_path>" << std::endl;
         return 1;
     }
+
+    // if (argc < 14)
+    // {
+    //     std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <use_mkl> <mklThreshold> <input_filepath> <query_filepath> <gt_filepath> <file_type> <output_path_folder>" << std::endl;
+    //     return 1;
+    // }
 
     // Parse command line arguments into variables.
     int M = std::stoi(argv[1]);
     int ef_construction = std::stoi(argv[2]);
     int ef = std::stoi(argv[3]);
-    std::string distance_metric = argv[4];
-    bool use_heuristic = (std::stoi(argv[5]) != 0);
-    bool extend_candidates = (std::stoi(argv[6]) != 0);
-    bool keep_pruned = (std::stoi(argv[7]) != 0);
-    std::string input_filepath = argv[8];
-    std::string query_filepath = argv[9];
-    std::string gt_filepath = argv[10];
-    std::string file_type = argv[11];
+    bool use_heuristic = (std::stoi(argv[4]) != 0);
+    bool extend_candidates = (std::stoi(argv[5]) != 0);
+    bool keep_pruned = (std::stoi(argv[6]) != 0);
+    bool use_mkl = (std::stoi(argv[7]) != 0);
+    size_t mklThreshold = std::stoul(argv[8]);
+    std::string input_filepath = argv[9];
+    std::string query_filepath = argv[10];
+    std::string gt_filepath = argv[11];
+    std::string file_type = argv[12];
+    std::string timing_csv_path = argv[13];
+    // std::string output_path_folder = argv[14];
+    // std::string dist_counts_insertion_output_path = output_path_folder + "/layer0_distance_counts_insertion.txt";
+    // std::string cand_elements_insertion_output_path = output_path_folder + "/layer0_cand_elements_counts_insertion.txt";
+    // std::string max_hops_insertion_output_path = output_path_folder + "/layer0_max_hops_counts_insertion.txt";
+    // std::string dist_counts_search_output_path = output_path_folder + "/layer0_distance_counts_search.txt";
+    // std::string cand_elements_search_output_path = output_path_folder + "/layer0_cand_elements_counts_search.txt";
+    // std::string max_hops_search_output_path = output_path_folder + "/layer0_max_hops_counts_search.txt";
 
     // Read a dense dataset from file.
     std::vector<std::vector<float>> points;
@@ -104,11 +134,26 @@ int main(int argc, char* argv[]) {
         std::cerr << "Unsupported file type: " << file_type << std::endl;
         return -1;
     }
+
+    int num_omp_threads = omp_get_max_threads();
+    int num_mkl_threads = mkl_get_max_threads();
+    std::cout << "Number of OpenMP threads: " << num_omp_threads << "\n";
+    std::cout << "Number of MKL threads: " << num_mkl_threads << "\n";
+
+    std::cout << "Applying Hilbert ordering before index construction...\n";
+    auto start_reorder_time = std::chrono::steady_clock::now();
+    std::vector<uint32_t> old_to_new;
+    std::vector<uint32_t> new_to_old;
+    HilbertOrdering::reorderDataset(points, old_to_new, new_to_old);
+    auto end_reorder_time = std::chrono::steady_clock::now();
+    auto reorder_time = std::chrono::duration_cast<std::chrono::microseconds>(end_reorder_time - start_reorder_time);
+    std::cout << "Hilbert pre-order completed in " << reorder_time.count() << " microseconds\n";
     
-    auto start_index_time = std::chrono::high_resolution_clock::now();
+    auto start_index_time = std::chrono::steady_clock::now();
     
     // Create HNSW index with 2D vectors.
-    HNSW index(dim, M, ef_construction, points.size(), distance_metric, use_heuristic, extend_candidates, keep_pruned);
+    HNSW index(dim, M, ef_construction, points.size(), use_heuristic, extend_candidates, keep_pruned, use_mkl, mklThreshold);
+    index.setLabelRemapping(std::move(old_to_new), std::move(new_to_old));
     
     // Add points from the dataset to the index.
     std::cout << "Adding points to the index...\n";
@@ -117,10 +162,11 @@ int main(int argc, char* argv[]) {
         index.addPoint(points[i], i);
     }
 
-    auto end_index_time = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> index_time = end_index_time - start_index_time;
+    auto end_index_time = std::chrono::steady_clock::now();
+    auto index_time = std::chrono::duration_cast<std::chrono::microseconds>(end_index_time - start_index_time);
 
-    std::cout << "Added " << points.size() << " points to the index in " << index_time.count() << " seconds.\n";
+    std::cout << "Added " << points.size() << " points to the index in " << index_time.count() << " microseconds.\n";
+    std::cout << "Average insertion time: " << index_time.count() / points.size() << " microseconds\n";
     
     // Search for nearest neighbors.
     std::cout << "\nSearching for k-nearest neighbors...\n";
@@ -137,41 +183,69 @@ int main(int argc, char* argv[]) {
     }
     int query_count = static_cast<int>(query.size());
 
-    std::vector<std::vector<int>> true_labels;
+    std::vector<std::vector<uint32_t>> true_labels;
     int k = readivecs(gt_filepath, true_labels);
+    index.relabelGroundTruth(true_labels);
     
-    auto start_query_time = std::chrono::high_resolution_clock::now();
+    auto start_query_time = std::chrono::steady_clock::now();
 
     int correct = 0;
     for (int i = 0; i < query_count; i++) {
-        auto nns = index.searchKNN(query[i], k, ef);
-        for (size_t j = 0; j < nns.size(); j++) {
-            if (std::find(true_labels[i].begin(), true_labels[i].end(), nns[j].first) != true_labels[i].end()) {
+        std::priority_queue<std::pair<float, uint32_t>> nns = index.searchKNN(query[i], k, ef);
+        while (!nns.empty()) {
+            auto nn = nns.top();
+            nns.pop();
+            if (std::find(true_labels[i].begin(), true_labels[i].end(), nn.second) != true_labels[i].end()) {
                 correct++;
             }
         }
-
-        // // For debugging.
-        // if (i == 0) {
-        //     std::cout << "Query 0: Found neighbors (label, distance):\n";
-        //     for (const auto& nn : nns) {
-        //         std::cout << "  Label: " << nn.first << ", Distance: " << nn.second << "\n";
-        //     }
-        //     std::cout << "True neighbors: \n";
-        //     for (int label : true_labels[i]) {
-        //         std::cout << "  Label: " << label << ", Distance: " << index.distance(query[i], points[label]) << "\n";
-        //     }
-        // }
     }
 
-    auto end_query_time = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> query_time = end_query_time - start_query_time;
+    auto end_query_time = std::chrono::steady_clock::now();
+    auto query_time = std::chrono::duration_cast<std::chrono::microseconds>(end_query_time - start_query_time);
     
     float recall = static_cast<float>(correct) / (query_count * k) * 100.0f;
     std::cout << "Recall@k: " << std::fixed << std::setprecision(2) << recall << "%\n";
-    std::cout << "Query time: " << query_time.count() << " seconds\n";
+    std::cout << "Total Query time: " << query_time.count() << " microseconds\n";
+    std::cout << "Average Query time: " << query_time.count() / query_count << " microseconds\n";
 
-    index.printInfo();
+    index.printInfo(timing_csv_path);
+
+    // if (index.dumpLayer0Counts(dist_counts_insertion_output_path, "dist_calc_insertion")) {
+    //     std::cout << "Wrote insertion layer-0 distance counts to: " << dist_counts_insertion_output_path << "\n";
+    // } else {
+    //     std::cerr << "Failed to write insertion layer-0 distance counts to: " << dist_counts_insertion_output_path << "\n";
+    // }
+
+    // if (index.dumpLayer0Counts(cand_elements_insertion_output_path, "cand_elements_insertion")) {
+    //     std::cout << "Wrote insertion layer-0 candidate elements counts to: " << cand_elements_insertion_output_path << "\n";
+    // } else {
+    //     std::cerr << "Failed to write insertion layer-0 candidate elements counts to: " << cand_elements_insertion_output_path << "\n";
+    // }
+
+    // if (index.dumpLayer0Counts(max_hops_insertion_output_path, "max_hops_insertion")) {
+    //     std::cout << "Wrote insertion layer-0 max hops counts to: " << max_hops_insertion_output_path << "\n";
+    // } else {
+    //     std::cerr << "Failed to write insertion layer-0 max hops counts to: " << max_hops_insertion_output_path << "\n";
+    // }
+
+    // if (index.dumpLayer0Counts(dist_counts_search_output_path, "dist_calc_search")) {
+    //     std::cout << "Wrote search layer-0 distance counts to: " << dist_counts_search_output_path << "\n";
+    // } else {
+    //     std::cerr << "Failed to write search layer-0 distance counts to: " << dist_counts_search_output_path << "\n";
+    // }
+
+    // if (index.dumpLayer0Counts(cand_elements_search_output_path, "cand_elements_search")) {
+    //     std::cout << "Wrote search layer-0 candidate elements counts to: " << cand_elements_search_output_path << "\n";
+    // } else {
+    //     std::cerr << "Failed to write search layer-0 candidate elements counts to: " << cand_elements_search_output_path << "\n";
+    // }
+
+    // if (index.dumpLayer0Counts(max_hops_search_output_path, "max_hops_search")) {
+    //     std::cout << "Wrote search layer-0 max hops counts to: " << max_hops_search_output_path << "\n";
+    // } else {
+    //     std::cerr << "Failed to write search layer-0 max hops counts to: " << max_hops_search_output_path << "\n";
+    // }
     
     std::cout << "\nDemo completed successfully!\n";
     
