@@ -61,3 +61,4 @@ Makefile
 dense/hnswlib/*
 dense/faiss/*
 sparse/GrassRMA/*
+sparse/vsag/*
