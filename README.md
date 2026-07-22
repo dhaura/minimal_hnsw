@@ -23,6 +23,7 @@ minimal_hnsw/
 │   ├── csr_matrix.h     # Compact CSR matrix loader (uint16 indices, fp16 values)
 │   ├── main.cpp         # Demo application
 │   ├── grassRMA_main.cpp# grassRMA benchmark driver
+│   ├── sindi_main.cpp   # SINDI (vsag) benchmark driver
 │   ├── scripts/         # SLURM run and thread-sweep scripts
 │   └── CMakeLists.txt
 └── CMakeLists.txt   # Root CMake configuration
@@ -45,6 +46,18 @@ cd ../
 # Clone grassRMA (for benchmarking)
 cd sparse
 git clone https://github.com/Leslie-Chung/GrassRMA.git
+cd ../
+
+# Clone and build vsag (for the SINDI benchmark)
+cd sparse
+git clone https://github.com/antgroup/vsag.git
+cmake -S vsag -Bvsag/build-release -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ \
+      -DENABLE_TESTS=OFF -DENABLE_EXAMPLES=OFF -DENABLE_TOOLS=OFF \
+      -DENABLE_WERROR=OFF -DNUM_BUILDING_JOBS=16 \
+      -DCMAKE_INSTALL_PREFIX=$PWD/vsag/install
+cmake --build vsag/build-release --parallel 16
+cmake --install vsag/build-release
 cd ../
 
 # Clone and build faiss (for PCA calculations used for hilbert ordering)
@@ -102,8 +115,15 @@ numactl --cpunodebind=0-3 --interleave=0-3 ./bin/grassRMA_demo 16 200 150 $SCRAT
 export OMP_NUM_THREADS=128 OMP_PROC_BIND=spread
 numactl --interleave=all ./bin/grassRMA_demo 16 200 150 $SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/data/msmarco_small/base_small.csr $SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/data/msmarco_small/queries.dev.csr $SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/data/msmarco_small/base_small.dev.gt 
 
+# Run the SINDI benchmark (inverted-index method: no M/efC/ef; prune ratios +
+# n_candidate are the knobs; n_candidate=0 means n_candidate=k)
+numactl --cpunodebind=0-3 --interleave=0-3 ./bin/sindi_demo 0.35 0.5 20 $SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/data/msmarco_full/base_full.csr $SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/data/msmarco_full/queries.dev.csr $SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/data/msmarco_full/base_full.dev.gt
+
 # Usage
 # ./bin/sparse_hnsw_demo <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <use_mkl> <mklThreshold> <input_filepath> <query_filepath> <gt_filepath>
+# ./bin/sindi_demo <doc_prune_ratio> <query_prune_ratio> <n_candidate> <input_filepath> <query_filepath> <gt_filepath> [term_prune_ratio=0] [window_size=50000] [use_reorder=1] [use_quantization=0|1|fp16]
+
+numactl --interleave=all ./bin/sparse_hnsw_demo 16 200 150 1 0 0 1 0 $SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/data/nq_splade/base_nq.csr $SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/data/nq_splade/queries.test.csr $SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/data/nq_splade/base_nq.test.gt  
 ```
 
 ## Dense HNSW Implementation
@@ -167,6 +187,11 @@ index.searchKNNBatch(query, query->nrow, /*k=*/10, /*ef=*/150, labels);
 // Or a single query row
 auto results = index.searchKNN(/*query_id=*/0, query, 10, 150);
 ```
+
+### Datasets
+
+#### Sparse
+- NQ-SPLADE - https://huggingface.co/datasets/tuskanny/seismic-nq-splade/tree/main
 
 ## Future Work
 

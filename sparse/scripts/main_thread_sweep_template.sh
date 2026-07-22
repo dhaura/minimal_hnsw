@@ -5,7 +5,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task={{CPUS}}
 #SBATCH --constraint=cpu
-#SBATCH --output=logs/main_1M_t{{THREADS}}_%j.out
+#SBATCH --output=logs/main_full_t{{THREADS}}_%j.out
 
 module load intel
 
@@ -24,6 +24,6 @@ if command -v numactl >/dev/null; then
 fi
 
 $LAUNCH $SCRATCH/repos/sparse_hnsw/minimal_hnsw/build/bin/sparse_hnsw_demo 16 200 150 1 0 0 1 0 \
-  $SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/data/msmarco_1M/base_1M.csr \
-  $SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/data/msmarco_1M/queries.dev.csr \
-  $SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/data/msmarco_1M/base_1M.dev.gt
+  $SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/data/msmarco_full/base_full.csr \
+  $SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/data/msmarco_full/queries.dev.csr \
+  $SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/data/msmarco_full/base_full.dev.gt
