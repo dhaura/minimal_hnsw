@@ -13,6 +13,11 @@
 #include <utility>
 #include <mutex>
 
+// Adds distance-call and byte accounting to the search path.
+#ifdef SPARSE_HNSW_PROFILE
+#include <atomic>
+#endif
+
 namespace sparse_hnsw {
     using MinPQ = std::priority_queue<
         std::pair<float, uint32_t>,
@@ -24,6 +29,26 @@ namespace sparse_hnsw {
         std::vector<uint8_t> visited_bits;
         std::vector<uint32_t> visited_list;
         std::vector<uint32_t> filtered_neighbors;
+
+#ifdef SPARSE_HNSW_PROFILE
+        // Accumulated across searchLayer calls (never reset by prepare();
+        // callers snapshot-and-diff). bytes = doc-row bytes each distance
+        // call must pull; the query row is resident and not counted.
+        // graph_bytes = the neighbor lists walked, which are memory traffic too
+        // and are NOT part of any distance call.
+        uint64_t prof_ndist = 0;
+        uint64_t prof_bytes = 0;
+        uint64_t prof_graph_bytes = 0;
+
+        // Record/replay, used to measure what share of search time distance()
+        // actually owns (mode=replay). searchLayer is deterministic given the
+        // distance VALUES, so replaying a recorded sequence reproduces the
+        // traversal, the heap operations and the visited set exactly -- while
+        // touching no CSR row at all. The delta is distance()'s true cost.
+        std::vector<float>* record = nullptr;   // set: append each computed distance
+        const float* replay = nullptr;          // set: return these instead of computing
+        size_t replay_idx = 0;
+#endif
 
         void prepare(int max_elements) {
             const size_t num_words = (static_cast<size_t>(max_elements) + 7) / 8;
@@ -61,6 +86,12 @@ namespace sparse_hnsw {
             bool use_heuristic = false, bool extend_candidates = false, bool keep_pruned = false, 
             bool use_mkl = false, size_t mklThreshold = 256);
         
+        // Kept out-of-line in a profile build so `perf report` can attribute
+        // cycles to distance() as its own symbol instead of folding them into
+        // searchLayer.
+#ifdef SPARSE_HNSW_PROFILE
+        __attribute__((noinline))
+#endif
         float distance(const void *pVect1, const void *pVect2, const void *qty_ptr, const void *other_ptr) const;
         void addPoint(uint32_t node_id, uint32_t label);
         void addPointsBatch(int num_points);
@@ -70,6 +101,21 @@ namespace sparse_hnsw {
         void setLabelRemapping(std::vector<uint32_t> old_to_new, std::vector<uint32_t> new_to_old);
         void relabelGroundTruth(std::vector<std::vector<uint32_t>>& groundtruth) const;
         void printInfo() const;
+
+#ifdef SPARSE_HNSW_PROFILE
+        std::priority_queue<std::pair<float, uint32_t>> searchKNNProf(
+                uint32_t query_id, CSRMatrix *query_matrix, int k, int ef,
+                SearchScratch& scratch) const {
+            return searchKNN(query_id, query_matrix, k, ef, scratch);
+        }
+        // Totals aggregated by searchKNNBatch across its worker scratches.
+        uint64_t profNDist() const { return prof_ndist_.load(std::memory_order_relaxed); }
+        uint64_t profBytes() const { return prof_bytes_.load(std::memory_order_relaxed); }
+        uint64_t profGraphBytes() const { return prof_graph_bytes_.load(std::memory_order_relaxed); }
+        void profReset() const {
+            prof_ndist_.store(0); prof_bytes_.store(0); prof_graph_bytes_.store(0);
+        }
+#endif
 
     private:
         CSRMatrix *data_matrix_;    
@@ -96,6 +142,24 @@ namespace sparse_hnsw {
         // A global mutex for entry_point_ / max_level_.
         mutable std::vector<std::mutex> link_locks_;
         std::mutex global_lock_;
+
+#ifdef SPARSE_HNSW_PROFILE
+        mutable std::atomic<uint64_t> prof_ndist_{0};
+        mutable std::atomic<uint64_t> prof_bytes_{0};
+        mutable std::atomic<uint64_t> prof_graph_bytes_{0};
+
+        float profDistance(uint32_t q, uint32_t p, const void* qty,
+                           SearchScratch& s) const {
+            if (s.replay) {
+                return s.replay[s.replay_idx++];
+            }
+            float d = distance(&q, &p, data_matrix_, qty);
+            if (s.record) {
+                s.record->push_back(d);
+            }
+            return d;
+        }
+#endif
 
         // For Hilbert curve ordering
         std::vector<uint32_t> old_to_new_labels_;

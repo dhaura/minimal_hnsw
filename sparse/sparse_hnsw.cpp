@@ -15,6 +15,14 @@
 
 using namespace sparse_hnsw;
 
+#ifdef SPARSE_HNSW_PROFILE
+#define SPARSE_HNSW_DISTANCE(q, p) profDistance((q), (p), qty_ptr, scratch)
+#define SPARSE_HNSW_REPLAYING (scratch.replay != nullptr)
+#else
+#define SPARSE_HNSW_DISTANCE(q, p) distance(&(q), &(p), data_matrix_, qty_ptr)
+#define SPARSE_HNSW_REPLAYING false
+#endif
+
 
 SPARSE_HNSW::SPARSE_HNSW(int dim, CSRMatrix *data_matrix, int M, int ef_construction, int max_elements, 
     bool use_heuristic, bool extend_candidates, bool keep_pruned, bool use_mkl, size_t mklThreshold)
@@ -181,7 +189,12 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
     std::priority_queue<std::pair<float, uint32_t>> top_candidates;
 
     for (uint32_t entry_point : entry_points) {
-        float d = distance(&query_id, &entry_point, data_matrix_, qty_ptr);
+#ifdef SPARSE_HNSW_PROFILE
+        scratch.prof_ndist++;
+        scratch.prof_bytes += static_cast<uint64_t>(
+            data_matrix_->indptr[entry_point + 1] - data_matrix_->indptr[entry_point]) * sizeof(IndiceDataPair);
+#endif
+        float d = SPARSE_HNSW_DISTANCE(query_id, entry_point);
         candidates.push({d, entry_point});
         top_candidates.push({d, entry_point});
         scratch.markVisited(entry_point);
@@ -216,6 +229,9 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
             }
             uint32_t count = getListCount(ll);
             scratch.filtered_neighbors.reserve(count);
+#ifdef SPARSE_HNSW_PROFILE
+            scratch.prof_graph_bytes += static_cast<uint64_t>(count + 1) * sizeof(uint32_t);
+#endif
 
             for (uint32_t i = 0; i < count && i < 4; ++i) {
                 __builtin_prefetch(visited_bytes + (neighbors[i] >> 3), 0, 3);
@@ -229,7 +245,9 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
                 if (!scratch.isVisited(neighbor_id)) {
                     scratch.markVisited(neighbor_id);
                     scratch.filtered_neighbors.push_back(neighbor_id);
-                    __builtin_prefetch(indptr + neighbor_id, 0, 3);
+                    if (!SPARSE_HNSW_REPLAYING) {
+                        __builtin_prefetch(indptr + neighbor_id, 0, 3);
+                    }
                 }
             }
         }
@@ -237,17 +255,19 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
         const uint32_t nfilter = static_cast<uint32_t>(scratch.filtered_neighbors.size());
         const uint32_t* filtered = scratch.filtered_neighbors.data();
 
-        for (uint32_t j = 0; j < nfilter; ++j) {
-            const char* vec = reinterpret_cast<const char*>(vec_base + indptr[filtered[j]]);
-            __builtin_prefetch(vec, 0, 2);
-            __builtin_prefetch(vec + 64, 0, 2);
+        if (!SPARSE_HNSW_REPLAYING) {
+            for (uint32_t j = 0; j < nfilter; ++j) {
+                const char* vec = reinterpret_cast<const char*>(vec_base + indptr[filtered[j]]);
+                __builtin_prefetch(vec, 0, 2);
+                __builtin_prefetch(vec + 64, 0, 2);
+            }
         }
 
         // Process unvisited neighbors.
         for (uint32_t j = 0; j < nfilter; ++j) {
             uint32_t neighbor_id = filtered[j];
 
-            if (j + 1 < nfilter) {
+            if (j + 1 < nfilter && !SPARSE_HNSW_REPLAYING) {
                 const char* next_vec = reinterpret_cast<const char*>(vec_base + indptr[filtered[j + 1]]);
                 __builtin_prefetch(next_vec, 0, 3);
                 __builtin_prefetch(next_vec + 64, 0, 3);
@@ -255,7 +275,14 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
                 __builtin_prefetch(next_vec + 192, 0, 3);
             }
 
-            float dist = distance(&query_id, &neighbor_id, data_matrix_, qty_ptr);
+#ifdef SPARSE_HNSW_PROFILE
+            scratch.prof_ndist++;
+            if (!scratch.replay) {
+                scratch.prof_bytes += static_cast<uint64_t>(
+                    indptr[neighbor_id + 1] - indptr[neighbor_id]) * sizeof(IndiceDataPair);
+            }
+#endif
+            float dist = SPARSE_HNSW_DISTANCE(query_id, neighbor_id);
 
             if (top_candidates.size() < static_cast<size_t>(ef) || dist < top_candidates.top().first) {
                 candidates.push({dist, neighbor_id});
@@ -548,6 +575,12 @@ void SPARSE_HNSW::searchKNNBatch(CSRMatrix *query_matrix, int num_queries, int k
                 nns.pop();
             }
         }
+
+#ifdef SPARSE_HNSW_PROFILE
+        prof_ndist_.fetch_add(scratch.prof_ndist, std::memory_order_relaxed);
+        prof_bytes_.fetch_add(scratch.prof_bytes, std::memory_order_relaxed);
+        prof_graph_bytes_.fetch_add(scratch.prof_graph_bytes, std::memory_order_relaxed);
+#endif
     }
 }
 

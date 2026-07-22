@@ -89,6 +89,24 @@ else()
     message(STATUS "vsag not installed under sparse/vsag/install: skipping sindi_demo")
 endif()
 
+# ---- Profiling ladder (see profiling/README.md) ----
+add_executable(bench_distance profiling/bench_distance.cpp)
+add_executable(bench_scale profiling/bench_scale.cpp)
+add_executable(sparse_profile profiling/profile_search.cpp sparse_hnsw.cpp)
+target_compile_definitions(sparse_profile PRIVATE SPARSE_HNSW_PROFILE)
+
+foreach(tgt bench_distance bench_scale sparse_profile)
+    target_include_directories(${tgt} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_compile_options(${tgt} PRIVATE -O3 -g -fno-omit-frame-pointer)
+    set_target_properties(${tgt} PROPERTIES
+        CXX_STANDARD 17
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+    )
+    if(OpenMP_CXX_FOUND)
+        target_link_libraries(${tgt} OpenMP::OpenMP_CXX)
+    endif()
+endforeach()
+
 # ---- Perf-friendly build option ----
 option(ENABLE_PERF "Build with perf-friendly flags (symbols + frame pointers)" OFF)
 
