@@ -9,17 +9,6 @@
 #include <chrono>
 #include <omp.h>
 
-#if defined(__has_include)
-#if __has_include(<mkl.h>)
-#include <mkl.h>
-#define SPARSE_HNSW_HAS_MKL 1
-#endif
-#endif
-
-#ifndef SPARSE_HNSW_HAS_MKL
-#define SPARSE_HNSW_HAS_MKL 0
-#endif
-
 using namespace sparse_hnsw;
 
 void get_gt(const std::string gt_path, uint32_t *&I, uint32_t &n, uint32_t &d)
@@ -103,9 +92,7 @@ int main(int argc, char* argv[]) {
     std::string gt_filepath = argv[11];
 
     int num_omp_threads = omp_get_max_threads();
-    int num_mkl_threads = mkl_get_max_threads();
     std::cout << "Number of OpenMP threads: " << num_omp_threads << "\n";
-    std::cout << "Number of MKL threads: " << num_mkl_threads << "\n";
 
     // Read a sparse dataset from file.
     CSRMatrix *datamatrix = new CSRMatrix(input_filepath, true);
