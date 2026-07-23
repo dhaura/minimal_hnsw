@@ -25,10 +25,10 @@ using namespace sparse_hnsw;
 
 
 SPARSE_HNSW::SPARSE_HNSW(int dim, CSRMatrix *data_matrix, int M, int ef_construction, int max_elements, 
-    bool use_heuristic, bool extend_candidates, bool keep_pruned, bool use_mkl, size_t mklThreshold)
+    bool use_heuristic, bool extend_candidates, bool keep_pruned)
     : data_matrix_(data_matrix), dim_(dim), M_(M), ef_construction_(ef_construction), max_elements_(max_elements),
-      use_heuristic_(use_heuristic), extend_candidates_(extend_candidates), keep_pruned_(keep_pruned), use_mkl_(use_mkl),
-      mklThreshold_(mklThreshold), max_level_(0), entry_point_(-1),
+      use_heuristic_(use_heuristic), extend_candidates_(extend_candidates), keep_pruned_(keep_pruned),
+      max_level_(0), entry_point_(-1),
       rng_(42), level_generator_(0.0, 1.0), link_locks_(max_elements) {
     size_neighbor_list_level0_ = static_cast<uint32_t>(2 * M_ + 1);  // count + maxM0 neighbors
     size_neighbor_list_per_element_ = static_cast<uint32_t>(M_ + 1); // count + maxM neighbors

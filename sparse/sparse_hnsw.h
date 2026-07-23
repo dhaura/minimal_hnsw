@@ -83,8 +83,7 @@ namespace sparse_hnsw {
     class SPARSE_HNSW {
     public:
         SPARSE_HNSW(int dim, CSRMatrix *data_matrix, int M = 16, int ef_construction = 200, int max_elements = 1000, 
-            bool use_heuristic = false, bool extend_candidates = false, bool keep_pruned = false, 
-            bool use_mkl = false, size_t mklThreshold = 256);
+            bool use_heuristic = false, bool extend_candidates = false, bool keep_pruned = false);
         
         // Kept out-of-line in a profile build so `perf report` can attribute
         // cycles to distance() as its own symbol instead of folding them into
@@ -168,8 +167,6 @@ namespace sparse_hnsw {
         bool use_heuristic_;
         bool extend_candidates_;
         bool keep_pruned_;
-        bool use_mkl_;
-        size_t mklThreshold_;
 
         std::mt19937 rng_;
         std::uniform_real_distribution<double> level_generator_;
