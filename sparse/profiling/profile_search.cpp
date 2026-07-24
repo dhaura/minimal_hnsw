@@ -127,7 +127,7 @@ int main(int argc, char* argv[]) {
 
     // ---- Build ----
     SPARSE_HNSW index(dim, datamatrix, M, ef_construction, num_points,
-                      use_heuristic, extend_candidates, keep_pruned, 1);
+                      use_heuristic, extend_candidates, keep_pruned, 1.0f, 1);
     omp_set_num_threads(build_threads);
     auto b0 = std::chrono::steady_clock::now();
     index.addPointsBatch(num_points);

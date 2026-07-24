@@ -30,6 +30,26 @@ namespace sparse_hnsw {
         std::vector<uint32_t> visited_list;
         std::vector<uint32_t> filtered_neighbors;
 
+        std::vector<float> q_dense;
+        bool dense_query = false;
+
+        void scatterQuery(int dim, const IndiceDataPair* q_indices, uint32_t q_num) {
+            if (q_dense.size() < static_cast<size_t>(dim)) {
+                q_dense.assign(static_cast<size_t>(dim), 0.0f);
+            }
+            for (uint32_t i = 0; i < q_num; ++i) {
+                q_dense[q_indices[i].indice] = static_cast<float>(q_indices[i].data);
+            }
+            dense_query = true;
+        }
+
+        void unscatterQuery(const IndiceDataPair* q_indices, uint32_t q_num) {
+            for (uint32_t i = 0; i < q_num; ++i) {
+                q_dense[q_indices[i].indice] = 0.0f;
+            }
+            dense_query = false;
+        }
+
 #ifdef SPARSE_HNSW_PROFILE
         // Accumulated across searchLayer calls (never reset by prepare();
         // callers snapshot-and-diff). bytes = doc-row bytes each distance
@@ -92,6 +112,12 @@ namespace sparse_hnsw {
         __attribute__((noinline))
 #endif
         float distance(const void *pVect1, const void *pVect2, const void *qty_ptr, const void *other_ptr) const;
+
+#ifdef SPARSE_HNSW_PROFILE
+        __attribute__((noinline))
+#endif
+        float distanceDense(uint32_t p_idx, const std::vector<float>& q_dense) const;
+
         void addPoint(uint32_t node_id, uint32_t label);
         void addPointsBatch(int num_points);
         std::priority_queue<std::pair<float, uint32_t>> searchKNN(uint32_t query_id, CSRMatrix *query_matrix, int k, int ef = 50) const;
@@ -156,6 +182,17 @@ namespace sparse_hnsw {
                 return s.replay[s.replay_idx++];
             }
             float d = distance(&q, &p, data_matrix_, qty);
+            if (s.record) {
+                s.record->push_back(d);
+            }
+            return d;
+        }
+
+        float profDistanceDense(uint32_t p, SearchScratch& s) const {
+            if (s.replay) {
+                return s.replay[s.replay_idx++];
+            }
+            float d = distanceDense(p, s.q_dense);
             if (s.record) {
                 s.record->push_back(d);
             }

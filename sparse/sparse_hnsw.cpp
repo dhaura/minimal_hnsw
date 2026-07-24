@@ -17,9 +17,11 @@ using namespace sparse_hnsw;
 
 #ifdef SPARSE_HNSW_PROFILE
 #define SPARSE_HNSW_DISTANCE(q, p) profDistance((q), (p), qty_ptr, scratch)
+#define SPARSE_HNSW_DISTANCE_DENSE(p) profDistanceDense((p), scratch)
 #define SPARSE_HNSW_REPLAYING (scratch.replay != nullptr)
 #else
 #define SPARSE_HNSW_DISTANCE(q, p) distance(&(q), &(p), data_matrix_, qty_ptr)
+#define SPARSE_HNSW_DISTANCE_DENSE(p) distanceDense((p), scratch.q_dense)
 #define SPARSE_HNSW_REPLAYING false
 #endif
 
@@ -176,6 +178,19 @@ float SPARSE_HNSW::distance(const void *pVect1, const void *pVect2, const void *
     return 1.0f - res;
 }
 
+float SPARSE_HNSW::distanceDense(uint32_t p_idx, const std::vector<float>& q_dense) const {
+    const int64_t p_start = data_matrix_->indptr[p_idx];
+    const int64_t p_end = data_matrix_->indptr[p_idx + 1];
+    const IndiceDataPair* p = data_matrix_->indices_data + p_start;
+    const uint32_t p_num = static_cast<uint32_t>(p_end - p_start);
+
+    float res = 0.0f;
+    for (uint32_t i = 0; i < p_num; ++i) {
+        res += static_cast<float>(p[i].data) * q_dense[p[i].indice];
+    }
+    return 1.0f - res;
+}
+
 int SPARSE_HNSW::getRandomLevel() {
     double r = level_generator_(rng_);
     // Ensure r is not too close to 0 to avoid log(0).
@@ -195,7 +210,7 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
         scratch.prof_bytes += static_cast<uint64_t>(
             data_matrix_->indptr[entry_point + 1] - data_matrix_->indptr[entry_point]) * sizeof(IndiceDataPair);
 #endif
-        float d = SPARSE_HNSW_DISTANCE(query_id, entry_point);
+        float d = scratch.dense_query ? SPARSE_HNSW_DISTANCE_DENSE(entry_point) : SPARSE_HNSW_DISTANCE(query_id, entry_point);
         candidates.push({d, entry_point});
         top_candidates.push({d, entry_point});
         scratch.markVisited(entry_point);
@@ -283,7 +298,7 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
                     indptr[neighbor_id + 1] - indptr[neighbor_id]) * sizeof(IndiceDataPair);
             }
 #endif
-            float dist = SPARSE_HNSW_DISTANCE(query_id, neighbor_id);
+            float dist = scratch.dense_query ? SPARSE_HNSW_DISTANCE_DENSE(neighbor_id) : SPARSE_HNSW_DISTANCE(query_id, neighbor_id);
 
             if (top_candidates.size() < static_cast<size_t>(ef) || dist < top_candidates.top().first) {
                 candidates.push({dist, neighbor_id});
@@ -527,6 +542,12 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchKNN(uint32_t 
         return {};
     }
 
+    const int64_t q_start = query_matrix->indptr[query_id];
+    const int64_t q_end = query_matrix->indptr[query_id + 1];
+    const IndiceDataPair* q_indices = query_matrix->indices_data + q_start;
+    const uint32_t q_num = static_cast<uint32_t>(q_end - q_start);
+    scratch.scatterQuery(dim_, q_indices, q_num);
+
     std::vector<uint32_t> entry_points = {entry_point_};
 
     // Search from top layer to layer 0
@@ -544,6 +565,9 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchKNN(uint32_t 
     // Search at layer 0 with ef >= k candidates, then keep only the k nearest.
     std::priority_queue<std::pair<float, uint32_t>> result =
         searchLayer(query_id, query_matrix, entry_points, std::max(ef, k), 0, scratch);
+
+    scratch.unscatterQuery(q_indices, q_num);
+
     // result is a max-heap on distance; pop the farthest until k remain.
     while (static_cast<int>(result.size()) > k) {
         result.pop();

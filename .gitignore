@@ -40,6 +40,9 @@
 # debug information files
 *.dwo
 
+# cache folders
+*/__pycache__/*
+
 # CMake build artifacts
 build/
 _codeql_build_dir/
