@@ -25,10 +25,10 @@ using namespace sparse_hnsw;
 
 
 SPARSE_HNSW::SPARSE_HNSW(int dim, CSRMatrix *data_matrix, int M, int ef_construction, int max_elements, 
-    bool use_heuristic, bool extend_candidates, bool keep_pruned)
+    bool use_heuristic, bool extend_candidates, bool keep_pruned, float alpha)
     : data_matrix_(data_matrix), dim_(dim), M_(M), ef_construction_(ef_construction), max_elements_(max_elements),
       use_heuristic_(use_heuristic), extend_candidates_(extend_candidates), keep_pruned_(keep_pruned),
-      max_level_(0), entry_point_(-1),
+      alpha_(alpha), max_level_(0), entry_point_(-1),
       rng_(42), level_generator_(0.0, 1.0), link_locks_(max_elements) {
     size_neighbor_list_level0_ = static_cast<uint32_t>(2 * M_ + 1);  // count + maxM0 neighbors
     size_neighbor_list_per_element_ = static_cast<uint32_t>(M_ + 1); // count + maxM neighbors
@@ -582,6 +582,37 @@ void SPARSE_HNSW::searchKNNBatch(CSRMatrix *query_matrix, int num_queries, int k
         prof_graph_bytes_.fetch_add(scratch.prof_graph_bytes, std::memory_order_relaxed);
 #endif
     }
+}
+
+void SPARSE_HNSW::pruneMatrix(CSRMatrix *m) {
+    int64_t write = 0;
+    std::vector<IndiceDataPair> buf;
+    for (int64_t row = 0; row < m->nrow; ++row) {
+        const int64_t s = m->indptr[row];
+        const int64_t e = m->indptr[row + 1];
+        m->indptr[row] = write;
+
+        float weight = 0;
+        for (int64_t i = s; i < e; ++i) weight += static_cast<float>(m->indices_data[i].data);
+
+        buf.assign(m->indices_data + s, m->indices_data + e);
+        std::sort(buf.begin(), buf.end(),
+                  [](const IndiceDataPair& a, const IndiceDataPair& b) {
+                      return static_cast<float>(a.data) > static_cast<float>(b.data);
+                  });
+
+        float prefix_sum = 0; size_t kept = 0;
+        while (kept < buf.size()) {
+            prefix_sum += static_cast<float>(buf[kept].data);
+            ++kept;
+            if (prefix_sum >= alpha_ * weight) break;
+        }
+
+        std::sort(buf.begin(), buf.begin() + kept);
+        for (size_t i = 0; i < kept; ++i) m->indices_data[write++] = buf[i];
+    }
+    m->indptr[m->nrow] = write;
+    m->nnz = write;
 }
 
 void SPARSE_HNSW::setLabelRemapping(std::vector<uint32_t> old_to_new, std::vector<uint32_t> new_to_old) {

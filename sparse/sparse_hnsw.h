@@ -83,7 +83,7 @@ namespace sparse_hnsw {
     class SPARSE_HNSW {
     public:
         SPARSE_HNSW(int dim, CSRMatrix *data_matrix, int M = 16, int ef_construction = 200, int max_elements = 1000, 
-            bool use_heuristic = false, bool extend_candidates = false, bool keep_pruned = false);
+            bool use_heuristic = false, bool extend_candidates = false, bool keep_pruned = false, float alpha = 1.0);
         
         // Kept out-of-line in a profile build so `perf report` can attribute
         // cycles to distance() as its own symbol instead of folding them into
@@ -97,6 +97,7 @@ namespace sparse_hnsw {
         std::priority_queue<std::pair<float, uint32_t>> searchKNN(uint32_t query_id, CSRMatrix *query_matrix, int k, int ef = 50) const;
         void searchKNNBatch(CSRMatrix *query_matrix, int num_queries, int k, int ef,
                             std::vector<uint32_t>& out_labels) const;
+        void pruneMatrix(CSRMatrix *m);
         void setLabelRemapping(std::vector<uint32_t> old_to_new, std::vector<uint32_t> new_to_old);
         void relabelGroundTruth(std::vector<std::vector<uint32_t>>& groundtruth) const;
         void printInfo() const;
@@ -167,6 +168,7 @@ namespace sparse_hnsw {
         bool use_heuristic_;
         bool extend_candidates_;
         bool keep_pruned_;
+        float alpha_;
 
         std::mt19937 rng_;
         std::uniform_real_distribution<double> level_generator_;

@@ -72,9 +72,9 @@ int main(int argc, char* argv[]) {
     std::cout << "Minimal SPARSE_HNSW Demo\n";
     std::cout << "=================\n\n";
 
-    if (argc < 10)
+    if (argc < 11)
     {
-        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <input_filepath> <query_filepath> <gt_filepath>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <alpha> <input_filepath> <query_filepath> <gt_filepath>" << std::endl;
         return 1;
     }
 
@@ -85,9 +85,10 @@ int main(int argc, char* argv[]) {
     bool use_heuristic = (std::stoi(argv[4]) != 0);
     bool extend_candidates = (std::stoi(argv[5]) != 0);
     bool keep_pruned = (std::stoi(argv[6]) != 0);
-    std::string input_filepath = argv[7];
-    std::string query_filepath = argv[8];
-    std::string gt_filepath = argv[9];
+    double alpha = std::stod(argv[7]);
+    std::string input_filepath = argv[8];
+    std::string query_filepath = argv[9];
+    std::string gt_filepath = argv[10];
 
     int num_omp_threads = omp_get_max_threads();
     std::cout << "Number of OpenMP threads: " << num_omp_threads << "\n";
@@ -109,8 +110,25 @@ int main(int argc, char* argv[]) {
     auto start_index_time = std::chrono::steady_clock::now();
     
     // Create SPARSE_HNSW index with 2D vectors.
-    SPARSE_HNSW index(dim, datamatrix, M, ef_construction, num_points, use_heuristic, extend_candidates, keep_pruned);
+    SPARSE_HNSW index(dim, datamatrix, M, ef_construction, num_points, use_heuristic, extend_candidates, keep_pruned, alpha);
     // index.setLabelRemapping(std::move(old_to_new), std::move(new_to_old));
+
+    // Prune dataset using mass ratio prunning.
+    if (alpha < 1.0) {
+        std::cout << "Pruning dataset using mass ratio pruning with alpha = " << alpha << "...\n";
+
+        auto start_prune_time = std::chrono::steady_clock::now();
+        index.pruneMatrix(datamatrix);
+        auto end_prune_time = std::chrono::steady_clock::now();
+        auto prune_time = std::chrono::duration_cast<std::chrono::microseconds>(end_prune_time - start_prune_time);
+
+        std::cout << "Pruning completed in " << prune_time.count() << " microseconds\n";
+    } else if (alpha > 1.0) {
+        std::cout << "Invalid alpha value: " << alpha << ". Alpha should be in the range (0, 1]. No pruning applied.\n";
+    }else {
+        std::cout << "No pruning applied (alpha = 1.0)\n";
+    }
+    
     
     // Add points from the dataset to the index.
     std::cout << "Adding points to the index...\n";
