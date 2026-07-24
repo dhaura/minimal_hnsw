@@ -24,11 +24,12 @@ using namespace sparse_hnsw;
 #endif
 
 
+
 SPARSE_HNSW::SPARSE_HNSW(int dim, CSRMatrix *data_matrix, int M, int ef_construction, int max_elements, 
-    bool use_heuristic, bool extend_candidates, bool keep_pruned, float alpha)
-    : data_matrix_(data_matrix), dim_(dim), M_(M), ef_construction_(ef_construction), max_elements_(max_elements),
+    bool use_heuristic, bool extend_candidates, bool keep_pruned, float alpha, int beta)
+    : data_matrix_(data_matrix), original_data_matrix_(nullptr), dim_(dim), M_(M), ef_construction_(ef_construction), max_elements_(max_elements),
       use_heuristic_(use_heuristic), extend_candidates_(extend_candidates), keep_pruned_(keep_pruned),
-      alpha_(alpha), max_level_(0), entry_point_(-1),
+      alpha_(alpha), beta_(beta), max_level_(0), entry_point_(-1),
       rng_(42), level_generator_(0.0, 1.0), link_locks_(max_elements) {
     size_neighbor_list_level0_ = static_cast<uint32_t>(2 * M_ + 1);  // count + maxM0 neighbors
     size_neighbor_list_per_element_ = static_cast<uint32_t>(M_ + 1); // count + maxM neighbors
@@ -557,22 +558,64 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchKNN(uint32_t 
 
 void SPARSE_HNSW::searchKNNBatch(CSRMatrix *query_matrix, int num_queries, int k, int ef,
                                  std::vector<uint32_t>& out_labels) const {
-
+    
+    int k_hat = k;
+    if (alpha_ < 1.0f) {
+        k_hat = k * beta_;
+    }
     out_labels.assign(static_cast<size_t>(num_queries) * static_cast<size_t>(k), 0);
 
+    const bool refine = (alpha_ < 1.0f && beta_ > 1);
+    std::vector<uint32_t> approx_labels(static_cast<size_t>(num_queries) * static_cast<size_t>(k_hat), 0);
     #pragma omp parallel
     {
         SearchScratch scratch;
         scratch.prepare(max_elements_);
 
+        std::vector<std::pair<float, uint32_t>> heap;
+        if (refine) heap.reserve(static_cast<size_t>(k));
+
         #pragma omp for schedule(dynamic, 4)
         for (int i = 0; i < num_queries; ++i) {
             std::priority_queue<std::pair<float, uint32_t>> nns =
-                searchKNN(static_cast<uint32_t>(i), query_matrix, k, ef, scratch);
-            const size_t base = static_cast<size_t>(i) * static_cast<size_t>(k);
+                searchKNN(static_cast<uint32_t>(i), query_matrix, k_hat, ef, scratch);
+            const size_t base = static_cast<size_t>(i) * static_cast<size_t>(k_hat);
             while (!nns.empty()) {
-                out_labels[base + (static_cast<size_t>(k) - nns.size())] = nns.top().second;
+                approx_labels[base + (static_cast<size_t>(k_hat) - nns.size())] = nns.top().second;
                 nns.pop();
+            }
+        }
+
+        if (refine) {
+            #pragma omp for schedule(dynamic, 4)
+            for (int i = 0; i < num_queries; ++i) {
+                const size_t base = static_cast<size_t>(i) * static_cast<size_t>(k_hat);
+                const uint32_t query_id = static_cast<uint32_t>(i);
+
+                heap.clear();
+                for (int j = 0; j < k_hat; ++j) {
+                    const uint32_t label = approx_labels[base + j];
+                    const float d = distance(&query_id, &label, original_data_matrix_, query_matrix);
+                    if (static_cast<int>(heap.size()) < k) {
+                        heap.emplace_back(d, label);
+                        std::push_heap(heap.begin(), heap.end());
+                    } else if (d < heap.front().first) {
+                        std::pop_heap(heap.begin(), heap.end());
+                        heap.back() = {d, label};
+                        std::push_heap(heap.begin(), heap.end());
+                    }
+                }
+                const size_t out_base = static_cast<size_t>(i) * static_cast<size_t>(k);
+                while (!heap.empty()) {
+                    std::pop_heap(heap.begin(), heap.end());
+                    out_labels[out_base + heap.size() - 1] = heap.back().second;
+                    heap.pop_back();
+                }
+            }
+        } else {
+            #pragma omp single
+            {
+                out_labels = std::move(approx_labels);
             }
         }
 
@@ -584,18 +627,25 @@ void SPARSE_HNSW::searchKNNBatch(CSRMatrix *query_matrix, int num_queries, int k
     }
 }
 
-void SPARSE_HNSW::pruneMatrix(CSRMatrix *m) {
+void SPARSE_HNSW::setPrunedDataMatrix(CSRMatrix *pruned_data_matrix) {
+    original_data_matrix_ = data_matrix_;
+    data_matrix_ = pruned_data_matrix;
+}
+
+CSRMatrix* SPARSE_HNSW::pruneMatrix(const CSRMatrix *m) {
+    CSRMatrix *pruned = new CSRMatrix(*m);
+
     int64_t write = 0;
     std::vector<IndiceDataPair> buf;
-    for (int64_t row = 0; row < m->nrow; ++row) {
-        const int64_t s = m->indptr[row];
-        const int64_t e = m->indptr[row + 1];
-        m->indptr[row] = write;
+    for (int64_t row = 0; row < pruned->nrow; ++row) {
+        const int64_t s = pruned->indptr[row];
+        const int64_t e = pruned->indptr[row + 1];
+        pruned->indptr[row] = write;
 
         float weight = 0;
-        for (int64_t i = s; i < e; ++i) weight += static_cast<float>(m->indices_data[i].data);
+        for (int64_t i = s; i < e; ++i) weight += static_cast<float>(pruned->indices_data[i].data);
 
-        buf.assign(m->indices_data + s, m->indices_data + e);
+        buf.assign(pruned->indices_data + s, pruned->indices_data + e);
         std::sort(buf.begin(), buf.end(),
                   [](const IndiceDataPair& a, const IndiceDataPair& b) {
                       return static_cast<float>(a.data) > static_cast<float>(b.data);
@@ -609,10 +659,11 @@ void SPARSE_HNSW::pruneMatrix(CSRMatrix *m) {
         }
 
         std::sort(buf.begin(), buf.begin() + kept);
-        for (size_t i = 0; i < kept; ++i) m->indices_data[write++] = buf[i];
+        for (size_t i = 0; i < kept; ++i) pruned->indices_data[write++] = buf[i];
     }
-    m->indptr[m->nrow] = write;
-    m->nnz = write;
+    pruned->indptr[pruned->nrow] = write;
+    pruned->nnz = write;
+    return pruned;
 }
 
 void SPARSE_HNSW::setLabelRemapping(std::vector<uint32_t> old_to_new, std::vector<uint32_t> new_to_old) {

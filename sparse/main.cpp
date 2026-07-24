@@ -11,6 +11,30 @@
 
 using namespace sparse_hnsw;
 
+void appendResultsRow(const std::string &csv_path, double alpha, int beta,
+                       int64_t dataset_size, int threads, double pruning_time_sec,
+                       double indexing_time_sec, double searching_time_sec, float recall) {
+    bool write_header = true;
+    {
+        std::ifstream check(csv_path);
+        write_header = !(check.good() && check.peek() != std::ifstream::traits_type::eof());
+    }
+
+    std::ofstream csv(csv_path, std::ios::app);
+    if (!csv) {
+        std::cerr << "Failed to open results CSV '" << csv_path << "' for writing.\n";
+        return;
+    }
+
+    if (write_header) {
+        csv << "alpha,beta,dataset_size,threads,pruning_time_sec,indexing_time_sec,searching_time_sec,recall\n";
+    }
+    csv << alpha << "," << beta << "," << dataset_size << "," << threads << ","
+        << std::fixed << std::setprecision(6)
+        << pruning_time_sec << "," << indexing_time_sec << "," << searching_time_sec << ","
+        << std::setprecision(4) << recall << "\n";
+}
+
 void get_gt(const std::string gt_path, uint32_t *&I, uint32_t &n, uint32_t &d)
 {
     std::ifstream infile(gt_path, std::ios::binary);
@@ -72,9 +96,9 @@ int main(int argc, char* argv[]) {
     std::cout << "Minimal SPARSE_HNSW Demo\n";
     std::cout << "=================\n\n";
 
-    if (argc < 11)
+    if (argc < 13)
     {
-        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <alpha> <input_filepath> <query_filepath> <gt_filepath>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <alpha> <beta> <input_filepath> <query_filepath> <gt_filepath> <results_csv_path>" << std::endl;
         return 1;
     }
 
@@ -86,9 +110,11 @@ int main(int argc, char* argv[]) {
     bool extend_candidates = (std::stoi(argv[5]) != 0);
     bool keep_pruned = (std::stoi(argv[6]) != 0);
     double alpha = std::stod(argv[7]);
-    std::string input_filepath = argv[8];
-    std::string query_filepath = argv[9];
-    std::string gt_filepath = argv[10];
+    int beta = std::stoi(argv[8]);
+    std::string input_filepath = argv[9];
+    std::string query_filepath = argv[10];
+    std::string gt_filepath = argv[11];
+    std::string results_csv_path = argv[12];
 
     int num_omp_threads = omp_get_max_threads();
     std::cout << "Number of OpenMP threads: " << num_omp_threads << "\n";
@@ -110,21 +136,24 @@ int main(int argc, char* argv[]) {
     auto start_index_time = std::chrono::steady_clock::now();
     
     // Create SPARSE_HNSW index with 2D vectors.
-    SPARSE_HNSW index(dim, datamatrix, M, ef_construction, num_points, use_heuristic, extend_candidates, keep_pruned, alpha);
+    SPARSE_HNSW index(dim, datamatrix, M, ef_construction, num_points, use_heuristic, extend_candidates, keep_pruned, alpha, beta);
     // index.setLabelRemapping(std::move(old_to_new), std::move(new_to_old));
 
-    // Prune dataset using mass ratio prunning.
+    CSRMatrix *pruned_datamatrix = nullptr;
+    std::chrono::microseconds prune_time{0};
     if (alpha < 1.0) {
         std::cout << "Pruning dataset using mass ratio pruning with alpha = " << alpha << "...\n";
 
         auto start_prune_time = std::chrono::steady_clock::now();
-        index.pruneMatrix(datamatrix);
+        pruned_datamatrix = index.pruneMatrix(datamatrix);
+        index.setPrunedDataMatrix(pruned_datamatrix);
         auto end_prune_time = std::chrono::steady_clock::now();
-        auto prune_time = std::chrono::duration_cast<std::chrono::microseconds>(end_prune_time - start_prune_time);
+        prune_time = std::chrono::duration_cast<std::chrono::microseconds>(end_prune_time - start_prune_time);
 
         std::cout << "Pruning completed in " << prune_time.count() << " microseconds\n";
     } else if (alpha > 1.0) {
         std::cout << "Invalid alpha value: " << alpha << ". Alpha should be in the range (0, 1]. No pruning applied.\n";
+        return 1;
     }else {
         std::cout << "No pruning applied (alpha = 1.0)\n";
     }
@@ -167,7 +196,12 @@ int main(int argc, char* argv[]) {
 
     index.printInfo();
 
+    appendResultsRow(results_csv_path, alpha, beta, num_points, num_omp_threads,
+                      prune_time.count() / 1e6, index_time.count() / 1e6,
+                      query_time.count() / 1e6, recall);
+    std::cout << "Appended results row to " << results_csv_path << "\n";
+
     std::cout << "\nDemo completed successfully!\n";
-    
+
     return 0;
 }

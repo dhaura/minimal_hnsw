@@ -145,6 +145,23 @@ public:
   //   return {start, end};
   // }
 
+  // Deep copy: allocates its own indptr/indices_data so the copy can be
+  // mutated (e.g. pruned) independently of the original.
+  CSRMatrix(const CSRMatrix &other)
+  {
+    nrow = other.nrow;
+    ncol = other.ncol;
+    nnz = other.nnz;
+    global_nrow = other.global_nrow;
+    global_nnz = other.global_nnz;
+
+    indptr = new int64_t[nrow + 1];
+    memcpy(indptr, other.indptr, (nrow + 1) * sizeof(int64_t));
+
+    indices_data = new IndiceDataPair[nnz];
+    memcpy(indices_data, other.indices_data, nnz * sizeof(IndiceDataPair));
+  }
+
   ~CSRMatrix()
   {
     delete[] indptr;
