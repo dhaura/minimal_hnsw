@@ -4,15 +4,18 @@ add_library(sparse_hnsw_lib sparse_hnsw.cpp sparse_hnsw.h)
 # Create executables
 add_executable(sparse_hnsw_demo main.cpp)
 add_executable(grassRMA_demo grassRMA_main.cpp)
+add_executable(sparse_hnsw_sweep sweep_main.cpp)
 
 # Link the library to the executable
 target_link_libraries(sparse_hnsw_demo sparse_hnsw_lib)
+target_link_libraries(sparse_hnsw_sweep sparse_hnsw_lib)
 
 # Link OpenMP for parallelization
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
     target_link_libraries(sparse_hnsw_lib PUBLIC OpenMP::OpenMP_CXX)
     target_link_libraries(sparse_hnsw_demo OpenMP::OpenMP_CXX)
+    target_link_libraries(sparse_hnsw_sweep OpenMP::OpenMP_CXX)
     target_link_libraries(grassRMA_demo OpenMP::OpenMP_CXX)
 endif()
 
@@ -33,19 +36,22 @@ find_path(VSAG_INCLUDE_DIR NAMES vsag/vsag.h
     NO_DEFAULT_PATH)
 if(VSAG_LIBRARY AND VSAG_INCLUDE_DIR)
     add_executable(sindi_demo sindi_main.cpp)
-    target_include_directories(sindi_demo PRIVATE ${VSAG_INCLUDE_DIR})
-    target_link_libraries(sindi_demo ${VSAG_LIBRARY})
-    if(OpenMP_CXX_FOUND)
-        target_link_libraries(sindi_demo OpenMP::OpenMP_CXX)
-    endif()
+    add_executable(sindi_sweep sindi_sweep_main.cpp)
     get_filename_component(VSAG_LIBRARY_DIR ${VSAG_LIBRARY} DIRECTORY)
-    set_target_properties(sindi_demo PROPERTIES
-        CXX_STANDARD 17
-        CXX_STANDARD_REQUIRED ON
-        BUILD_RPATH ${VSAG_LIBRARY_DIR}
-        INSTALL_RPATH ${VSAG_LIBRARY_DIR}
-        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-    message(STATUS "vsag found: building sindi_demo")
+    foreach(tgt sindi_demo sindi_sweep)
+        target_include_directories(${tgt} PRIVATE ${VSAG_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
+        target_link_libraries(${tgt} ${VSAG_LIBRARY})
+        if(OpenMP_CXX_FOUND)
+            target_link_libraries(${tgt} OpenMP::OpenMP_CXX)
+        endif()
+        set_target_properties(${tgt} PROPERTIES
+            CXX_STANDARD 17
+            CXX_STANDARD_REQUIRED ON
+            BUILD_RPATH ${VSAG_LIBRARY_DIR}
+            INSTALL_RPATH ${VSAG_LIBRARY_DIR}
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+    endforeach()
+    message(STATUS "vsag found: building sindi_demo and sindi_sweep")
 else()
     message(STATUS "vsag not installed under sparse/vsag/install: skipping sindi_demo")
 endif()
@@ -83,7 +89,7 @@ if(ENABLE_PERF)
 endif()
 
 # Set output directory
-set_target_properties(sparse_hnsw_demo PROPERTIES
+set_target_properties(sparse_hnsw_demo sparse_hnsw_sweep PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
 

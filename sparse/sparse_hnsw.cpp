@@ -185,6 +185,7 @@ float SPARSE_HNSW::distanceDense(uint32_t p_idx, const std::vector<float>& q_den
     const uint32_t p_num = static_cast<uint32_t>(p_end - p_start);
 
     float res = 0.0f;
+    #pragma omp simd reduction(+:res)
     for (uint32_t i = 0; i < p_num; ++i) {
         res += static_cast<float>(p[i].data) * q_dense[p[i].indice];
     }

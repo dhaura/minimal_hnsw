@@ -135,7 +135,7 @@ int main(int argc, char* argv[]) {
     
     auto start_index_time = std::chrono::steady_clock::now();
     
-    // Create SPARSE_HNSW index with 2D vectors.
+    // Create SPARSE_HNSW index.
     SPARSE_HNSW index(dim, datamatrix, M, ef_construction, num_points, use_heuristic, extend_candidates, keep_pruned, alpha, beta);
     // index.setLabelRemapping(std::move(old_to_new), std::move(new_to_old));
 
@@ -154,7 +154,7 @@ int main(int argc, char* argv[]) {
     } else if (alpha > 1.0) {
         std::cout << "Invalid alpha value: " << alpha << ". Alpha should be in the range (0, 1]. No pruning applied.\n";
         return 1;
-    }else {
+    } else {
         std::cout << "No pruning applied (alpha = 1.0)\n";
     }
     
