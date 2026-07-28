@@ -2,6 +2,7 @@
 #define SPARSE_HNSW_H
 
 #include "csr_matrix.h"
+#include "prune.h"
 #include <vector>
 #include <queue>
 #include <random>
@@ -59,6 +60,13 @@ namespace sparse_hnsw {
         uint64_t prof_ndist = 0;
         uint64_t prof_bytes = 0;
         uint64_t prof_graph_bytes = 0;
+
+        // The beta>1 refine pass re-scores k*beta candidates against the
+        // UNPRUNED matrix using the old merge kernel. It runs in
+        // searchKNNBatch, not searchLayer, and streams different (longer)
+        // rows -- so it is counted apart from the traversal above.
+        uint64_t prof_refine_ndist = 0;
+        uint64_t prof_refine_bytes = 0;
 
         // Record/replay, used to measure what share of search time distance()
         // actually owns (mode=replay). searchLayer is deterministic given the
@@ -139,8 +147,11 @@ namespace sparse_hnsw {
         uint64_t profNDist() const { return prof_ndist_.load(std::memory_order_relaxed); }
         uint64_t profBytes() const { return prof_bytes_.load(std::memory_order_relaxed); }
         uint64_t profGraphBytes() const { return prof_graph_bytes_.load(std::memory_order_relaxed); }
+        uint64_t profRefineNDist() const { return prof_refine_ndist_.load(std::memory_order_relaxed); }
+        uint64_t profRefineBytes() const { return prof_refine_bytes_.load(std::memory_order_relaxed); }
         void profReset() const {
             prof_ndist_.store(0); prof_bytes_.store(0); prof_graph_bytes_.store(0);
+            prof_refine_ndist_.store(0); prof_refine_bytes_.store(0);
         }
 #endif
 
@@ -175,6 +186,8 @@ namespace sparse_hnsw {
         mutable std::atomic<uint64_t> prof_ndist_{0};
         mutable std::atomic<uint64_t> prof_bytes_{0};
         mutable std::atomic<uint64_t> prof_graph_bytes_{0};
+        mutable std::atomic<uint64_t> prof_refine_ndist_{0};
+        mutable std::atomic<uint64_t> prof_refine_bytes_{0};
 
         float profDistance(uint32_t q, uint32_t p, const void* qty,
                            SearchScratch& s) const {

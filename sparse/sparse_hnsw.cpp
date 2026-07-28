@@ -620,6 +620,12 @@ void SPARSE_HNSW::searchKNNBatch(CSRMatrix *query_matrix, int num_queries, int k
                 heap.clear();
                 for (int j = 0; j < k_hat; ++j) {
                     const uint32_t label = approx_labels[base + j];
+#ifdef SPARSE_HNSW_PROFILE
+                    scratch.prof_refine_ndist++;
+                    scratch.prof_refine_bytes += static_cast<uint64_t>(
+                        original_data_matrix_->indptr[label + 1] -
+                        original_data_matrix_->indptr[label]) * sizeof(IndiceDataPair);
+#endif
                     const float d = distance(&query_id, &label, original_data_matrix_, query_matrix);
                     if (static_cast<int>(heap.size()) < k) {
                         heap.emplace_back(d, label);
@@ -648,6 +654,8 @@ void SPARSE_HNSW::searchKNNBatch(CSRMatrix *query_matrix, int num_queries, int k
         prof_ndist_.fetch_add(scratch.prof_ndist, std::memory_order_relaxed);
         prof_bytes_.fetch_add(scratch.prof_bytes, std::memory_order_relaxed);
         prof_graph_bytes_.fetch_add(scratch.prof_graph_bytes, std::memory_order_relaxed);
+        prof_refine_ndist_.fetch_add(scratch.prof_refine_ndist, std::memory_order_relaxed);
+        prof_refine_bytes_.fetch_add(scratch.prof_refine_bytes, std::memory_order_relaxed);
 #endif
     }
 }
@@ -658,37 +666,7 @@ void SPARSE_HNSW::setPrunedDataMatrix(CSRMatrix *pruned_data_matrix) {
 }
 
 CSRMatrix* SPARSE_HNSW::pruneMatrix(const CSRMatrix *m) {
-    CSRMatrix *pruned = new CSRMatrix(*m);
-
-    int64_t write = 0;
-    std::vector<IndiceDataPair> buf;
-    for (int64_t row = 0; row < pruned->nrow; ++row) {
-        const int64_t s = pruned->indptr[row];
-        const int64_t e = pruned->indptr[row + 1];
-        pruned->indptr[row] = write;
-
-        float weight = 0;
-        for (int64_t i = s; i < e; ++i) weight += static_cast<float>(pruned->indices_data[i].data);
-
-        buf.assign(pruned->indices_data + s, pruned->indices_data + e);
-        std::sort(buf.begin(), buf.end(),
-                  [](const IndiceDataPair& a, const IndiceDataPair& b) {
-                      return static_cast<float>(a.data) > static_cast<float>(b.data);
-                  });
-
-        float prefix_sum = 0; size_t kept = 0;
-        while (kept < buf.size()) {
-            prefix_sum += static_cast<float>(buf[kept].data);
-            ++kept;
-            if (prefix_sum >= alpha_ * weight) break;
-        }
-
-        std::sort(buf.begin(), buf.begin() + kept);
-        for (size_t i = 0; i < kept; ++i) pruned->indices_data[write++] = buf[i];
-    }
-    pruned->indptr[pruned->nrow] = write;
-    pruned->nnz = write;
-    return pruned;
+    return sparse_hnsw::pruneMatrixWithAlpha(m, alpha_);
 }
 
 void SPARSE_HNSW::setLabelRemapping(std::vector<uint32_t> old_to_new, std::vector<uint32_t> new_to_old) {

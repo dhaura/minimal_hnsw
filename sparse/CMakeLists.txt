@@ -56,7 +56,7 @@ else()
     message(STATUS "vsag not installed under sparse/vsag/install: skipping sindi_demo")
 endif()
 
-# ---- Profiling ladder (see profiling/README.md) ----
+# ---- Profiling ladder (see profiling/PROFILING_GUIDE.md) ----
 add_executable(bench_distance profiling/bench_distance.cpp)
 add_executable(bench_scale profiling/bench_scale.cpp)
 add_executable(sparse_profile profiling/profile_search.cpp sparse_hnsw.cpp)
@@ -64,7 +64,9 @@ target_compile_definitions(sparse_profile PRIVATE SPARSE_HNSW_PROFILE)
 
 foreach(tgt bench_distance bench_scale sparse_profile)
     target_include_directories(${tgt} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_compile_options(${tgt} PRIVATE -O3 -g -fno-omit-frame-pointer)
+    # -gdwarf-4, not plain -g: GCC 13 defaults to DWARF 5, which the RHEL 8
+    # binutils `as` on Grace rejects with "unrecognized option '--gdwarf-5'".
+    target_compile_options(${tgt} PRIVATE -O3 -gdwarf-4 -fno-omit-frame-pointer)
     set_target_properties(${tgt} PROPERTIES
         CXX_STANDARD 17
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
@@ -79,9 +81,10 @@ option(ENABLE_PERF "Build with perf-friendly flags (symbols + frame pointers)" O
 
 if(ENABLE_PERF)
     foreach(tgt sparse_hnsw_lib sparse_hnsw_demo grassRMA_demo)
-        # Keep debug symbols even in Release; good stacks for perf
-        target_compile_options(${tgt} PRIVATE -g -fno-omit-frame-pointer)
-        target_link_options(${tgt} PRIVATE -g)
+        # Keep debug symbols even in Release; good stacks for perf.
+        # -gdwarf-4 for the same binutils reason as the profiling targets above.
+        target_compile_options(${tgt} PRIVATE -gdwarf-4 -fno-omit-frame-pointer)
+        target_link_options(${tgt} PRIVATE -gdwarf-4)
     endforeach()
 
     # Optional: if you use Release, ensure optimization still happens
