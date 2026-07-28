@@ -1,11 +1,18 @@
 #ifndef SPARSE_BENCH_COMMON_H
 #define SPARSE_BENCH_COMMON_H
 
+#include <algorithm>
+#include <chrono>
 #include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <string>
+#include <sys/resource.h>
+#include <unistd.h>
 #include <unordered_set>
 #include <vector>
 
@@ -45,8 +52,7 @@ inline double calculate_recall(const std::vector<uint32_t> &predicted_labels,
 }
 
 // Mean reciprocal rank of the first predicted id that is in the exact-NN
-// ground truth. Same definition sindi_ex.py / the other spknn-playground
-// runners use -- it is scored against exact NN, not against MS MARCO qrels.
+// ground truth.
 inline double calculate_rr(const std::vector<uint32_t> &predicted_labels,
                            const std::vector<uint32_t> &I, uint32_t k,
                            uint32_t num_queries) {
@@ -66,12 +72,38 @@ inline double calculate_rr(const std::vector<uint32_t> &predicted_labels,
     return rr / num_queries;
 }
 
-// One sweep point. searching_time_sec is wall time for the whole query batch,
-// so QPS/latency are throughput figures at whatever thread count the run used.
+// Peak resident set size of this process, in GB. ru_maxrss is KiB on Linux.
+inline double peakRssGb() {
+    struct rusage ru;
+    getrusage(RUSAGE_SELF, &ru);
+    return static_cast<double>(ru.ru_maxrss) / (1024.0 * 1024.0);
+}
+
+inline double median(std::vector<double> v) {
+    if (v.empty()) return 0.0;
+    std::sort(v.begin(), v.end());
+    const size_t n = v.size();
+    return (n % 2) ? v[n / 2] : 0.5 * (v[n / 2 - 1] + v[n / 2]);
+}
+
+inline std::string joinTimes(const std::vector<double> &v) {
+    std::ostringstream os;
+    os << std::fixed << std::setprecision(6);
+    for (size_t i = 0; i < v.size(); ++i) {
+        if (i) os << ';';
+        os << v[i];
+    }
+    return os.str();
+}
+
 inline void appendRow(const std::string &csv_path, const std::string &model,
-                      double recall, double indexing_time_sec,
-                      double searching_time_sec, uint32_t num_queries,
-                      double rr, const std::string &params) {
+                      const std::string &params, int threads,
+                      double recall, double rr,
+                      double index_sec, double load_sec, double convert_sec,
+                      const std::vector<double> &search_times,
+                      uint32_t num_queries, uint32_t k,
+                      uint64_t index_bytes = 0,
+                      bool results_ordered = true) {
     bool write_header;
     {
         std::ifstream check(csv_path);
@@ -84,21 +116,40 @@ inline void appendRow(const std::string &csv_path, const std::string &model,
         return;
     }
     if (write_header) {
-        csv << "Model,Recall,Indexing Time,Single Query Time (microseconds),"
-               "Searching Time (Seconds),QPS,RR@10,params\n";
+        csv << "Model,Params,Threads,Recall,RR@10,IndexSec,LoadSec,ConvertSec,"
+               "SearchSecMedian,SearchSecRuns,AmortizedUsPerQuery,QPS,"
+               "LatencyUsSingleThread,PeakRSSGB,IndexBytes,NumQueries,K,"
+               "ResultsOrdered,Host,JobID\n";
     }
 
-    const double latency_us = searching_time_sec / num_queries * 1e6;
-    const double qps = num_queries / searching_time_sec;
+    const double med = median(search_times);
+    const double amortized_us = med / num_queries * 1e6;
+    const double qps = num_queries / med;
+
+    char host[256] = {0};
+    if (gethostname(host, sizeof(host) - 1) != 0) std::snprintf(host, sizeof(host), "?");
+    const char *job = std::getenv("SLURM_JOB_ID");
 
     csv << model << ","
+        << "\"" << params << "\","
+        << threads << ","
         << std::fixed << std::setprecision(10) << recall << ","
-        << std::setprecision(2) << indexing_time_sec << ","
-        << std::setprecision(6) << latency_us << ","
-        << std::setprecision(16) << searching_time_sec << ","
-        << std::setprecision(2) << qps << ","
         << std::setprecision(4) << rr << ","
-        << "\"" << params << "\"\n";
+        << std::setprecision(4) << index_sec << ","
+        << std::setprecision(4) << load_sec << ","
+        << std::setprecision(4) << convert_sec << ","
+        << std::setprecision(6) << med << ","
+        << "\"" << joinTimes(search_times) << "\","
+        << std::setprecision(6) << amortized_us << ","
+        << std::setprecision(2) << qps << ","
+        << ","                                   // LatencyUsSingleThread: unset
+        << std::setprecision(2) << peakRssGb() << ","
+        << index_bytes << ","
+        << num_queries << ","
+        << k << ","
+        << (results_ordered ? "True" : "False") << ","
+        << host << ","
+        << (job ? job : "") << "\n";
     csv.flush();
 }
 
@@ -111,7 +162,23 @@ inline void printPoint(const std::string &params, double recall,
               << " | " << std::setprecision(4) << searching_time_sec << " s"
               << " | " << std::setprecision(2) << searching_time_sec / num_queries * 1e6 << " us/query"
               << " | " << std::setprecision(2) << num_queries / searching_time_sec << " QPS"
-              << " | RR " << std::setprecision(4) << rr << "\n";
+              << " | RR " << std::setprecision(4) << rr
+              << " | peak " << std::setprecision(1) << peakRssGb() << " GB\n";
+}
+
+template <typename F>
+inline std::vector<double> timedRuns(F &&body, int repeats, int warmup) {
+    for (int i = 0; i < warmup; ++i) body();
+    std::vector<double> times;
+    times.reserve(std::max(1, repeats));
+    for (int i = 0; i < std::max(1, repeats); ++i) {
+        auto t0 = std::chrono::steady_clock::now();
+        body();
+        auto t1 = std::chrono::steady_clock::now();
+        times.push_back(
+            std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count() / 1e6);
+    }
+    return times;
 }
 
 // Parses "10,20,50" into a vector.

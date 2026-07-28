@@ -61,6 +61,7 @@ int main(int argc, char *argv[]) {
                      " <input_filepath> <query_filepath> <gt_filepath>"
                      " <results_csv_path> [term_prune_ratio=0] [window_size=50000]"
                      " [use_reorder=1] [use_quantization=0|1|fp16] [model_name=SINDI]"
+                     " [repeats=5] [warmup=1]"
                   << std::endl;
         return 1;
     }
@@ -77,6 +78,8 @@ int main(int argc, char *argv[]) {
     bool use_reorder = (argc > 10) ? (std::stoi(argv[10]) != 0) : true;
     std::string use_quantization = (argc > 11) ? argv[11] : "0";
     std::string model_name = (argc > 12) ? argv[12] : "SINDI";
+    int repeats = (argc > 13) ? std::stoi(argv[13]) : 5;
+    int warmup = (argc > 14) ? std::stoi(argv[14]) : 1;
 
     if (use_quantization == "0")
         use_quantization = "false";
@@ -103,7 +106,14 @@ int main(int argc, char *argv[]) {
               << " use_quantization=" << use_quantization
               << " threads=" << num_omp_threads << "\n";
 
+    auto start_load_time = std::chrono::steady_clock::now();
     CSRData datamatrix(input_filepath);
+    auto end_load_time = std::chrono::steady_clock::now();
+    double load_time_sec =
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            end_load_time - start_load_time).count() / 1e6;
+    std::cout << "Loaded base vectors in " << load_time_sec << " seconds.\n";
+
     int64_t dim = datamatrix.ncol;
     int64_t num_points = datamatrix.nrow;
 
@@ -173,7 +183,7 @@ int main(int argc, char *argv[]) {
         std::cout << "Added " << index->GetNumElements() << " points to the index in "
                   << indexing_time_sec << " seconds.\n";
 
-        auto run = [&](int n_candidate, float query_prune_ratio) -> double {
+        auto run = [&](int n_candidate, float query_prune_ratio) {
             std::ostringstream search_parameters;
             search_parameters << R"({
                 "sindi": {
@@ -186,7 +196,6 @@ int main(int argc, char *argv[]) {
 
             std::fill(pred_labels.begin(), pred_labels.end(), UINT32_MAX);
 
-            auto start_query = std::chrono::steady_clock::now();
             #pragma omp parallel for schedule(dynamic, 4)
             for (int64_t i = 0; i < query_count; i++) {
                 auto query = vsag::Dataset::Make();
@@ -200,24 +209,18 @@ int main(int argc, char *argv[]) {
                 for (int64_t j = 0; j < nres && j < (int64_t)k; ++j)
                     pred_labels[i * k + j] = static_cast<uint32_t>(ids[j]);
             }
-            auto end_query = std::chrono::steady_clock::now();
-
-            return std::chrono::duration_cast<std::chrono::microseconds>(
-                       end_query - start_query).count() / 1e6;
         };
 
         std::cout << "Sweeping " << qpr_list.size() * ncand_list.size()
                   << " (query_prune_ratio, n_candidate) points (" << query_count
-                  << " queries, k=" << k << ")\n";
-
-        // Warm-up: the first pass over a freshly built index pays page-fault and
-        // NUMA first-touch costs that would otherwise be charged to whichever
-        // sweep point happens to run first.
-        run(ncand_list[0], qpr_list[0]);
+                  << " queries, k=" << k << ")\n"
+                  << "  " << repeats << " timed passes per point after " << warmup
+                  << " warm-up pass(es); the median is reported.\n";
 
         for (float qpr : qpr_list) {
             for (int n_candidate : ncand_list) {
-                double searching_time_sec = run(n_candidate, qpr);
+                std::vector<double> times = bench::timedRuns(
+                    [&] { run(n_candidate, qpr); }, repeats, warmup);
 
                 double recall = bench::calculate_recall(pred_labels, I, k, query_count);
                 double rr = bench::calculate_rr(pred_labels, I, k, query_count);
@@ -225,12 +228,12 @@ int main(int argc, char *argv[]) {
                 std::ostringstream params;
                 params << "doc_prune=" << doc_prune_ratio
                        << " query_prune=" << qpr
-                       << " n_cand=" << n_candidate
-                       << " threads=" << num_omp_threads;
+                       << " n_cand=" << n_candidate;
 
-                bench::printPoint(params.str(), recall, searching_time_sec, query_count, rr);
-                bench::appendRow(results_csv_path, model_name, recall, indexing_time_sec,
-                                 searching_time_sec, query_count, rr, params.str());
+                bench::printPoint(params.str(), recall, bench::median(times), query_count, rr);
+                bench::appendRow(results_csv_path, model_name, params.str(), num_omp_threads,
+                                 recall, rr, indexing_time_sec, load_time_sec, 0.0,
+                                 times, query_count, k);
             }
         }
     }

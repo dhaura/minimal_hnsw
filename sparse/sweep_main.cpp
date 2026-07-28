@@ -22,6 +22,7 @@ int main(int argc, char *argv[]) {
                      " <extend_candidates> <keep_pruned> <alpha> <beta>"
                      " <input_filepath> <query_filepath> <gt_filepath>"
                      " <results_csv_path> [model_name=SparseHNSW]"
+                     " [repeats=5] [warmup=1]"
                   << std::endl;
         return 1;
     }
@@ -39,6 +40,8 @@ int main(int argc, char *argv[]) {
     std::string gt_filepath = argv[11];
     std::string results_csv_path = argv[12];
     std::string model_name = (argc > 13) ? argv[13] : "SparseHNSW";
+    int repeats = (argc > 14) ? std::stoi(argv[14]) : 5;
+    int warmup = (argc > 15) ? std::stoi(argv[15]) : 1;
 
     if (ef_list.empty()) {
         std::cerr << "ef_list is empty." << std::endl;
@@ -52,7 +55,14 @@ int main(int argc, char *argv[]) {
               << " heuristic=" << use_heuristic
               << " threads=" << num_omp_threads << "\n";
 
+    auto start_load_time = std::chrono::steady_clock::now();
     CSRMatrix *datamatrix = new CSRMatrix(input_filepath, true);
+    auto end_load_time = std::chrono::steady_clock::now();
+    double load_time_sec =
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            end_load_time - start_load_time).count() / 1e6;
+    std::cout << "Loaded base vectors in " << load_time_sec << " seconds.\n";
+
     int dim = datamatrix->ncol;
     int num_points = datamatrix->nrow;
 
@@ -86,8 +96,9 @@ int main(int argc, char *argv[]) {
     double indexing_time_sec =
         std::chrono::duration_cast<std::chrono::microseconds>(
             end_index_time - start_index_time).count() / 1e6;
-    std::cout << "Added " << num_points << " points to the index in "
-              << indexing_time_sec << " seconds.\n";
+    std::cout << "Built a searchable index over " << num_points
+              << " points in " << indexing_time_sec
+              << " seconds (pruning included).\n";
 
     index.printInfo();
 
@@ -106,12 +117,8 @@ int main(int argc, char *argv[]) {
     std::cout << "\nSweeping ef over " << ef_list.size() << " values ("
               << query_count << " queries, k=" << k << ")\n";
 
-    // Warm-up: first pass pays page-cache and NUMA first-touch costs that
-    // would otherwise be charged to whichever ef happens to run first.
-    {
-        std::vector<uint32_t> warm;
-        index.searchKNNBatch(querymatrix, query_count, k, ef_list[0], warm);
-    }
+    std::cout << "  " << repeats << " timed passes per ef after " << warmup
+              << " warm-up pass(es); the median is reported.\n";
 
     for (int ef : ef_list) {
         if (ef < static_cast<int>(k)) {
@@ -120,25 +127,21 @@ int main(int argc, char *argv[]) {
         }
 
         std::vector<uint32_t> pred_labels;
-        auto start_query = std::chrono::steady_clock::now();
-        index.searchKNNBatch(querymatrix, query_count, k, ef, pred_labels);
-        auto end_query = std::chrono::steady_clock::now();
-
-        double searching_time_sec =
-            std::chrono::duration_cast<std::chrono::microseconds>(
-                end_query - start_query).count() / 1e6;
+        std::vector<double> times = bench::timedRuns(
+            [&] { index.searchKNNBatch(querymatrix, query_count, k, ef, pred_labels); },
+            repeats, warmup);
 
         double recall = bench::calculate_recall(pred_labels, I, k, query_count);
         double rr = bench::calculate_rr(pred_labels, I, k, query_count);
 
         std::ostringstream params;
         params << "M=" << M << " efC=" << ef_construction << " ef=" << ef
-               << " alpha=" << alpha << " beta=" << beta
-               << " threads=" << num_omp_threads;
+               << " alpha=" << alpha << " beta=" << beta;
 
-        bench::printPoint(params.str(), recall, searching_time_sec, query_count, rr);
-        bench::appendRow(results_csv_path, model_name, recall, indexing_time_sec,
-                         searching_time_sec, query_count, rr, params.str());
+        bench::printPoint(params.str(), recall, bench::median(times), query_count, rr);
+        bench::appendRow(results_csv_path, model_name, params.str(), num_omp_threads,
+                         recall, rr, indexing_time_sec, load_time_sec, 0.0,
+                         times, query_count, k);
     }
 
     std::cout << "\nResults appended to " << results_csv_path << "\n";
