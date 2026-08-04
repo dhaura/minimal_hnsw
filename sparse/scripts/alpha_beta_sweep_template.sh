@@ -10,7 +10,7 @@
 module load GCC/13.2.0
 
 REPO=$SCRATCH/repos/minimal_hnsw
-BIN=$REPO/build/bin/sparse_hnsw_demo
+BIN=$REPO/build-release/bin/sparse_hnsw_demo
 DATA=$REPO/sparse/data/msmarco_full
 RESULTS_DIR=$REPO/sparse/scripts/results
 

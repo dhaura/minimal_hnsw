@@ -11,7 +11,7 @@ mkdir -p "$TMP_DIR" "$SCRIPT_DIR/logs" "$SCRIPT_DIR/results"
 
 echo "Building sparse_hnsw_demo before submitting (so every job picks up the current source)..."
 module load GCC/13.2.0
-cmake --build "$REPO_ROOT/build" --target sparse_hnsw_demo -j8
+cmake --build "$REPO_ROOT/build-release" --target sparse_hnsw_demo -j8
 
 ALPHAS=(0.5 0.6 0.7 0.8 0.9 1.0)
 BETAS=(1 2 3)

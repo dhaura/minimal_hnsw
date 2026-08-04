@@ -37,6 +37,10 @@ search_sec=$(echo "scale=6; $search_us/1000000" | bc -l)
 mkdir -p "$(dirname "$CSV")"
 if [ ! -s "$CSV" ]; then
   echo "method,params,dataset_size,threads,indexing_time_sec,searching_time_sec,recall" > "$CSV"
+elif [ -n "$(tail -c1 "$CSV")" ]; then
+  # Last append left no trailing newline -- fix it up first or the next row
+  # concatenates onto the same line instead of starting a new one.
+  echo >> "$CSV"
 fi
 echo "${METHOD},\"${PARAMS}\",${dataset_size},${THREADS},${indexing_sec},${search_sec},${recall}" >> "$CSV"
 echo "Appended ${METHOD} result to $CSV"

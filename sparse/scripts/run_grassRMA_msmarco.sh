@@ -10,7 +10,7 @@
 module load GCC/13.2.0
 
 REPO=$SCRATCH/repos/minimal_hnsw
-BIN=$REPO/build/bin/grassRMA_demo
+BIN=$REPO/build-release/bin/grassRMA_demo
 DATA=$REPO/sparse/data/msmarco_full
 SCRIPTS=$REPO/sparse/scripts
 LOG=$SCRIPTS/logs/grassRMA_full_${SLURM_JOB_ID}.out
