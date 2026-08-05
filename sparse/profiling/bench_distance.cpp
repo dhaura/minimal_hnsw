@@ -46,6 +46,7 @@
 //               ever streams pruned rows (~215 B at alpha=0.8 vs ~507 B
 //               unpruned), so profiling the raw matrix measures a kernel that
 //               never actually runs. 1.0 = no pruning.
+#include <unistd.h>
 #include "csr_matrix.h"
 #include "prune.h"
 #include "perf_ctl.h"
@@ -171,12 +172,18 @@ int main(int argc, char** argv) {
 
     // Scatter it, exactly as SearchScratch::scatterQuery does once per query.
     // This buffer is the dense kernel's second access stream: dim x 4 B, too
-    // big for L1 (32 KB) and comfortably inside L2 (1 MB on this part).
+    // big for L1 (32 KB) and, on both target parts, still inside L2 --
+    // 1 MB/core on Grace's Cascade Lake, 512 KB/core on Perlmutter's Zen3.
+    // Report the actual L2 rather than a hardcoded one: which side of the L2
+    // boundary q_dense lands on is exactly how V1 is meant to be read.
     const int dim = static_cast<int>(D.ncol);
     std::vector<float> q_dense(static_cast<size_t>(dim), 0.0f);
     for (uint32_t i = 0; i < qn; ++i) q_dense[qv[i].indice] = static_cast<float>(qv[i].data);
-    printf("query nnz=%u  dim=%d  q_dense=%.0f KB (L1=32 KB, L2=1 MB)\n",
-           qn, dim, dim * 4.0 / 1024);
+    long l1b = sysconf(_SC_LEVEL1_DCACHE_SIZE);
+    long l2b = sysconf(_SC_LEVEL2_CACHE_SIZE);
+    printf("query nnz=%u  dim=%d  q_dense=%.0f KB (L1=%ld KB, L2=%ld KB)\n",
+           qn, dim, dim * 4.0 / 1024,
+           l1b > 0 ? l1b / 1024 : 32, l2b > 0 ? l2b / 1024 : 512);
 
     auto bytes_of = [&](const std::vector<uint32_t>& v, uint64_t n) {
         double b = 0;

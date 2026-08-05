@@ -13,8 +13,10 @@ fi
 
 if ! command -v perf >/dev/null 2>&1; then
     cat >&2 <<'EOF'
-perf_hotspots.sh: `perf` is not installed on this cluster, so E6b (the ranked
-list of where non-distance cycles go) cannot run here.
+perf_hotspots.sh: `perf` is not on $PATH, so E6b (the ranked list of where
+non-distance cycles go) cannot run here. Grace has no perf at all; Perlmutter
+DOES (/usr/bin/perf), so on Perlmutter this means the environment is wrong,
+not that the rung is impossible.
 
 E6 still answers the question that matters -- HOW MUCH of the time is not the
 distance kernel -- via the record/replay ablation in sparse_profile, which needs
