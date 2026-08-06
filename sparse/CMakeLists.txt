@@ -28,11 +28,14 @@ endif()
 #   cmake --build vsag/build-release --parallel 16
 #   cmake --install vsag/build-release
 find_library(VSAG_LIBRARY NAMES vsag
-    HINTS ${CMAKE_CURRENT_SOURCE_DIR}/vsag/install/lib
+    HINTS ${CMAKE_CURRENT_SOURCE_DIR}/vsag/install-znver3/lib
+          ${CMAKE_CURRENT_SOURCE_DIR}/vsag/install-znver3/lib64
+          ${CMAKE_CURRENT_SOURCE_DIR}/vsag/install/lib
           ${CMAKE_CURRENT_SOURCE_DIR}/vsag/install/lib64
     NO_DEFAULT_PATH)
 find_path(VSAG_INCLUDE_DIR NAMES vsag/vsag.h
-    HINTS ${CMAKE_CURRENT_SOURCE_DIR}/vsag/install/include
+    HINTS ${CMAKE_CURRENT_SOURCE_DIR}/vsag/install-znver3/include
+          ${CMAKE_CURRENT_SOURCE_DIR}/vsag/install/include
     NO_DEFAULT_PATH)
 if(VSAG_LIBRARY AND VSAG_INCLUDE_DIR)
     add_executable(sindi_demo sindi_main.cpp)
@@ -67,7 +70,7 @@ target_compile_definitions(sparse_profile PRIVATE SPARSE_HNSW_PROFILE)
 add_executable(sparse_diag_sweep diag_sweep_main.cpp sparse_hnsw.cpp)
 target_compile_definitions(sparse_diag_sweep PRIVATE SPARSE_HNSW_PROFILE)
 
-foreach(tgt bench_distance bench_scale bench_kernels sparse_profile sparse_diag_sweep)
+foreach(tgt bench_distance bench_scale sparse_profile sparse_diag_sweep)
     target_include_directories(${tgt} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     # -gdwarf-4, not plain -g: GCC 13 defaults to DWARF 5, which the RHEL 8
     # binutils `as` on Grace rejects with "unrecognized option '--gdwarf-5'".
