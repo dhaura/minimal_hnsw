@@ -18,7 +18,7 @@ source /global/homes/d/dhaura/repos/SpKNN/spknn-playground/common/bench_env_perl
 bench_provenance
 bench_assert_optimized "$SPKNN_BIN/sindi_sweep"
 
-OUT=${SPKNN_OUT:-$SCRATCH/datasets/SpKNN/sindi}
+OUT=${SPKNN_OUT:-$SPKNN_OUT_ROOT/sindi}
 mkdir -p "$OUT"
 
 CSV="$OUT/sindi_results${TAG:+_$TAG}.csv"
@@ -28,9 +28,9 @@ $BENCH_LAUNCH stdbuf -oL -eL "$SPKNN_BIN/sindi_sweep" \
   "${DPR:-0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7}" \
   "${QPR:-0.5,0.4,0.3,0.2,0.1,0.0}" \
   "${NCAND:-10,20,50}" \
-  "$SPKNN_DATA/base_full.csr" \
-  "$SPKNN_DATA/queries.dev.csr" \
-  "$SPKNN_DATA/base_full.dev.gt" \
+  "$SPKNN_BASE" \
+  "$SPKNN_QUERIES" \
+  "$SPKNN_GT" \
   "$CSV" \
   "${TPR:-0}" "${WINDOW:-50000}" "${REORDER:-1}" "${QUANT:-0}" \
   SINDI "${REPEATS:-5}" "${WARMUP:-1}"
