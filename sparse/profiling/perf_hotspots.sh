@@ -43,7 +43,9 @@ perf report -i "$WORK/search.data" --stdio --no-children --percent-limit 0.5 2>/
     | head -25
 
 echo
-echo "(--no-children = self cycles. distanceDense() is the production kernel;"
+echo "(--no-children = self cycles. distanceDense() is the traversal kernel"
+echo " and distanceDenseRefine() the beta-refine pass -- same code, split"
+echo " symbols so the two are separable;"
 echo " everything else -- priority_queue sift, visited bits, neighbor walks, the"
 echo " per-query q_dense scatter -- is overhead that no amount of distance-kernel"
 echo " optimization will remove.)"

@@ -4,8 +4,11 @@
 // The production kernel is now SPARSE_HNSW::distanceDense(): the query row is
 // scattered once per query into a dense fp32 array of length `dim`, and each
 // document row is then a straight-line SIMD loop that gathers q_dense[col] and
-// multiplies by the fp16 value. There is no sorted-list merge on the search
-// path any more -- the merge only survives in the beta>1 refine pass.
+// multiplies by the fp16 value. There is no sorted-list merge anywhere on the
+// search path any more: the beta>1 refine pass was switched to the same dense
+// kernel (2026-08-12), so the merge is now BUILD-ONLY (insertion, where the
+// inserted row itself is the query). Variant 6 keeps it as a historical
+// before/after baseline, not as a live search-path kernel.
 //
 // That change matters for this rung. The old merge advanced its two pointers
 // from data it had just loaded (a serial, data-dependent chain that starved
@@ -72,8 +75,9 @@ static inline float dense(const float* qd, const IndiceDataPair* p, uint32_t pn)
     return 1.0f - res;
 }
 
-// The OLD kernel: branchless sorted-list merge. Still live in the refine pass
-// (SPARSE_HNSW::distance()), and kept here as the before/after baseline.
+// The OLD kernel: branchless sorted-list merge. No longer on any search path
+// (SPARSE_HNSW::distance() is now build-only); kept as the before/after
+// baseline for what the dense rewrite bought.
 __attribute__((always_inline))
 static inline float merge(const IndiceDataPair* q, uint32_t qn,
                           const IndiceDataPair* p, uint32_t pn) {

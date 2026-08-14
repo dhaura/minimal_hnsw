@@ -18,10 +18,12 @@ using namespace sparse_hnsw;
 #ifdef SPARSE_HNSW_PROFILE
 #define SPARSE_HNSW_DISTANCE(q, p) profDistance((q), (p), qty_ptr, scratch)
 #define SPARSE_HNSW_DISTANCE_DENSE(p) profDistanceDense((p), scratch)
+#define SPARSE_HNSW_DISTANCE_DENSE_REFINE(m, p) distanceDenseRefine((m), (p), scratch.q_dense)
 #define SPARSE_HNSW_REPLAYING (scratch.replay != nullptr)
 #else
 #define SPARSE_HNSW_DISTANCE(q, p) distance(&(q), &(p), data_matrix_, qty_ptr)
-#define SPARSE_HNSW_DISTANCE_DENSE(p) distanceDense((p), scratch.q_dense)
+#define SPARSE_HNSW_DISTANCE_DENSE(p) distanceDense(data_matrix_, (p), scratch.q_dense)
+#define SPARSE_HNSW_DISTANCE_DENSE_REFINE(m, p) distanceDense((m), (p), scratch.q_dense)
 #define SPARSE_HNSW_REPLAYING false
 #endif
 
@@ -178,10 +180,11 @@ float SPARSE_HNSW::distance(const void *pVect1, const void *pVect2, const void *
     return 1.0f - res;
 }
 
-float SPARSE_HNSW::distanceDense(uint32_t p_idx, const std::vector<float>& q_dense) const {
-    const int64_t p_start = data_matrix_->indptr[p_idx];
-    const int64_t p_end = data_matrix_->indptr[p_idx + 1];
-    const IndiceDataPair* p = data_matrix_->indices_data + p_start;
+__attribute__((always_inline))
+static inline float denseDotRow(const CSRMatrix* m, uint32_t p_idx, const std::vector<float>& q_dense) {
+    const int64_t p_start = m->indptr[p_idx];
+    const int64_t p_end = m->indptr[p_idx + 1];
+    const IndiceDataPair* p = m->indices_data + p_start;
     const uint32_t p_num = static_cast<uint32_t>(p_end - p_start);
 
     float res = 0.0f;
@@ -191,6 +194,16 @@ float SPARSE_HNSW::distanceDense(uint32_t p_idx, const std::vector<float>& q_den
     }
     return 1.0f - res;
 }
+
+float SPARSE_HNSW::distanceDense(const CSRMatrix* m, uint32_t p_idx, const std::vector<float>& q_dense) const {
+    return denseDotRow(m, p_idx, q_dense);
+}
+
+#ifdef SPARSE_HNSW_PROFILE
+float SPARSE_HNSW::distanceDenseRefine(const CSRMatrix* m, uint32_t p_idx, const std::vector<float>& q_dense) const {
+    return denseDotRow(m, p_idx, q_dense);
+}
+#endif
 
 int SPARSE_HNSW::getRandomLevel() {
     double r = level_generator_(rng_);
@@ -617,16 +630,39 @@ void SPARSE_HNSW::searchKNNBatch(CSRMatrix *query_matrix, int num_queries, int k
                 const size_t base = static_cast<size_t>(i) * static_cast<size_t>(k_hat);
                 const uint32_t query_id = static_cast<uint32_t>(i);
 
+                const int64_t q_start = query_matrix->indptr[query_id];
+                const int64_t q_end = query_matrix->indptr[query_id + 1];
+                const IndiceDataPair* q_indices = query_matrix->indices_data + q_start;
+                const uint32_t q_num = static_cast<uint32_t>(q_end - q_start);
+                scratch.scatterQuery(dim_, q_indices, q_num);
+
+                const int64_t* refine_indptr = original_data_matrix_->indptr;
+                const IndiceDataPair* refine_base = original_data_matrix_->indices_data;
+                {
+                    const char* vec = reinterpret_cast<const char*>(refine_base + refine_indptr[approx_labels[base]]);
+                    __builtin_prefetch(vec, 0, 3);
+                    __builtin_prefetch(vec + 64, 0, 3);
+                    __builtin_prefetch(vec + 128, 0, 3);
+                    __builtin_prefetch(vec + 192, 0, 3);
+                }
+
                 heap.clear();
                 for (int j = 0; j < k_hat; ++j) {
                     const uint32_t label = approx_labels[base + j];
+                    if (j + 1 < k_hat) {
+                        const char* next_vec = reinterpret_cast<const char*>(refine_base + refine_indptr[approx_labels[base + j + 1]]);
+                        __builtin_prefetch(next_vec, 0, 3);
+                        __builtin_prefetch(next_vec + 64, 0, 3);
+                        __builtin_prefetch(next_vec + 128, 0, 3);
+                        __builtin_prefetch(next_vec + 192, 0, 3);
+                    }
 #ifdef SPARSE_HNSW_PROFILE
                     scratch.prof_refine_ndist++;
                     scratch.prof_refine_bytes += static_cast<uint64_t>(
                         original_data_matrix_->indptr[label + 1] -
                         original_data_matrix_->indptr[label]) * sizeof(IndiceDataPair);
 #endif
-                    const float d = distance(&query_id, &label, original_data_matrix_, query_matrix);
+                    const float d = SPARSE_HNSW_DISTANCE_DENSE_REFINE(original_data_matrix_, label);
                     if (static_cast<int>(heap.size()) < k) {
                         heap.emplace_back(d, label);
                         std::push_heap(heap.begin(), heap.end());
@@ -636,6 +672,7 @@ void SPARSE_HNSW::searchKNNBatch(CSRMatrix *query_matrix, int num_queries, int k
                         std::push_heap(heap.begin(), heap.end());
                     }
                 }
+                scratch.unscatterQuery(q_indices, q_num);
                 const size_t out_base = static_cast<size_t>(i) * static_cast<size_t>(k);
                 while (!heap.empty()) {
                     std::pop_heap(heap.begin(), heap.end());

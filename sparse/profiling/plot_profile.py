@@ -746,7 +746,7 @@ def main():
             if v is not None:
                 print(("  %-32s" + fmt) % (label, v))
         if rf is not None:
-            print("  %-32s%10.1f %% of distance calls (beta-refine, merge kernel"
+            print("  %-32s%10.1f %% of distance calls (beta-refine, dense kernel"
                   " on unpruned rows)" % ("exact re-scoring", rf * 100))
 
     if stats:

@@ -124,7 +124,12 @@ namespace sparse_hnsw {
 #ifdef SPARSE_HNSW_PROFILE
         __attribute__((noinline))
 #endif
-        float distanceDense(uint32_t p_idx, const std::vector<float>& q_dense) const;
+        float distanceDense(const CSRMatrix* m, uint32_t p_idx, const std::vector<float>& q_dense) const;
+
+#ifdef SPARSE_HNSW_PROFILE
+        __attribute__((noinline))
+        float distanceDenseRefine(const CSRMatrix* m, uint32_t p_idx, const std::vector<float>& q_dense) const;
+#endif
 
         void addPoint(uint32_t node_id, uint32_t label);
         void addPointsBatch(int num_points);
@@ -205,7 +210,7 @@ namespace sparse_hnsw {
             if (s.replay) {
                 return s.replay[s.replay_idx++];
             }
-            float d = distanceDense(p, s.q_dense);
+            float d = distanceDense(data_matrix_, p, s.q_dense);
             if (s.record) {
                 s.record->push_back(d);
             }

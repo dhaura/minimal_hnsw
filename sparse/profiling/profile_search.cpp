@@ -156,9 +156,11 @@ static void run_batch(const SPARSE_HNSW& index, CSRMatrix* querymatrix, int quer
               << " GBps_per_thread=" << bytes / sec / 1e9 / threads << "\n";
     std::cout << "PROF graph_bytes=" << gbytes
               << " graph_frac_of_bytes=" << (double)gbytes / (bytes + gbytes) << "\n";
-    // The beta-refine pass: exact merge-kernel re-scoring of k*beta candidates
-    // against the UNPRUNED rows. Its ns/call is not separable from the total
-    // here, but its call and byte counts show how much of the work it is.
+    // The beta-refine pass: exact re-scoring of k*beta candidates against the
+    // UNPRUNED rows, using the same dense gather kernel as the traversal
+    // (distanceDenseRefine -- its own symbol in this build, so perf can split
+    // it out). Its ns/call is not separable from the total here, but its call
+    // and byte counts show how much of the work it is.
     std::cout << "PROF refine_ndist=" << rdist
               << " refine_bytes=" << rbytes
               << " refine_frac_of_ndist="
