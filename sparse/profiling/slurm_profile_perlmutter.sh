@@ -34,6 +34,7 @@ EF=${EF:-150}
 ALPHA=${ALPHA:-0.8}
 BETA=${BETA:-3}
 THREADS=${THREADS:-64}
+TAG=${TAG:-}
 HNSW_ARGS="$M $EFC $EF 1 0 0 $ALPHA $BETA $BASE $QUERIES $GT"
 
 export OMP_NUM_THREADS=$THREADS
@@ -43,7 +44,7 @@ echo "### cpu=$(lscpu | awk -F: '/Model name/{gsub(/^ +/,"",$2); print $2; exit}
 echo "### avx=$(lscpu | grep -o -E 'avx[0-9a-z_]*' | sort -u | tr '\n' ' ')"
 echo "### THP=$(cat /sys/kernel/mm/transparent_hugepage/enabled 2>/dev/null)"
 echo "### perf_event_paranoid=$(cat /proc/sys/kernel/perf_event_paranoid 2>/dev/null)"
-echo "### config: M=$M efC=$EFC ef=$EF alpha=$ALPHA beta=$BETA threads=$THREADS"
+echo "### config: M=$M efC=$EFC ef=$EF alpha=$ALPHA beta=$BETA threads=$THREADS${TAG:+ tag=$TAG}"
 echo "### binaries from $BIN"
 numactl --hardware | head -20
 
@@ -104,7 +105,7 @@ echo; echo "########## Done ##########"
     VENV=$SCRATCH/benchmarks/SpKNN/bench-venv-perlmutter
     if [ -x "$VENV/bin/python3" ]; then
         "$VENV/bin/python3" $PROF/plot_profile.py logs/profile_${SLURM_JOB_ID}.out \
-                -o logs/plots_${SLURM_JOB_ID} --pdf
+                -o logs/plots_${SLURM_JOB_ID}${TAG:+_$TAG} --pdf
     else
         echo "venv not found at $VENV -- plot manually with plot_profile.py" >&2
     fi

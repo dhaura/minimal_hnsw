@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
     if (argc < 13) {
         std::cerr << "Usage: " << argv[0]
                   << " <M> <ef_construction> <ef_list> <use_heuristic>"
-                     " <extend_candidates> <keep_pruned> <alpha> <beta>"
+                     " <extend_candidates> <keep_pruned> <alpha> <beta_list>"
                      " <input_filepath> <query_filepath> <gt_filepath>"
                      " <results_csv_path> [model_name=SparseHNSW]"
                      " [repeats=5] [warmup=1]"
@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
     bool extend_candidates = (std::stoi(argv[5]) != 0);
     bool keep_pruned = (std::stoi(argv[6]) != 0);
     double alpha = std::stod(argv[7]);
-    int beta = std::stoi(argv[8]);
+    std::vector<int> beta_list = bench::parseList<int>(argv[8], bench::toInt);
     std::string input_filepath = argv[9];
     std::string query_filepath = argv[10];
     std::string gt_filepath = argv[11];
@@ -47,11 +47,20 @@ int main(int argc, char *argv[]) {
         std::cerr << "ef_list is empty." << std::endl;
         return 1;
     }
+    if (beta_list.empty()) {
+        std::cerr << "beta_list is empty." << std::endl;
+        return 1;
+    }
+
+    std::ostringstream beta_str;
+    for (size_t i = 0; i < beta_list.size(); ++i) {
+        beta_str << (i ? "," : "") << beta_list[i];
+    }
 
     int num_omp_threads = omp_get_max_threads();
     std::cout << "SPARSE_HNSW ef sweep\n====================\n"
               << "M=" << M << " ef_construction=" << ef_construction
-              << " alpha=" << alpha << " beta=" << beta
+              << " alpha=" << alpha << " beta=" << beta_str.str()
               << " heuristic=" << use_heuristic
               << " threads=" << num_omp_threads << "\n";
 
@@ -69,7 +78,8 @@ int main(int argc, char *argv[]) {
     auto start_index_time = std::chrono::steady_clock::now();
 
     SPARSE_HNSW index(dim, datamatrix, M, ef_construction, num_points,
-                      use_heuristic, extend_candidates, keep_pruned, alpha, beta);
+                      use_heuristic, extend_candidates, keep_pruned, alpha,
+                      beta_list.front());
 
     CSRMatrix *pruned_datamatrix = nullptr;
     if (alpha < 1.0) {
@@ -114,34 +124,45 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    std::cout << "\nSweeping ef over " << ef_list.size() << " values ("
-              << query_count << " queries, k=" << k << ")\n";
+    std::cout << "\nSweeping ef over " << ef_list.size() << " values x beta over "
+              << beta_list.size() << " values (" << query_count
+              << " queries, k=" << k << ")\n";
 
-    std::cout << "  " << repeats << " timed passes per ef after " << warmup
+    std::cout << "  " << repeats << " timed passes per point after " << warmup
               << " warm-up pass(es); the median is reported.\n";
 
-    for (int ef : ef_list) {
-        if (ef < static_cast<int>(k)) {
-            std::cerr << "  skipping ef=" << ef << " (< k=" << k << ")\n";
-            continue;
+    const bool multi_beta = beta_list.size() > 1;
+
+    for (int beta : beta_list) {
+        index.setBeta(beta);
+        // Only the search side changes, so no rebuild -- see setBeta().
+        std::string row_model = multi_beta
+                ? model_name + "_b" + std::to_string(beta)
+                : model_name;
+
+        for (int ef : ef_list) {
+            if (ef < static_cast<int>(k)) {
+                std::cerr << "  skipping ef=" << ef << " (< k=" << k << ")\n";
+                continue;
+            }
+
+            std::vector<uint32_t> pred_labels;
+            std::vector<double> times = bench::timedRuns(
+                [&] { index.searchKNNBatch(querymatrix, query_count, k, ef, pred_labels); },
+                repeats, warmup);
+
+            double recall = bench::calculate_recall(pred_labels, I, k, query_count);
+            double rr = bench::calculate_rr(pred_labels, I, k, query_count);
+
+            std::ostringstream params;
+            params << "M=" << M << " efC=" << ef_construction << " ef=" << ef
+                   << " alpha=" << alpha << " beta=" << beta;
+
+            bench::printPoint(params.str(), recall, bench::median(times), query_count, rr);
+            bench::appendRow(results_csv_path, row_model, params.str(), num_omp_threads,
+                             recall, rr, indexing_time_sec, load_time_sec, 0.0,
+                             times, query_count, k);
         }
-
-        std::vector<uint32_t> pred_labels;
-        std::vector<double> times = bench::timedRuns(
-            [&] { index.searchKNNBatch(querymatrix, query_count, k, ef, pred_labels); },
-            repeats, warmup);
-
-        double recall = bench::calculate_recall(pred_labels, I, k, query_count);
-        double rr = bench::calculate_rr(pred_labels, I, k, query_count);
-
-        std::ostringstream params;
-        params << "M=" << M << " efC=" << ef_construction << " ef=" << ef
-               << " alpha=" << alpha << " beta=" << beta;
-
-        bench::printPoint(params.str(), recall, bench::median(times), query_count, rr);
-        bench::appendRow(results_csv_path, model_name, params.str(), num_omp_threads,
-                         recall, rr, indexing_time_sec, load_time_sec, 0.0,
-                         times, query_count, k);
     }
 
     std::cout << "\nResults appended to " << results_csv_path << "\n";
