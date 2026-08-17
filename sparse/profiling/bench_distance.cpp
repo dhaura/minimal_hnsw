@@ -25,6 +25,7 @@
 //   4 COLD dense + pf   : batched prefetch (as searchLayer)   -> async gather
 //   5 COLD gather+dense : memcpy batch to scratch, then dense -> staged pipeline
 //   6 COLD merge        : the OLD sparse merge kernel         -> old vs new
+//   7 COLD quant u8     : the CURRENT production kernel       -> V3/V7 = byte diet
 //
 // Read-out:
 //   memory-attributable share = (V3 - V1) / V3
@@ -52,6 +53,7 @@
 #include <unistd.h>
 #include "csr_matrix.h"
 #include "prune.h"
+#include "quant_csr.h"
 #include "perf_ctl.h"
 #include <chrono>
 #include <random>
@@ -64,7 +66,7 @@
 
 static const int HOPS_BATCH = 32;   // ~= level-0 degree (2*M with M=16)
 
-// The production kernel: SPARSE_HNSW::distanceDense(), verbatim.
+// The fp16 dense kernel: SPARSE_HNSW::distanceDense(), verbatim.
 __attribute__((always_inline))
 static inline float dense(const float* qd, const IndiceDataPair* p, uint32_t pn) {
     float res = 0.0f;
@@ -94,6 +96,24 @@ static inline float merge(const IndiceDataPair* q, uint32_t qn,
     return 1.0f - res;
 }
 
+// THE CURRENT PRODUCTION KERNEL: SPARSE_HNSW::distanceQuant()
+__attribute__((always_inline))
+static inline float quant(const float* qd, const uint8_t* p) {
+    uint16_t n16;
+    _Float16 scale16;
+    std::memcpy(&n16, p, sizeof(n16));
+    std::memcpy(&scale16, p + 2, sizeof(scale16));
+    const uint32_t pn = n16;
+    const uint16_t* idx = reinterpret_cast<const uint16_t*>(p + sparse_hnsw::QuantCSR::kHeader);
+    const uint8_t* code = p + sparse_hnsw::QuantCSR::kHeader + 2 * static_cast<size_t>(pn);
+    float res = 0.0f;
+    #pragma omp simd reduction(+:res)
+    for (uint32_t i = 0; i < pn; ++i) {
+        res += static_cast<float>(code[i]) * qd[idx[i]];
+    }
+    return 1.0f - res * static_cast<float>(scale16);
+}
+
 // Pure streaming read of a row: no ALU on the values, high ILP. Isolates memory.
 __attribute__((always_inline))
 static inline uint64_t stream_row(const IndiceDataPair* p, uint32_t pn) {
@@ -119,7 +139,7 @@ static void timeit(const char* name, uint64_t ncalls, double bytes, F&& f) {
 int main(int argc, char** argv) {
     if (argc < 3) {
         fprintf(stderr, "usage: %s <base.csr> <queries.csr> [ncalls=2000000] "
-                        "[variant=0..6] [maxrow=0[,maxrow...]] [reps=1] [alpha=1.0]\n", argv[0]);
+                        "[variant=0..7] [maxrow=0[,maxrow...]] [reps=1] [alpha=1.0]\n", argv[0]);
         return 1;
     }
     uint64_t NCALL = (argc > 3) ? strtoull(argv[3], nullptr, 10) : 2000000ULL;
@@ -183,6 +203,14 @@ int main(int argc, char** argv) {
     const int dim = static_cast<int>(D.ncol);
     std::vector<float> q_dense(static_cast<size_t>(dim), 0.0f);
     for (uint32_t i = 0; i < qn; ++i) q_dense[qv[i].indice] = static_cast<float>(qv[i].data);
+
+    sparse_hnsw::QuantCSR QC;
+    QC.build(D);
+    printf("quantized copy: %.0f MB (%.1f B/row) vs fp16 %.0f MB (%.1f B/row) "
+           "-> %.3fx fewer row bytes\n",
+           QC.blob.size() / 1e6, (double)QC.blob.size() / D.nrow,
+           D.nnz * 4.0 / 1e6, (double)D.nnz * 4.0 / D.nrow,
+           (D.nnz * 4.0 / D.nrow) / ((double)QC.blob.size() / D.nrow));
     long l1b = sysconf(_SC_LEVEL1_DCACHE_SIZE);
     long l2b = sysconf(_SC_LEVEL2_CACHE_SIZE);
     printf("query nnz=%u  dim=%d  q_dense=%.0f KB (L1=%ld KB, L2=%ld KB)\n",
@@ -321,6 +349,22 @@ int main(int argc, char** argv) {
             }
             return s;
         });
+
+        // 7. COLD QUANT: the CURRENT production kernel on the same rows, from
+        //    the uint8 layout. V3/V7 is what the byte diet bought; note its
+        //    bytes/call differ from the other variants by construction -- that
+        //    IS the point, so its GB/s is reported against its own traffic.
+        if (!only || only == 7) {
+            double qbytes = 0;
+            for (uint64_t i = 0; i < NCALL; ++i) qbytes += QC.rowBytes(ids[i]);
+            timeit("7 COLD quant u8 (production)", NCALL, qbytes, [&] {
+                double s = 0;
+                for (uint64_t i = 0; i < NCALL; ++i) {
+                    s += quant(q_dense.data(), QC.blob.data() + QC.row_off[ids[i]]);
+                }
+                return s;
+            });
+        }
     }
 
     printf("\navg bytes/call: cold=%.0f hot=%.0f  (v5 scratch max=%zu KB, ~%.0f KB avg/batch)\n\n",

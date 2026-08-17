@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
                      " <extend_candidates> <keep_pruned> <alpha> <beta_list>"
                      " <input_filepath> <query_filepath> <gt_filepath>"
                      " <results_csv_path> [model_name=SparseHNSW]"
-                     " [repeats=5] [warmup=1]"
+                     " [repeats=5] [warmup=1] [quantize=0]"
                   << std::endl;
         return 1;
     }
@@ -42,6 +42,7 @@ int main(int argc, char *argv[]) {
     std::string model_name = (argc > 13) ? argv[13] : "SparseHNSW";
     int repeats = (argc > 14) ? std::stoi(argv[14]) : 5;
     int warmup = (argc > 15) ? std::stoi(argv[15]) : 1;
+    bool quantize = (argc > 16) && (std::stoi(argv[16]) != 0);
 
     if (ef_list.empty()) {
         std::cerr << "ef_list is empty." << std::endl;
@@ -112,6 +113,18 @@ int main(int argc, char *argv[]) {
 
     index.printInfo();
 
+    if (quantize) {
+        std::cout << "Building uint8-quantized traversal copy...\n";
+        auto start_q = std::chrono::steady_clock::now();
+        index.enableQuantizedTraversal();
+        auto end_q = std::chrono::steady_clock::now();
+        std::cout << "Quantization completed in "
+                  << std::chrono::duration_cast<std::chrono::microseconds>(
+                         end_q - start_q).count() / 1e6
+                  << " seconds (" << index.quantizedBytes() / (1024.0 * 1024.0)
+                  << " MiB)\n";
+    }
+
     CSRMatrix *querymatrix = new CSRMatrix(query_filepath, true);
     int query_count = querymatrix->nrow;
 
@@ -157,6 +170,9 @@ int main(int argc, char *argv[]) {
             std::ostringstream params;
             params << "M=" << M << " efC=" << ef_construction << " ef=" << ef
                    << " alpha=" << alpha << " beta=" << beta;
+            if (quantize) {
+                params << " q=u8";
+            }
 
             bench::printPoint(params.str(), recall, bench::median(times), query_count, rr);
             bench::appendRow(results_csv_path, row_model, params.str(), num_omp_threads,

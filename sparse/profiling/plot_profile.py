@@ -67,7 +67,7 @@ def style(ax, xgrid=True):
 
 # ----------------------------------------------------------------- parse -----
 VARIANT_RE = re.compile(
-    r"^([1-6])\s+(\S.*?)\s{2,}([\d.]+)\s*ns/call\s+([\d.]+)\s*GB/s\s+\(([\d.]+)\s*s\)")
+    r"^([1-9])\s+(\S.*?)\s{2,}([\d.]+)\s*ns/call\s+([\d.]+)\s*GB/s\s+\(([\d.]+)\s*s\)")
 WORKSET_RE = re.compile(r"^working set:\s+(\d+)\s+rows\s+=\s+([\d.]+)\s+MB")
 SCALE_RE = re.compile(
     r"^\s*(\d+)\s+([\d.]+)\s+\|\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*$")
@@ -80,12 +80,16 @@ BANNER_RE = re.compile(r"^#+\s*(.+?)\s*#+\s*$")
 VARIANT_MEANING = {
     1: "compute floor (rows in L1)",
     2: "memory only (no ALU)",
-    3: "production kernel (dense)",
+    3: "fp16 dense kernel",
     4: "+ batched prefetch",
     5: "+ gather then dense",
     6: "old merge kernel",
+    7: "production kernel (uint8)",
 }
-DENSE_VARIANTS = (1, 2, 3, 4, 5)   # share one kernel; V6 does not
+DENSE_VARIANTS = (1, 2, 3, 4, 5)   # share one kernel; V6/V7 do not
+# Unknown variants must not crash a whole profiling run at the plotting step --
+# the ladder has already finished by then and the log holds all the data.
+VARIANT_FALLBACK = "variant %d (unlabelled -- add it to VARIANT_MEANING)"
 
 
 def parse(text):
@@ -110,7 +114,8 @@ def parse(text):
         m = VARIANT_HDR_RE.match(line)
         if m:
             v = int(m.group(1))
-            cur_ctx = "variant %d (%s)" % (v, VARIANT_MEANING[v])
+            cur_ctx = ("variant %d (%s)" % (v, VARIANT_MEANING[v])
+                       if v in VARIANT_MEANING else VARIANT_FALLBACK % v)
             continue
 
         m = GROUP_RE.match(line)
@@ -217,7 +222,7 @@ def fig_ablation(data, ax=None):
     bound = max(v1, v2)
     serial = v1 + v2
 
-    order = [v for v in (1, 2, 3, 4, 5, 6) if v in vals]
+    order = [v for v in (1, 2, 3, 4, 5, 6, 7) if v in vals]
     labels = ["V%d  %s" % (v, VARIANT_MEANING[v]) for v in order]
     totals = [vals[v] for v in order]
     comp = [0.0 if v in (2, 6) else min(v1, vals[v]) for v in order]
@@ -282,11 +287,15 @@ def fig_ablation(data, ax=None):
     if 6 in vals:
         note += ("          dense rewrite  V6/V3 = %.2fx"
                  % (vals[6] / v3 if v3 else 0.0))
+    if 7 in vals:
+        # V7 is the kernel that actually ships; V3 is its fp16 predecessor.
+        note += ("          uint8 byte diet  V3/V7 = %.2fx"
+                 % (v3 / vals[7] if vals[7] else 0.0))
     ax.annotate(note, xy=(0.0, -0.28), xycoords="axes fraction", fontsize=9,
                 color=INK2, va="top")
     if own:
         fig.tight_layout()
-    return {"v1": v1, "v2": v2, "v3": v3, "v6": vals.get(6),
+    return {"v1": v1, "v2": v2, "v3": v3, "v6": vals.get(6), "v7": vals.get(7),
             "bound": bound, "serial": serial,
             "mem_share": mem_share, "penalty": penalty, "prod": prod}
 
@@ -753,7 +762,10 @@ def main():
         print("\nheadline numbers")
         print("  compute floor  V1 = %7.0f ns/call" % stats["v1"])
         print("  memory only    V2 = %7.0f ns/call" % stats["v2"])
-        print("  production     V3 = %7.0f ns/call" % stats["v3"])
+        print("  fp16 dense     V3 = %7.0f ns/call" % stats["v3"])
+        if stats.get("v7"):
+            print("  uint8 (SHIPS)  V7 = %7.0f ns/call  -> byte diet is %.3fx on ONE core"
+                  % (stats["v7"], stats["v3"] / stats["v7"]))
         if stats.get("v6"):
             print("  old merge      V6 = %7.0f ns/call  -> dense rewrite is %.2fx"
                   % (stats["v6"], stats["v6"] / stats["v3"]))

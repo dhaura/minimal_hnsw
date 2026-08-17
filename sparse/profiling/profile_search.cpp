@@ -37,7 +37,7 @@
 //   sparse_profile <M> <ef_construction> <ef> <use_heuristic> <extend_candidates>
 //                  <keep_pruned> <alpha> <beta>
 //                  <base.csr> <queries.csr> <gt>
-//                  [modes=batch] [num_queries=all] [gate=cold|warm|all]
+//                  [modes=batch] [num_queries=all] [gate=cold|warm|all] [quantize=0]
 //
 // Env:
 //   PROF_BUILD_THREADS  threads for index construction (default: OMP max).
@@ -336,7 +336,7 @@ int main(int argc, char* argv[]) {
                   << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates>"
                      " <keep_pruned> <alpha> <beta>"
                      " <input_filepath> <query_filepath> <gt_filepath>"
-                     " [modes=batch] [num_queries=all] [gate=cold|warm|all]\n"
+                     " [modes=batch] [num_queries=all] [gate=cold|warm|all] [quantize=0]\n"
                      "   modes: comma-separated <mode>[@threads][:nq], e.g.\n"
                      "          batch@48,batch@1,repeat@1:2000,replay@1:2000\n";
         return 1;
@@ -356,6 +356,7 @@ int main(int argc, char* argv[]) {
     std::string modes_arg = (argc > 12) ? argv[12] : "batch";
     long nq_arg          = (argc > 13) ? std::stol(argv[13]) : 0;
     std::string gate     = (argc > 14) ? argv[14] : "cold";
+    bool quantize        = (argc > 15) && (std::stoi(argv[15]) != 0);
 
     if (alpha > 1.0 || alpha <= 0.0) {
         std::cerr << "Invalid alpha " << alpha << "; expected (0, 1].\n";
@@ -416,6 +417,22 @@ int main(int argc, char* argv[]) {
     index.addPointsBatch(num_points);
     auto b1 = std::chrono::steady_clock::now();
     std::cout << "PROF build_s=" << std::chrono::duration<double>(b1 - b0).count() << "\n";
+
+    if (quantize) {
+        auto q0 = std::chrono::steady_clock::now();
+        index.enableQuantizedTraversal();
+        auto q1 = std::chrono::steady_clock::now();
+        const double fp16_row = (alpha < 1.0 ? (double)pruned_datamatrix->nnz
+                                             : (double)datamatrix->nnz) / num_points * 4.0;
+        const double u8_row = (double)(index.quantizedBytes() - (size_t)(num_points + 1) * 8)
+                              / num_points;
+        std::cout << "PROF quantize_s=" << std::chrono::duration<double>(q1 - q0).count()
+                  << " quant_MiB=" << index.quantizedBytes() / (1024.0 * 1024.0)
+                  << " fp16_row_bytes=" << fp16_row
+                  << " u8_row_bytes=" << u8_row
+                  << " row_byte_ratio=" << fp16_row / u8_row << "\n";
+    }
+    std::cout << "PROF quantized=" << (index.quantized() ? 1 : 0) << "\n";
     std::cout.flush();
 
     // The traversal searches for k*beta candidates before the refine pass trims

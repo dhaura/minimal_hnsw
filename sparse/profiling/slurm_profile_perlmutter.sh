@@ -28,13 +28,14 @@ GT=$DATA/base_full.dev.gt
 
 export LD_LIBRARY_PATH=/opt/intel/oneapi/compiler/2025.3/lib:/opt/AMD/aocc-compiler-4.1.0/lib:${LD_LIBRARY_PATH:-}
 
-M=${M:-16}
+M=${M:-32}
 EFC=${EFC:-200}
 EF=${EF:-150}
 ALPHA=${ALPHA:-0.8}
 BETA=${BETA:-3}
 THREADS=${THREADS:-64}
 TAG=${TAG:-}
+QUANTIZE=${QUANTIZE:-1}
 HNSW_ARGS="$M $EFC $EF 1 0 0 $ALPHA $BETA $BASE $QUERIES $GT"
 
 export OMP_NUM_THREADS=$THREADS
@@ -44,7 +45,7 @@ echo "### cpu=$(lscpu | awk -F: '/Model name/{gsub(/^ +/,"",$2); print $2; exit}
 echo "### avx=$(lscpu | grep -o -E 'avx[0-9a-z_]*' | sort -u | tr '\n' ' ')"
 echo "### THP=$(cat /sys/kernel/mm/transparent_hugepage/enabled 2>/dev/null)"
 echo "### perf_event_paranoid=$(cat /proc/sys/kernel/perf_event_paranoid 2>/dev/null)"
-echo "### config: M=$M efC=$EFC ef=$EF alpha=$ALPHA beta=$BETA threads=$THREADS${TAG:+ tag=$TAG}"
+echo "### config: M=$M efC=$EFC ef=$EF alpha=$ALPHA beta=$BETA threads=$THREADS quantize=$QUANTIZE${TAG:+ tag=$TAG}"
 echo "### binaries from $BIN"
 numactl --hardware | head -20
 
@@ -61,12 +62,13 @@ PIN1="numactl --physcpubind=8 --membind=0"
 echo; echo "########## E3+E4: ablation and working-set sweep (1 core, local mem) ##########"
 
 $PIN1 $BIN/bench_distance $BASE $QUERIES 1000000 0 1000,2500,10000,40000,150000,600000,2500000 1 $ALPHA
-echo "-------- E3 proper: full working set, 6 variants, 3 reps --------"
+echo "-------- E3 proper: full working set, 7 variants, 3 reps --------"
 $PIN1 $BIN/bench_distance $BASE $QUERIES 2000000 0 0 3 $ALPHA
 
 if [ "$HAVE_PERF" = "1" ]; then
     echo; echo "########## E2/E3 counters: per-variant groups (1 core) ##########"
-    for V in 1 3 4 6; do
+    # 7 = the current production (u8) kernel; 3 = its fp16 predecessor.
+    for V in 1 3 4 6 7; do
         echo "======== variant $V ========"
         $PROF/perf_groups.sh $PIN1 $BIN/bench_distance $BASE $QUERIES 2000000 $V 0 1 $ALPHA
     done
@@ -89,13 +91,13 @@ export PROF_BUILD_THREADS=$THREADS
 export OMP_PROC_BIND=close
 numactl --cpunodebind=0-3 --interleave=0-3 stdbuf -oL -eL \
   $BIN/sparse_profile $HNSW_ARGS \
-  "replay@1:2000,repeat@1:2000,batch@1,batch@$THREADS" 0 cold
+  "replay@1:2000,repeat@1:2000,batch@1,batch@$THREADS" 0 cold $QUANTIZE
 
 if [ "$HAVE_PERF" = "1" ]; then
     echo; echo "########## E2: counters on the real search (gated) ##########"
-    OMP_NUM_THREADS=1 $PROF/perf_groups.sh $BIN/sparse_profile $HNSW_ARGS batch@1
+    OMP_NUM_THREADS=1 $PROF/perf_groups.sh $BIN/sparse_profile $HNSW_ARGS batch@1 0 cold $QUANTIZE
     echo; echo "########## E6b: what the non-distance time IS ##########"
-    OMP_NUM_THREADS=1 $PROF/perf_hotspots.sh $BIN/sparse_profile $HNSW_ARGS batch@1
+    OMP_NUM_THREADS=1 $PROF/perf_hotspots.sh $BIN/sparse_profile $HNSW_ARGS batch@1 0 cold $QUANTIZE
 fi
 
 echo; echo "########## Done ##########"

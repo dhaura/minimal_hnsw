@@ -18,14 +18,21 @@ using namespace sparse_hnsw;
 #ifdef SPARSE_HNSW_PROFILE
 #define SPARSE_HNSW_DISTANCE(q, p) profDistance((q), (p), qty_ptr, scratch)
 #define SPARSE_HNSW_DISTANCE_DENSE(p) profDistanceDense((p), scratch)
+#define SPARSE_HNSW_DISTANCE_QUANT(p) profDistanceQuant((p), scratch)
 #define SPARSE_HNSW_DISTANCE_DENSE_REFINE(m, p) distanceDenseRefine((m), (p), scratch.q_dense)
 #define SPARSE_HNSW_REPLAYING (scratch.replay != nullptr)
 #else
 #define SPARSE_HNSW_DISTANCE(q, p) distance(&(q), &(p), data_matrix_, qty_ptr)
 #define SPARSE_HNSW_DISTANCE_DENSE(p) distanceDense(data_matrix_, (p), scratch.q_dense)
+#define SPARSE_HNSW_DISTANCE_QUANT(p) distanceQuant((p), scratch.q_dense)
 #define SPARSE_HNSW_DISTANCE_DENSE_REFINE(m, p) distanceDense((m), (p), scratch.q_dense)
 #define SPARSE_HNSW_REPLAYING false
 #endif
+
+#define SPARSE_HNSW_TRAVERSAL_DISTANCE(p)                       \
+    (use_quant ? SPARSE_HNSW_DISTANCE_QUANT(p)                  \
+               : (scratch.dense_query ? SPARSE_HNSW_DISTANCE_DENSE(p) \
+                                      : SPARSE_HNSW_DISTANCE(query_id, p)))
 
 
 
@@ -205,6 +212,32 @@ float SPARSE_HNSW::distanceDenseRefine(const CSRMatrix* m, uint32_t p_idx, const
 }
 #endif
 
+float SPARSE_HNSW::distanceQuant(uint32_t p_idx, const std::vector<float>& q_dense) const {
+    const uint8_t* p = quant_.blob.data() + quant_.row_off[p_idx];
+
+    uint16_t n16;
+    _Float16 scale16;
+    std::memcpy(&n16, p, sizeof(n16));
+    std::memcpy(&scale16, p + 2, sizeof(scale16));
+    const uint32_t p_num = n16;
+
+    const uint16_t* idx = reinterpret_cast<const uint16_t*>(p + QuantCSR::kHeader);
+    const uint8_t* code = p + QuantCSR::kHeader + 2 * static_cast<size_t>(p_num);
+    const float* q = q_dense.data();
+
+    float res = 0.0f;
+    #pragma omp simd reduction(+:res)
+    for (uint32_t i = 0; i < p_num; ++i) {
+        res += static_cast<float>(code[i]) * q[idx[i]];
+    }
+    return 1.0f - res * static_cast<float>(scale16);
+}
+
+void SPARSE_HNSW::enableQuantizedTraversal() {
+    quant_.build(*data_matrix_);
+    quantized_ = true;
+}
+
 int SPARSE_HNSW::getRandomLevel() {
     double r = level_generator_(rng_);
     // Ensure r is not too close to 0 to avoid log(0).
@@ -218,13 +251,19 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
     MinPQ candidates;
     std::priority_queue<std::pair<float, uint32_t>> top_candidates;
 
+    const bool use_quant = quantized_ && scratch.dense_query;
+    const int64_t* qrow_off = quant_.row_off.empty() ? nullptr : quant_.row_off.data();
+    const uint8_t* qblob = quant_.blob.empty() ? nullptr : quant_.blob.data();
+
     for (uint32_t entry_point : entry_points) {
 #ifdef SPARSE_HNSW_PROFILE
         scratch.prof_ndist++;
-        scratch.prof_bytes += static_cast<uint64_t>(
-            data_matrix_->indptr[entry_point + 1] - data_matrix_->indptr[entry_point]) * sizeof(IndiceDataPair);
+        scratch.prof_bytes += use_quant
+            ? static_cast<uint64_t>(quant_.rowBytes(entry_point))
+            : static_cast<uint64_t>(
+                  data_matrix_->indptr[entry_point + 1] - data_matrix_->indptr[entry_point]) * sizeof(IndiceDataPair);
 #endif
-        float d = scratch.dense_query ? SPARSE_HNSW_DISTANCE_DENSE(entry_point) : SPARSE_HNSW_DISTANCE(query_id, entry_point);
+        float d = SPARSE_HNSW_TRAVERSAL_DISTANCE(entry_point);
         candidates.push({d, entry_point});
         top_candidates.push({d, entry_point});
         scratch.markVisited(entry_point);
@@ -276,7 +315,8 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
                     scratch.markVisited(neighbor_id);
                     scratch.filtered_neighbors.push_back(neighbor_id);
                     if (!SPARSE_HNSW_REPLAYING) {
-                        __builtin_prefetch(indptr + neighbor_id, 0, 3);
+                        __builtin_prefetch(use_quant ? static_cast<const void*>(qrow_off + neighbor_id)
+                                                     : static_cast<const void*>(indptr + neighbor_id), 0, 3);
                     }
                 }
             }
@@ -287,7 +327,9 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
 
         if (!SPARSE_HNSW_REPLAYING) {
             for (uint32_t j = 0; j < nfilter; ++j) {
-                const char* vec = reinterpret_cast<const char*>(vec_base + indptr[filtered[j]]);
+                const char* vec = use_quant
+                    ? reinterpret_cast<const char*>(qblob + qrow_off[filtered[j]])
+                    : reinterpret_cast<const char*>(vec_base + indptr[filtered[j]]);
                 __builtin_prefetch(vec, 0, 2);
                 __builtin_prefetch(vec + 64, 0, 2);
             }
@@ -298,7 +340,9 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
             uint32_t neighbor_id = filtered[j];
 
             if (j + 1 < nfilter && !SPARSE_HNSW_REPLAYING) {
-                const char* next_vec = reinterpret_cast<const char*>(vec_base + indptr[filtered[j + 1]]);
+                const char* next_vec = use_quant
+                    ? reinterpret_cast<const char*>(qblob + qrow_off[filtered[j + 1]])
+                    : reinterpret_cast<const char*>(vec_base + indptr[filtered[j + 1]]);
                 __builtin_prefetch(next_vec, 0, 3);
                 __builtin_prefetch(next_vec + 64, 0, 3);
                 __builtin_prefetch(next_vec + 128, 0, 3);
@@ -308,11 +352,13 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
 #ifdef SPARSE_HNSW_PROFILE
             scratch.prof_ndist++;
             if (!scratch.replay) {
-                scratch.prof_bytes += static_cast<uint64_t>(
-                    indptr[neighbor_id + 1] - indptr[neighbor_id]) * sizeof(IndiceDataPair);
+                scratch.prof_bytes += use_quant
+                    ? static_cast<uint64_t>(quant_.rowBytes(neighbor_id))
+                    : static_cast<uint64_t>(
+                          indptr[neighbor_id + 1] - indptr[neighbor_id]) * sizeof(IndiceDataPair);
             }
 #endif
-            float dist = scratch.dense_query ? SPARSE_HNSW_DISTANCE_DENSE(neighbor_id) : SPARSE_HNSW_DISTANCE(query_id, neighbor_id);
+            float dist = SPARSE_HNSW_TRAVERSAL_DISTANCE(neighbor_id);
 
             if (top_candidates.size() < static_cast<size_t>(ef) || dist < top_candidates.top().first) {
                 candidates.push({dist, neighbor_id});

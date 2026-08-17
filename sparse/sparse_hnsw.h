@@ -3,6 +3,7 @@
 
 #include "csr_matrix.h"
 #include "prune.h"
+#include "quant_csr.h"
 #include <vector>
 #include <queue>
 #include <random>
@@ -131,6 +132,15 @@ namespace sparse_hnsw {
         float distanceDenseRefine(const CSRMatrix* m, uint32_t p_idx, const std::vector<float>& q_dense) const;
 #endif
 
+#ifdef SPARSE_HNSW_PROFILE
+        __attribute__((noinline))
+#endif
+        float distanceQuant(uint32_t p_idx, const std::vector<float>& q_dense) const;
+
+        void enableQuantizedTraversal();
+        bool quantized() const { return quantized_; }
+        size_t quantizedBytes() const { return quant_.bytes(); }
+
         void addPoint(uint32_t node_id, uint32_t label);
         void addPointsBatch(int num_points);
         std::priority_queue<std::pair<float, uint32_t>> searchKNN(uint32_t query_id, CSRMatrix *query_matrix, int k, int ef = 50) const;
@@ -184,6 +194,9 @@ namespace sparse_hnsw {
         // Scratch reused across the serial insertion path.
         SearchScratch insert_scratch_;
 
+        QuantCSR quant_;
+        bool quantized_ = false;
+
         // Oone mutex per element guarding its neighbor lists.
         // A global mutex for entry_point_ / max_level_.
         mutable std::vector<std::mutex> link_locks_;
@@ -213,6 +226,17 @@ namespace sparse_hnsw {
                 return s.replay[s.replay_idx++];
             }
             float d = distanceDense(data_matrix_, p, s.q_dense);
+            if (s.record) {
+                s.record->push_back(d);
+            }
+            return d;
+        }
+
+        float profDistanceQuant(uint32_t p, SearchScratch& s) const {
+            if (s.replay) {
+                return s.replay[s.replay_idx++];
+            }
+            float d = distanceQuant(p, s.q_dense);
             if (s.record) {
                 s.record->push_back(d);
             }

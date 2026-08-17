@@ -98,7 +98,7 @@ int main(int argc, char* argv[]) {
 
     if (argc < 13)
     {
-        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <alpha> <beta> <input_filepath> <query_filepath> <gt_filepath> <results_csv_path>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <alpha> <beta> <input_filepath> <query_filepath> <gt_filepath> <results_csv_path> [quantize=0]" << std::endl;
         return 1;
     }
 
@@ -115,6 +115,7 @@ int main(int argc, char* argv[]) {
     std::string query_filepath = argv[10];
     std::string gt_filepath = argv[11];
     std::string results_csv_path = argv[12];
+    bool quantize = (argc > 13) && (std::stoi(argv[13]) != 0);
 
     int num_omp_threads = omp_get_max_threads();
     std::cout << "Number of OpenMP threads: " << num_omp_threads << "\n";
@@ -170,6 +171,16 @@ int main(int argc, char* argv[]) {
     std::cout << "Added " << num_points << " points to the index in " << index_time.count() << " microseconds.\n";
     std::cout << "Average insertion time: " << index_time.count() / num_points << " microseconds\n";
     
+    if (quantize) {
+        std::cout << "Building uint8-quantized traversal copy...\n";
+        auto start_q = std::chrono::steady_clock::now();
+        index.enableQuantizedTraversal();
+        auto end_q = std::chrono::steady_clock::now();
+        auto q_time = std::chrono::duration_cast<std::chrono::microseconds>(end_q - start_q);
+        std::cout << "Quantization completed in " << q_time.count() << " microseconds ("
+                  << index.quantizedBytes() / (1024.0 * 1024.0) << " MiB)\n";
+    }
+
     // Search for nearest neighbors.
     std::cout << "\nSearching for k-nearest neighbors...\n";
     

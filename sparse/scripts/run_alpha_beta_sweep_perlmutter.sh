@@ -30,20 +30,27 @@ ALPHAS=${ALPHAS:-0.5 0.6 0.7 0.8 0.9 1.0}
 BETAS=${BETAS:-1 2 3 4 5}
 
 echo "dataset=$SPKNN_DATASET  M=$M efC=$EFC  ef=[$EF_LIST]  threads=$BENCH_THREADS"
-echo "alphas=[$ALPHAS]  betas=[$BETAS]"
+echo "alphas=[$ALPHAS]  betas=[$BETAS]  quantize=${QUANTIZE:-0}"
 echo "=========================================================================="
 
 for ALPHA in $ALPHAS; do
   if [ "$ALPHA" = "1.0" ]; then combo_betas="1"; else combo_betas="$BETAS"; fi
-  for BETA in $combo_betas; do
-    echo
-    echo "######## alpha=$ALPHA beta=$BETA ########"
-    $BENCH_LAUNCH stdbuf -oL -eL "$SPKNN_BIN/sparse_hnsw_sweep" \
-      "$M" "$EFC" "$EF_LIST" 1 0 0 "$ALPHA" "$BETA" \
-      "$SPKNN_BASE" "$SPKNN_QUERIES" "$SPKNN_GT" \
-      "$CSV" "SparseHNSW_a${ALPHA}_b${BETA}" \
-      "${REPEATS:-5}" "${WARMUP:-1}"
-  done
+  BETA_CSV=$(echo $combo_betas | tr ' ' ',')
+  NBETA=$(echo $combo_betas | wc -w)
+
+  if [ "$NBETA" -eq 1 ]; then
+    MODEL="SparseHNSW_a${ALPHA}_b${combo_betas}"
+  else
+    MODEL="SparseHNSW_a${ALPHA}"
+  fi
+
+  echo
+  echo "######## alpha=$ALPHA betas=[$BETA_CSV] (one build) ########"
+  $BENCH_LAUNCH stdbuf -oL -eL "$SPKNN_BIN/sparse_hnsw_sweep" \
+    "$M" "$EFC" "$EF_LIST" 1 0 0 "$ALPHA" "$BETA_CSV" \
+    "$SPKNN_BASE" "$SPKNN_QUERIES" "$SPKNN_GT" \
+    "$CSV" "$MODEL" \
+    "${REPEATS:-5}" "${WARMUP:-1}" "${QUANTIZE:-0}"
 done
 
 echo
