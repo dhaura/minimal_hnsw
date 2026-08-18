@@ -95,7 +95,7 @@ int main(int argc, char* argv[]) {
                      " <input_filepath> <query_filepath> <gt_filepath>"
                      " <results_csv_path> <diag_csv_path>"
                      " [model_name=SparseHNSW] [repeats=3] [warmup=1]"
-                     " [diag_queries=all]"
+                     " [diag_queries=all] [quantize=0]"
                   << std::endl;
         return 1;
     }
@@ -117,6 +117,7 @@ int main(int argc, char* argv[]) {
     const int repeats = (argc > 15) ? std::stoi(argv[15]) : 3;
     const int warmup = (argc > 16) ? std::stoi(argv[16]) : 1;
     const long diag_nq_arg = (argc > 17) ? std::stol(argv[17]) : 0;
+    const bool quantize = (argc > 18) && (std::stoi(argv[18]) != 0);
 
     if (ef_list.empty()) {
         std::cerr << "ef_list is empty.\n";
@@ -162,6 +163,11 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Building index...\n";
     index.addPointsBatch(num_points);
+    if (quantize) {
+        index.enableQuantizedTraversal();
+        std::cout << "Quantized traversal enabled ("
+                  << index.quantizedBytes() / (1024.0 * 1024.0) << " MiB)\n";
+    }
     auto end_index = std::chrono::steady_clock::now();
     const double indexing_time_sec =
         std::chrono::duration_cast<std::chrono::microseconds>(end_index - start_index).count() / 1e6;
