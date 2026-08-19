@@ -1,57 +1,21 @@
 # Create library for HNSW
 add_library(sparse_hnsw_lib sparse_hnsw.cpp sparse_hnsw.h)
 
-
-# Optional MKL for batched distance path in sparse_hnsw.cpp
-find_package(MKL CONFIG QUIET)
-if(MKL_FOUND)
-    target_link_libraries(sparse_hnsw_lib PUBLIC MKL::MKL)
-    message(STATUS "MKL found: enabling MKL path in sparse_hnsw_lib")
-else()
-    # Common on HPC systems: MKL module loaded, but no MKLConfig.cmake provided.
-    if(DEFINED ENV{MKLROOT})
-        set(MKLROOT_DIR "$ENV{MKLROOT}")
-        find_path(MKL_INCLUDE_DIR
-            NAMES mkl.h
-            HINTS
-                "${MKLROOT_DIR}/include")
-        find_library(MKL_RT_LIBRARY
-            NAMES mkl_rt
-            HINTS
-                "${MKLROOT_DIR}/lib"
-                "${MKLROOT_DIR}/lib/intel64")
-
-        if(MKL_INCLUDE_DIR AND MKL_RT_LIBRARY)
-            find_package(Threads QUIET)
-            target_include_directories(sparse_hnsw_lib PRIVATE ${MKL_INCLUDE_DIR})
-            target_link_libraries(sparse_hnsw_lib PUBLIC ${MKL_RT_LIBRARY})
-            if(Threads_FOUND)
-                target_link_libraries(sparse_hnsw_lib PUBLIC Threads::Threads)
-            endif()
-            if(UNIX AND NOT APPLE)
-                target_link_libraries(sparse_hnsw_lib PUBLIC dl m)
-            endif()
-            message(STATUS "MKL found via MKLROOT: enabling MKL path in sparse_hnsw_lib")
-        else()
-            message(STATUS "MKL package config missing and MKLROOT lookup failed: using non-MKL distance path")
-        endif()
-    else()
-        message(STATUS "MKL not found and MKLROOT is unset: using non-MKL distance path")
-    endif()
-endif()
-
 # Create executables
 add_executable(sparse_hnsw_demo main.cpp)
 add_executable(grassRMA_demo grassRMA_main.cpp)
+add_executable(sparse_hnsw_sweep sweep_main.cpp)
 
 # Link the library to the executable
 target_link_libraries(sparse_hnsw_demo sparse_hnsw_lib)
+target_link_libraries(sparse_hnsw_sweep sparse_hnsw_lib)
 
 # Link OpenMP for parallelization
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
     target_link_libraries(sparse_hnsw_lib PUBLIC OpenMP::OpenMP_CXX)
     target_link_libraries(sparse_hnsw_demo OpenMP::OpenMP_CXX)
+    target_link_libraries(sparse_hnsw_sweep OpenMP::OpenMP_CXX)
     target_link_libraries(grassRMA_demo OpenMP::OpenMP_CXX)
 endif()
 
@@ -64,40 +28,53 @@ endif()
 #   cmake --build vsag/build-release --parallel 16
 #   cmake --install vsag/build-release
 find_library(VSAG_LIBRARY NAMES vsag
-    HINTS ${CMAKE_CURRENT_SOURCE_DIR}/vsag/install/lib
+    HINTS ${CMAKE_CURRENT_SOURCE_DIR}/vsag/install-znver3/lib
+          ${CMAKE_CURRENT_SOURCE_DIR}/vsag/install-znver3/lib64
+          ${CMAKE_CURRENT_SOURCE_DIR}/vsag/install/lib
           ${CMAKE_CURRENT_SOURCE_DIR}/vsag/install/lib64
     NO_DEFAULT_PATH)
 find_path(VSAG_INCLUDE_DIR NAMES vsag/vsag.h
-    HINTS ${CMAKE_CURRENT_SOURCE_DIR}/vsag/install/include
+    HINTS ${CMAKE_CURRENT_SOURCE_DIR}/vsag/install-znver3/include
+          ${CMAKE_CURRENT_SOURCE_DIR}/vsag/install/include
     NO_DEFAULT_PATH)
 if(VSAG_LIBRARY AND VSAG_INCLUDE_DIR)
     add_executable(sindi_demo sindi_main.cpp)
-    target_include_directories(sindi_demo PRIVATE ${VSAG_INCLUDE_DIR})
-    target_link_libraries(sindi_demo ${VSAG_LIBRARY})
-    if(OpenMP_CXX_FOUND)
-        target_link_libraries(sindi_demo OpenMP::OpenMP_CXX)
-    endif()
+    add_executable(sindi_sweep sindi_sweep_main.cpp)
     get_filename_component(VSAG_LIBRARY_DIR ${VSAG_LIBRARY} DIRECTORY)
-    set_target_properties(sindi_demo PROPERTIES
-        CXX_STANDARD 17
-        CXX_STANDARD_REQUIRED ON
-        BUILD_RPATH ${VSAG_LIBRARY_DIR}
-        INSTALL_RPATH ${VSAG_LIBRARY_DIR}
-        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-    message(STATUS "vsag found: building sindi_demo")
+    foreach(tgt sindi_demo sindi_sweep)
+        target_include_directories(${tgt} PRIVATE ${VSAG_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
+        target_link_libraries(${tgt} ${VSAG_LIBRARY})
+        if(OpenMP_CXX_FOUND)
+            target_link_libraries(${tgt} OpenMP::OpenMP_CXX)
+        endif()
+        set_target_properties(${tgt} PROPERTIES
+            CXX_STANDARD 17
+            CXX_STANDARD_REQUIRED ON
+            BUILD_RPATH ${VSAG_LIBRARY_DIR}
+            INSTALL_RPATH ${VSAG_LIBRARY_DIR}
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+    endforeach()
+    message(STATUS "vsag found: building sindi_demo and sindi_sweep")
 else()
     message(STATUS "vsag not installed under sparse/vsag/install: skipping sindi_demo")
 endif()
 
-# ---- Profiling ladder (see profiling/README.md) ----
+# ---- Profiling ladder (see profiling/PROFILING_GUIDE.md) ----
 add_executable(bench_distance profiling/bench_distance.cpp)
 add_executable(bench_scale profiling/bench_scale.cpp)
 add_executable(sparse_profile profiling/profile_search.cpp sparse_hnsw.cpp)
 target_compile_definitions(sparse_profile PRIVATE SPARSE_HNSW_PROFILE)
 
-foreach(tgt bench_distance bench_scale sparse_profile)
+# Recall-loss decomposition across ef, sharing one index build. Needs its own
+# copy of sparse_hnsw.cpp because the counters are behind SPARSE_HNSW_PROFILE.
+add_executable(sparse_diag_sweep diag_sweep_main.cpp sparse_hnsw.cpp)
+target_compile_definitions(sparse_diag_sweep PRIVATE SPARSE_HNSW_PROFILE)
+
+foreach(tgt bench_distance bench_scale sparse_profile sparse_diag_sweep)
     target_include_directories(${tgt} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_compile_options(${tgt} PRIVATE -O3 -g -fno-omit-frame-pointer)
+    # -gdwarf-4, not plain -g: GCC 13 defaults to DWARF 5, which the RHEL 8
+    # binutils `as` on Grace rejects with "unrecognized option '--gdwarf-5'".
+    target_compile_options(${tgt} PRIVATE -O3 -gdwarf-4 -fno-omit-frame-pointer)
     set_target_properties(${tgt} PROPERTIES
         CXX_STANDARD 17
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
@@ -112,9 +89,10 @@ option(ENABLE_PERF "Build with perf-friendly flags (symbols + frame pointers)" O
 
 if(ENABLE_PERF)
     foreach(tgt sparse_hnsw_lib sparse_hnsw_demo grassRMA_demo)
-        # Keep debug symbols even in Release; good stacks for perf
-        target_compile_options(${tgt} PRIVATE -g -fno-omit-frame-pointer)
-        target_link_options(${tgt} PRIVATE -g)
+        # Keep debug symbols even in Release; good stacks for perf.
+        # -gdwarf-4 for the same binutils reason as the profiling targets above.
+        target_compile_options(${tgt} PRIVATE -gdwarf-4 -fno-omit-frame-pointer)
+        target_link_options(${tgt} PRIVATE -gdwarf-4)
     endforeach()
 
     # Optional: if you use Release, ensure optimization still happens
@@ -122,11 +100,7 @@ if(ENABLE_PERF)
 endif()
 
 # Set output directory
-set_target_properties(sparse_hnsw_demo PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-)
-
-set_target_properties(hnswlib_demo PROPERTIES
+set_target_properties(sparse_hnsw_demo sparse_hnsw_sweep PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
 

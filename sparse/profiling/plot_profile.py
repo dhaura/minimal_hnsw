@@ -23,6 +23,7 @@ import matplotlib
 matplotlib.use("Agg")           # headless: no DISPLAY on compute nodes
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
+from matplotlib.patches import Patch
 
 # ---------------------------------------------------------------- palette ----
 # Reference categorical palette, fixed slot order (blue, aqua, yellow).
@@ -66,7 +67,7 @@ def style(ax, xgrid=True):
 
 # ----------------------------------------------------------------- parse -----
 VARIANT_RE = re.compile(
-    r"^([1-5])\s+(\S.*?)\s{2,}([\d.]+)\s*ns/call\s+([\d.]+)\s*GB/s\s+\(([\d.]+)\s*s\)")
+    r"^([1-9])\s+(\S.*?)\s{2,}([\d.]+)\s*ns/call\s+([\d.]+)\s*GB/s\s+\(([\d.]+)\s*s\)")
 WORKSET_RE = re.compile(r"^working set:\s+(\d+)\s+rows\s+=\s+([\d.]+)\s+MB")
 SCALE_RE = re.compile(
     r"^\s*(\d+)\s+([\d.]+)\s+\|\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*$")
@@ -78,11 +79,17 @@ BANNER_RE = re.compile(r"^#+\s*(.+?)\s*#+\s*$")
 
 VARIANT_MEANING = {
     1: "compute floor (rows in L1)",
-    2: "memory only (no merge)",
-    3: "production kernel",
+    2: "memory only (no ALU)",
+    3: "fp16 dense kernel",
     4: "+ batched prefetch",
-    5: "+ gather then merge",
+    5: "+ gather then dense",
+    6: "old merge kernel",
+    7: "production kernel (uint8)",
 }
+DENSE_VARIANTS = (1, 2, 3, 4, 5)   # share one kernel; V6/V7 do not
+# Unknown variants must not crash a whole profiling run at the plotting step --
+# the ladder has already finished by then and the log holds all the data.
+VARIANT_FALLBACK = "variant %d (unlabelled -- add it to VARIANT_MEANING)"
 
 
 def parse(text):
@@ -107,7 +114,8 @@ def parse(text):
         m = VARIANT_HDR_RE.match(line)
         if m:
             v = int(m.group(1))
-            cur_ctx = "variant %d (%s)" % (v, VARIANT_MEANING[v])
+            cur_ctx = ("variant %d (%s)" % (v, VARIANT_MEANING[v])
+                       if v in VARIANT_MEANING else VARIANT_FALLBACK % v)
             continue
 
         m = GROUP_RE.match(line)
@@ -137,10 +145,10 @@ def parse(text):
             scaling.append({
                 "threads": int(m.group(1)),
                 "stream_gbps": float(m.group(2)),
-                "merge_ns": float(m.group(3)),
-                "merge_mcalls": float(m.group(4)),
-                "merge_gbps": float(m.group(5)),
-                "merge_gbps_core": float(m.group(6)),
+                "dense_ns": float(m.group(3)),
+                "dense_mcalls": float(m.group(4)),
+                "dense_gbps": float(m.group(5)),
+                "dense_gbps_core": float(m.group(6)),
             })
             continue
 
@@ -154,6 +162,10 @@ def parse(text):
                 prof_runs.append(cur_prof)
             elif cur_prof is not None:
                 cur_prof.update(kv)
+            elif kv:
+                cur_prof = dict(kv, mode="setup")
+                prof_runs.append(cur_prof)
+                cur_prof = None
             continue
 
         m = COUNTER_RE.match(line)
@@ -173,7 +185,7 @@ def parse(text):
         by_t = {}
         for r in scaling:
             t = r["threads"]
-            if t not in by_t or r["merge_ns"] < by_t[t]["merge_ns"]:
+            if t not in by_t or r["dense_ns"] < by_t[t]["dense_ns"]:
                 by_t[t] = r
         out["scaling"] = [by_t[t] for t in sorted(by_t)]
     if prof_runs:
@@ -210,12 +222,10 @@ def fig_ablation(data, ax=None):
     bound = max(v1, v2)
     serial = v1 + v2
 
-    order = [v for v in (1, 2, 3, 4, 5) if v in vals]
+    order = [v for v in (1, 2, 3, 4, 5, 6, 7) if v in vals]
     labels = ["V%d  %s" % (v, VARIANT_MEANING[v]) for v in order]
     totals = [vals[v] for v in order]
-    # V2 does no merge, so none of it is compute; every other variant carries
-    # the same ALU work as V1.
-    comp = [0.0 if v == 2 else min(v1, vals[v]) for v in order]
+    comp = [0.0 if v in (2, 6) else min(v1, vals[v]) for v in order]
     mem = [t - c for t, c in zip(totals, comp)]
 
     own = ax is None
@@ -223,10 +233,14 @@ def fig_ablation(data, ax=None):
         fig, ax = plt.subplots(figsize=(10.5, 4.6))
     y = range(len(order))
 
-    ax.barh(y, mem, color=S1, height=0.62, label="memory-exposed",
+    ax.barh(y, mem, color=[S3 if v == 6 else S1 for v in order], height=0.62,
             edgecolor=SURFACE, linewidth=1.5, zorder=3)
-    ax.barh(y, comp, left=mem, color=S2, height=0.62, label="compute (ALU)",
+    ax.barh(y, comp, left=mem, color=S2, height=0.62,
             edgecolor=SURFACE, linewidth=1.5, zorder=3)
+    handles = [Patch(facecolor=S1, label="memory-exposed"),
+               Patch(facecolor=S2, label="compute (ALU)")]
+    if 6 in vals:
+        handles.append(Patch(facecolor=S3, label="old merge kernel (total)"))
 
     for i, t in enumerate(totals):
         ax.text(t + max(totals) * 0.012, i, "%.0f ns" % t, va="center",
@@ -262,21 +276,27 @@ def fig_ablation(data, ax=None):
                 va="center", ha="right" if left else "left",
                 fontweight="bold" if ls == "-" else "normal",
                 bbox=dict(facecolor=SURFACE, edgecolor="none", pad=1.5))
-    ax.legend(loc="lower right", fontsize=9)
+    ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.0, -0.13),
+              ncol=len(handles), fontsize=9)
     style(ax)
 
     mem_share = (v3 - v1) / v3 * 100.0
     penalty = v3 - serial
     note = ("memory-attributable  (V3-V1)/V3 = %.0f%%          "
-            "fusion penalty  V3-(V1+V2) = %+.0f ns" % (mem_share, penalty))
-    if penalty > 0:
-        note += ("\nthe fused merge is SLOWER than loading and computing serially: its "
-                 "data-dependent pointer advance starves memory-level parallelism")
-    ax.annotate(note, xy=(0.0, -0.30), xycoords="axes fraction", fontsize=9,
+            "pipelining penalty  V3-(V1+V2) = %+.0f ns" % (mem_share, penalty))
+    if 6 in vals:
+        note += ("          dense rewrite  V6/V3 = %.2fx"
+                 % (vals[6] / v3 if v3 else 0.0))
+    if 7 in vals:
+        # V7 is the kernel that actually ships; V3 is its fp16 predecessor.
+        note += ("          uint8 byte diet  V3/V7 = %.2fx"
+                 % (v3 / vals[7] if vals[7] else 0.0))
+    ax.annotate(note, xy=(0.0, -0.28), xycoords="axes fraction", fontsize=9,
                 color=INK2, va="top")
     if own:
         fig.tight_layout()
-    return {"v1": v1, "v2": v2, "v3": v3, "bound": bound, "serial": serial,
+    return {"v1": v1, "v2": v2, "v3": v3, "v6": vals.get(6), "v7": vals.get(7),
+            "bound": bound, "serial": serial,
             "mem_share": mem_share, "penalty": penalty, "prod": prod}
 
 
@@ -294,9 +314,8 @@ def fig_working_set(data, ax=None):
     xs = [p[0] for p in pts]
     ys = [p[1] for p in pts]
 
-    # L2 = 512 KB/core; L3 = 32 MB/CCX; L2 dTLB covers only 2048 x 4 KiB = 8 MiB.
-    for x, lab in ((0.5, "L2\n512 KB"), (8.0, "4K-page TLB\nreach 8 MB"),
-                   (32.0, "L3/CCX\n32 MB")):
+    for x, lab in ((1.0, "L2\n1 MB"), (6.0, "4K-page STLB\nreach 6 MB"),
+                   (36.6, "L3/socket\n36 MB")):
         if min(xs) <= x <= max(xs):
             ax.axvline(x, color=GRID, lw=1.2, ls="-", zorder=1)
             ax.text(x, max(ys) * 1.04, lab, fontsize=8, color=INK2,
@@ -328,9 +347,9 @@ def fig_scaling(data, axes=None):
     if len(sc) < 3:
         return None
     t = [r["threads"] for r in sc]
-    merge = [r["merge_gbps"] for r in sc]
+    dense = [r["dense_gbps"] for r in sc]
     stream = [r["stream_gbps"] for r in sc]
-    per_core = [r["merge_gbps_core"] for r in sc]
+    per_core = [r["dense_gbps_core"] for r in sc]
 
     own = axes is None
     if own:
@@ -340,11 +359,11 @@ def fig_scaling(data, axes=None):
     # No dual axis: two measures of different scale get two panels.
     a1.plot(t, stream, color=S1, marker="o", markersize=6, label="stream ceiling",
             markeredgecolor=SURFACE, markeredgewidth=1.2)
-    a1.plot(t, merge, color=S2, marker="s", markersize=6, label="distance() execution",
+    a1.plot(t, dense, color=S2, marker="s", markersize=6, label="distanceDense() achieved",
             markeredgecolor=SURFACE, markeredgewidth=1.2)
     a1.annotate("%.0f" % stream[-1], (t[-1], stream[-1]), textcoords="offset points",
                 xytext=(-4, 8), fontsize=8.5, color=INK, ha="right")
-    a1.annotate("%.0f" % merge[-1], (t[-1], merge[-1]), textcoords="offset points",
+    a1.annotate("%.0f" % dense[-1], (t[-1], dense[-1]), textcoords="offset points",
                 xytext=(-4, -14), fontsize=8.5, color=INK, ha="right")
     a1.set_xscale("log", base=2)
     a1.set_xticks(t)
@@ -368,16 +387,16 @@ def fig_scaling(data, axes=None):
     a2.set_xticks(t)
     a2.set_xticklabels([str(x) for x in t])
     a2.set_xlabel("threads")
-    a2.set_ylabel("GB/s per core (merge)")
+    a2.set_ylabel("GB/s per core (dense kernel)")
     a2.set_ylim(0, max(per_core) * 1.3)
     a2.set_title("Per-core Throughput")
     style(a2, xgrid=False)
 
     # Verdict, stated with the numbers that produce it.
-    eff = merge[-1] / (merge[0] * t[-1] / t[0]) if merge[0] else 0.0
-    ratio = merge[-1] / stream[-1] if stream[-1] else 0.0
+    eff = dense[-1] / (dense[0] * t[-1] / t[0]) if dense[0] else 0.0
+    ratio = dense[-1] / stream[-1] if stream[-1] else 0.0
     if ratio > 0.8 and eff < 0.5:
-        verdict = ("BANDWIDTH-BOUND: merge reaches %.0f%% of the stream ceiling "
+        verdict = ("BANDWIDTH-BOUND: the dense kernel reaches %.0f%% of the stream ceiling "
                    "and scaling efficiency is %.0f%%." % (ratio * 100, eff * 100))
     elif eff > 0.7:
         verdict = ("LATENCY-BOUND: still scaling (%.0f%% efficiency at %d threads) at "
@@ -396,10 +415,10 @@ def fig_scaling(data, axes=None):
 
 # ----------------------------------------------------------------- fig 4 -----
 INTERESTING = [
-    ("ls_dmnd_fills_from_sys.mem_io_local", "DRAM fills (local)"),
-    ("ls_dmnd_fills_from_sys.mem_io_remote", "DRAM fills (remote)"),
-    ("ls_dmnd_fills_from_sys.lcl_l2", "L2 fills"),
-    ("ls_l1_d_tlb_miss.all", "page walks"),
+    ("mem_load_l3_miss_retired.local_dram", "DRAM loads (local)"),
+    ("mem_load_l3_miss_retired.remote_dram", "DRAM loads (remote)"),
+    ("mem_load_retired.l2_miss", "L2 misses"),
+    ("dtlb_load_misses.miss_causes_a_walk", "page walks"),
 ]
 
 
@@ -495,10 +514,10 @@ def fig_time_split(data, ax=None):
 
     dist_pct = share * 100.0
     ovh_pct = 100.0 - dist_pct
-    ax.barh([0], [dist_pct], color=S1, height=0.5, label="distance()",
+    ax.barh([0], [dist_pct], color=S1, height=0.5, label="distanceDense()",
             edgecolor=SURFACE, linewidth=1.5, zorder=3)
     ax.barh([0], [ovh_pct], left=[dist_pct], color=S2, height=0.5,
-            label="traversal overhead (heaps, visited bits, neighbor walks)",
+            label="traversal overhead (heaps, visited bits, neighbor walks, query scatter)",
             edgecolor=SURFACE, linewidth=1.5, zorder=3)
     ax.text(dist_pct / 2, 0, "%.1f%%" % dist_pct, ha="center", va="center",
             fontsize=13, color="white", fontweight="bold")
@@ -534,8 +553,9 @@ def fig_time_split(data, ax=None):
 # Explicit legend/x-axis overrides for fig4 contexts (checked before the
 # generic prefix-stripping below).
 CTX_LABEL = {
-    "E0+E1+E2: production search, batch mode": "Batch Mode (Production Search)",
-    "E3b: repeat-query cold/warm on the real path": "Repeat Mode",
+    "E2: counters on the real search (gated)": "Real Search (Batch)",
+    "E6 + E3b + E1: the real driver (one index build)": "Real Search",
+    "E2/E3 counters: per-variant groups (1 core)": "Micro-benchmark",
 }
 
 
@@ -616,7 +636,7 @@ def write_csv(data, path):
     for (ws, v), ns in sorted(data.get("ablation", {}).items()):
         rows.append(["ablation", "variant_%d" % v, "%.1f" % ws, "ns_per_call", ns])
     for r in data.get("scaling", []):
-        for k in ("stream_gbps", "merge_gbps", "merge_gbps_core", "merge_ns"):
+        for k in ("stream_gbps", "dense_gbps", "dense_gbps_core", "dense_ns"):
             rows.append(["scaling", "threads_%d" % r["threads"], "", k, r[k]])
     for r in data.get("prof", []):
         tag = "%s_%sthr" % (r.get("mode", "?"), r.get("search_threads", "?"))
@@ -713,22 +733,46 @@ def main():
     for r in data.get("prof", []):
         if r.get("mode") == "replay" and r.get("ndist_match") == "1":
             s = fnum(r, "distance_share")
-            print("\nis distance() the bottleneck?  (E6 replay ablation)")
-            print("  distance()        = %6.1f%% of search time" % (s * 100))
+            print("\nis distanceDense() the bottleneck?  (E6 replay ablation)")
+            print("  distanceDense()   = %6.1f%% of search time" % (s * 100))
             print("  traversal overhead= %6.1f%%   (heaps, visited bits, "
                   "neighbor walks)" % ((1 - s) * 100))
             print("  ns/dist true      = %7.0f   (naive search_time/ndist = %.0f)"
                   % (fnum(r, "ns_per_dist_true"), fnum(r, "ns_per_dist_naive")))
 
+    for r in data.get("prof", []):
+        if r.get("mode") != "batch":
+            continue
+        rf = fnum(r, "refine_frac_of_ndist")
+        print("\nreal search, %s thread(s)  (E1 batch)" % r.get("search_threads", "?"))
+        for key, label, fmt in (
+                ("qps", "throughput", "%10.0f QPS"),
+                ("recall", "recall@k", "%10.2f %%"),
+                ("ns_per_dist", "ns per distance call", "%10.1f ns"),
+                ("achieved_GBps", "achieved bandwidth (doc rows)", "%10.2f GB/s"),
+                ("total_GBps", "achieved bandwidth (all traffic)", "%10.2f GB/s")):
+            v = fnum(r, key)
+            if v is not None:
+                print(("  %-32s" + fmt) % (label, v))
+        if rf is not None:
+            print("  %-32s%10.1f %% of distance calls (beta-refine, dense kernel"
+                  " on unpruned rows)" % ("exact re-scoring", rf * 100))
+
     if stats:
         print("\nheadline numbers")
         print("  compute floor  V1 = %7.0f ns/call" % stats["v1"])
         print("  memory only    V2 = %7.0f ns/call" % stats["v2"])
-        print("  production     V3 = %7.0f ns/call" % stats["v3"])
+        print("  fp16 dense     V3 = %7.0f ns/call" % stats["v3"])
+        if stats.get("v7"):
+            print("  uint8 (SHIPS)  V7 = %7.0f ns/call  -> byte diet is %.3fx on ONE core"
+                  % (stats["v7"], stats["v3"] / stats["v7"]))
+        if stats.get("v6"):
+            print("  old merge      V6 = %7.0f ns/call  -> dense rewrite is %.2fx"
+                  % (stats["v6"], stats["v6"] / stats["v3"]))
         print("  memory share      = %6.0f%%   (V3-V1)/V3" % stats["mem_share"])
-        print("  fusion penalty    = %+7.0f ns  V3-(V1+V2)%s" % (
+        print("  pipelining penalty= %+7.0f ns  V3-(V1+V2)%s" % (
             stats["penalty"],
-            "   <- fusion is starving MLP" if stats["penalty"] > 0 else ""))
+            "   <- loads and ALU are not overlapping" if stats["penalty"] > 0 else ""))
         print("  pipelining bound  = %7.0f ns/call  -> %.1fx headroom"
               % (stats["bound"], stats["v3"] / stats["bound"]))
         if stats["prod"]:

@@ -9,18 +9,31 @@
 #include <chrono>
 #include <omp.h>
 
-#if defined(__has_include)
-#if __has_include(<mkl.h>)
-#include <mkl.h>
-#define SPARSE_HNSW_HAS_MKL 1
-#endif
-#endif
-
-#ifndef SPARSE_HNSW_HAS_MKL
-#define SPARSE_HNSW_HAS_MKL 0
-#endif
-
 using namespace sparse_hnsw;
+
+void appendResultsRow(const std::string &csv_path, double alpha, int beta,
+                       int64_t dataset_size, int threads, double pruning_time_sec,
+                       double indexing_time_sec, double searching_time_sec, float recall) {
+    bool write_header = true;
+    {
+        std::ifstream check(csv_path);
+        write_header = !(check.good() && check.peek() != std::ifstream::traits_type::eof());
+    }
+
+    std::ofstream csv(csv_path, std::ios::app);
+    if (!csv) {
+        std::cerr << "Failed to open results CSV '" << csv_path << "' for writing.\n";
+        return;
+    }
+
+    if (write_header) {
+        csv << "alpha,beta,dataset_size,threads,pruning_time_sec,indexing_time_sec,searching_time_sec,recall\n";
+    }
+    csv << alpha << "," << beta << "," << dataset_size << "," << threads << ","
+        << std::fixed << std::setprecision(6)
+        << pruning_time_sec << "," << indexing_time_sec << "," << searching_time_sec << ","
+        << std::setprecision(4) << recall << "\n";
+}
 
 void get_gt(const std::string gt_path, uint32_t *&I, uint32_t &n, uint32_t &d)
 {
@@ -83,9 +96,9 @@ int main(int argc, char* argv[]) {
     std::cout << "Minimal SPARSE_HNSW Demo\n";
     std::cout << "=================\n\n";
 
-    if (argc < 12)
+    if (argc < 13)
     {
-        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <use_mkl> <mklThreshold> <input_filepath> <query_filepath> <gt_filepath>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <alpha> <beta> <input_filepath> <query_filepath> <gt_filepath> <results_csv_path> [quantize=0] [seed_top_k=0] [seed_terms=0] [seed_per_term=1]" << std::endl;
         return 1;
     }
 
@@ -96,16 +109,19 @@ int main(int argc, char* argv[]) {
     bool use_heuristic = (std::stoi(argv[4]) != 0);
     bool extend_candidates = (std::stoi(argv[5]) != 0);
     bool keep_pruned = (std::stoi(argv[6]) != 0);
-    bool use_mkl = (std::stoi(argv[7]) != 0);
-    size_t mklThreshold = std::stoul(argv[8]);
+    double alpha = std::stod(argv[7]);
+    int beta = std::stoi(argv[8]);
     std::string input_filepath = argv[9];
     std::string query_filepath = argv[10];
     std::string gt_filepath = argv[11];
+    std::string results_csv_path = argv[12];
+    bool quantize = (argc > 13) && (std::stoi(argv[13]) != 0);
+    int seed_top_k = (argc > 14) ? std::stoi(argv[14]) : 0;
+    int seed_terms = (argc > 15) ? std::stoi(argv[15]) : 0;
+    int seed_per_term = (argc > 16) ? std::stoi(argv[16]) : 1;
 
     int num_omp_threads = omp_get_max_threads();
-    int num_mkl_threads = mkl_get_max_threads();
     std::cout << "Number of OpenMP threads: " << num_omp_threads << "\n";
-    std::cout << "Number of MKL threads: " << num_mkl_threads << "\n";
 
     // Read a sparse dataset from file.
     CSRMatrix *datamatrix = new CSRMatrix(input_filepath, true);
@@ -123,9 +139,29 @@ int main(int argc, char* argv[]) {
     
     auto start_index_time = std::chrono::steady_clock::now();
     
-    // Create SPARSE_HNSW index with 2D vectors.
-    SPARSE_HNSW index(dim, datamatrix, M, ef_construction, num_points, use_heuristic, extend_candidates, keep_pruned, use_mkl, mklThreshold);
+    // Create SPARSE_HNSW index.
+    SPARSE_HNSW index(dim, datamatrix, M, ef_construction, num_points, use_heuristic, extend_candidates, keep_pruned, alpha, beta);
     // index.setLabelRemapping(std::move(old_to_new), std::move(new_to_old));
+
+    CSRMatrix *pruned_datamatrix = nullptr;
+    std::chrono::microseconds prune_time{0};
+    if (alpha < 1.0) {
+        std::cout << "Pruning dataset using mass ratio pruning with alpha = " << alpha << "...\n";
+
+        auto start_prune_time = std::chrono::steady_clock::now();
+        pruned_datamatrix = index.pruneMatrix(datamatrix);
+        index.setPrunedDataMatrix(pruned_datamatrix);
+        auto end_prune_time = std::chrono::steady_clock::now();
+        prune_time = std::chrono::duration_cast<std::chrono::microseconds>(end_prune_time - start_prune_time);
+
+        std::cout << "Pruning completed in " << prune_time.count() << " microseconds\n";
+    } else if (alpha > 1.0) {
+        std::cout << "Invalid alpha value: " << alpha << ". Alpha should be in the range (0, 1]. No pruning applied.\n";
+        return 1;
+    } else {
+        std::cout << "No pruning applied (alpha = 1.0)\n";
+    }
+    
     
     // Add points from the dataset to the index.
     std::cout << "Adding points to the index...\n";
@@ -138,6 +174,29 @@ int main(int argc, char* argv[]) {
     std::cout << "Added " << num_points << " points to the index in " << index_time.count() << " microseconds.\n";
     std::cout << "Average insertion time: " << index_time.count() / num_points << " microseconds\n";
     
+    if (quantize) {
+        std::cout << "Building uint8-quantized traversal copy...\n";
+        auto start_q = std::chrono::steady_clock::now();
+        index.enableQuantizedTraversal();
+        auto end_q = std::chrono::steady_clock::now();
+        auto q_time = std::chrono::duration_cast<std::chrono::microseconds>(end_q - start_q);
+        std::cout << "Quantization completed in " << q_time.count() << " microseconds ("
+                  << index.quantizedBytes() / (1024.0 * 1024.0) << " MiB)\n";
+    }
+
+    if (seed_top_k > 0 && seed_terms > 0) {
+        std::cout << "Building inverted seed table (top-" << seed_top_k << " per column)...\n";
+        auto start_seed = std::chrono::steady_clock::now();
+        index.buildSeedTable(static_cast<uint32_t>(seed_top_k));
+        index.setSeedParams(seed_terms, seed_per_term);
+        auto end_seed = std::chrono::steady_clock::now();
+        std::cout << "Seed table built in "
+                  << std::chrono::duration_cast<std::chrono::microseconds>(
+                         end_seed - start_seed).count()
+                  << " us (" << index.seedTableBytes() / 1024.0 << " KiB); seeding with "
+                  << seed_terms << " terms x " << seed_per_term << " docs\n";
+    }
+
     // Search for nearest neighbors.
     std::cout << "\nSearching for k-nearest neighbors...\n";
     
@@ -164,7 +223,12 @@ int main(int argc, char* argv[]) {
 
     index.printInfo();
 
+    appendResultsRow(results_csv_path, alpha, beta, num_points, num_omp_threads,
+                      prune_time.count() / 1e6, index_time.count() / 1e6,
+                      query_time.count() / 1e6, recall);
+    std::cout << "Appended results row to " << results_csv_path << "\n";
+
     std::cout << "\nDemo completed successfully!\n";
-    
+
     return 0;
 }

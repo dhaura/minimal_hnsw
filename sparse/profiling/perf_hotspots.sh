@@ -2,13 +2,28 @@
 # E6b: Profile the non-distance time.
 #
 #   ./perf_hotspots.sh <command> [args...]
-#   ./perf_hotspots.sh ../../build/bin/sparse_profile 16 200 150 1 0 0 1 0 \
+#   ./perf_hotspots.sh ../../build-release/bin/sparse_profile 16 200 150 1 0 0 0.8 3 \
 #        base.csr queries.csr gt batch
 set -u
 
 if [ $# -lt 1 ]; then
     echo "usage: $0 <command> [args...]" >&2
     exit 1
+fi
+
+if ! command -v perf >/dev/null 2>&1; then
+    cat >&2 <<'EOF'
+perf_hotspots.sh: `perf` is not on $PATH, so E6b (the ranked list of where
+non-distance cycles go) cannot run here. Grace has no perf at all; Perlmutter
+DOES (/usr/bin/perf), so on Perlmutter this means the environment is wrong,
+not that the rung is impossible.
+
+E6 still answers the question that matters -- HOW MUCH of the time is not the
+distance kernel -- via the record/replay ablation in sparse_profile, which needs
+no PMU at all. Only the breakdown of that remainder into named functions is
+lost.
+EOF
+    exit 127
 fi
 
 WORK=$(mktemp -d)
@@ -28,6 +43,9 @@ perf report -i "$WORK/search.data" --stdio --no-children --percent-limit 0.5 2>/
     | head -25
 
 echo
-echo "(--no-children = self cycles. distance() is the merge kernel; everything"
-echo " else -- priority_queue sift, visited bits, neighbor walks -- is overhead"
-echo " that no amount of distance-kernel optimization will remove.)"
+echo "(--no-children = self cycles. distanceDense() is the traversal kernel"
+echo " and distanceDenseRefine() the beta-refine pass -- same code, split"
+echo " symbols so the two are separable;"
+echo " everything else -- priority_queue sift, visited bits, neighbor walks, the"
+echo " per-query q_dense scatter -- is overhead that no amount of distance-kernel"
+echo " optimization will remove.)"

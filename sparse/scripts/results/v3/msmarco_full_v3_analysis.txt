@@ -1,0 +1,80 @@
+v2: 387 rows | v3: 387 rows | joined: 387
+nodes: v2=nid005842,nid006624  v3=nid006633,nid006802
+
+recall delta (after - before): median=-0.00004 max|delta|=+0.00347   OK (build nondeterminism only)
+
+=== control group (no refine pass runs: beta=1 or alpha=1) ===
+control                    n=63    median=1.006x (+0.6%)  min=0.970  max=1.071
+  -> machine/day drift factor = 1.006x; treated speedups are divided by this to isolate the code change.
+
+=== treated rows (alpha<1 and beta>1: the refine pass runs) ===
+raw                        n=324   median=1.022x (+2.2%)  min=0.972  max=1.092
+drift-corrected            n=324   median=1.015x (+1.5%)  min=0.966  max=1.085
+
+--- by beta (refine re-scores k*beta candidates) ---
+  beta=2                     n=54    median=1.015x (+1.5%)  min=0.986  max=1.085
+  beta=3                     n=54    median=1.005x (+0.5%)  min=0.978  max=1.040
+  beta=4                     n=54    median=1.014x (+1.4%)  min=0.966  max=1.049
+  beta=5                     n=54    median=1.014x (+1.4%)  min=0.974  max=1.051
+  beta=6                     n=54    median=1.022x (+2.2%)  min=0.987  max=1.065
+  beta=8                     n=54    median=1.025x (+2.5%)  min=0.994  max=1.058
+
+--- by ef (refine is a fixed cost; its share shrinks as ef grows) ---
+  ef=10                      n=36    median=1.029x (+2.9%)  min=0.990  max=1.060
+  ef=20                      n=36    median=1.033x (+3.3%)  min=0.986  max=1.058
+  ef=50                      n=36    median=1.022x (+2.2%)  min=0.988  max=1.065
+  ef=100                     n=36    median=1.014x (+1.4%)  min=0.974  max=1.073
+  ef=200                     n=36    median=1.017x (+1.7%)  min=0.966  max=1.085
+  ef=400                     n=36    median=1.009x (+0.9%)  min=0.979  max=1.051
+  ef=800                     n=36    median=1.005x (+0.5%)  min=0.984  max=1.044
+  ef=1600                    n=36    median=1.012x (+1.2%)  min=0.987  max=1.047
+  ef=3200                    n=36    median=1.008x (+0.8%)  min=0.994  max=1.032
+
+=== drift-immune ef contrast (low ef <= 50 vs high ef >= 800) ===
+  low-ef  median = 1.033x   (refine is a large share here)
+  high-ef median = 1.014x   (refine negligible -> expected ~1.00x)
+  contrast = 1.018x (+1.8%) <-- refine-attributable speedup, immune to node/day drift
+  implied drift on this node pair = 1.014x
+
+--- biggest wins (drift-corrected) ---
+  alpha=0.9   beta=2  ef=200   1.085x (+8.5%)   0.1450s -> 0.1328s
+  alpha=0.9   beta=2  ef=100   1.073x (+7.3%)   0.0917s -> 0.0849s
+  alpha=0.75  beta=6  ef=50    1.065x (+6.5%)   0.0549s -> 0.0512s
+  alpha=0.75  beta=6  ef=10    1.060x (+6.0%)   0.0549s -> 0.0514s
+  alpha=0.85  beta=6  ef=200   1.059x (+5.9%)   0.1441s -> 0.1352s
+  alpha=0.7   beta=8  ef=50    1.058x (+5.8%)   0.0647s -> 0.0608s
+  alpha=0.75  beta=6  ef=20    1.058x (+5.8%)   0.0548s -> 0.0515s
+  alpha=0.7   beta=8  ef=10    1.055x (+5.5%)   0.0647s -> 0.0609s
+
+Wrote results/v3/msmarco_full_refine_speedup.csv
+
+################ HIGH-RECALL FRONTIER ################
+
+v2: 387 points -> frontier 102   max recall 0.9902
+v3: 387 points -> frontier 91   max recall 0.9902
+SEISMIC: 16 frontier points, max recall 0.9950
+
+ recall |         v2         v3    ratio | winning config (v3)       |   SEISMIC   vs comp
+--------------------------------------------------------------------------------------------------------
+   0.90 |     158432     165695   1.046x | a=0.7 b=4 ef=50           |    106213     1.56x
+   0.95 |      67444      70930   1.052x | a=0.85 b=4 ef=100         |     84030     0.84x
+   0.97 |      32516      32731   1.007x | a=0.7 b=4 ef=400          |     70505     0.46x  (within drift band)
+   0.98 |      17319      17691   1.021x | a=0.75 b=6 ef=800         |     42259     0.42x
+   0.99 |       3950       4160   1.053x | a=0.85 b=6 ef=3200        |     35039     0.12x
+
+--- route taken at each target (v3 frontier) ---
+  (low alpha + high beta = lean traversal, wide exact refine;
+   high alpha + low beta = heavier traversal, narrow refine)
+  recall 0.90: a=0.7 b=4 ef=50
+  recall 0.95: a=0.85 b=4 ef=100   <-- MOVED from a=0.85 b=6 ef=100
+  recall 0.97: a=0.7 b=4 ef=400   <-- MOVED from a=0.7 b=5 ef=400
+  recall 0.98: a=0.75 b=6 ef=800   <-- MOVED from a=0.75 b=8 ef=800
+  recall 0.99: a=0.85 b=6 ef=3200
+
+frontier tail (v3), highest-recall points:
+  recall 0.9866  qps      8223   a=0.85 b=6 ef=1600
+  recall 0.9867  qps      4609   a=0.7 b=8 ef=3200
+  recall 0.9879  qps      4517   a=0.75 b=6 ef=3200
+  recall 0.9886  qps      4476   a=0.75 b=8 ef=3200
+  recall 0.9894  qps      4302   a=0.8 b=8 ef=3200
+  recall 0.9902  qps      4110   a=0.85 b=6 ef=3200

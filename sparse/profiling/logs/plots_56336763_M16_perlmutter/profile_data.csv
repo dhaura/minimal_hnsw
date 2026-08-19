@@ -1,0 +1,417 @@
+section,series,working_set_mb,metric,value
+ablation,variant_1,0.2,ns_per_call,23.3
+ablation,variant_2,0.2,ns_per_call,17.8
+ablation,variant_3,0.2,ns_per_call,35.4
+ablation,variant_4,0.2,ns_per_call,37.9
+ablation,variant_5,0.2,ns_per_call,49.9
+ablation,variant_6,0.2,ns_per_call,206.2
+ablation,variant_1,0.5,ns_per_call,22.5
+ablation,variant_2,0.5,ns_per_call,18.6
+ablation,variant_3,0.5,ns_per_call,39.5
+ablation,variant_4,0.5,ns_per_call,40.0
+ablation,variant_5,0.5,ns_per_call,50.5
+ablation,variant_6,0.5,ns_per_call,208.3
+ablation,variant_1,2.2,ns_per_call,26.0
+ablation,variant_2,2.2,ns_per_call,23.3
+ablation,variant_3,2.2,ns_per_call,48.6
+ablation,variant_4,2.2,ns_per_call,43.3
+ablation,variant_5,2.2,ns_per_call,52.6
+ablation,variant_6,2.2,ns_per_call,219.9
+ablation,variant_1,8.7,ns_per_call,24.6
+ablation,variant_2,8.7,ns_per_call,25.8
+ablation,variant_3,8.7,ns_per_call,54.5
+ablation,variant_4,8.7,ns_per_call,46.8
+ablation,variant_5,8.7,ns_per_call,54.4
+ablation,variant_6,8.7,ns_per_call,226.7
+ablation,variant_1,32.1,ns_per_call,23.3
+ablation,variant_2,32.1,ns_per_call,29.9
+ablation,variant_3,32.1,ns_per_call,60.6
+ablation,variant_4,32.1,ns_per_call,51.4
+ablation,variant_5,32.1,ns_per_call,57.7
+ablation,variant_6,32.1,ns_per_call,230.2
+ablation,variant_1,128.0,ns_per_call,23.3
+ablation,variant_2,128.0,ns_per_call,60.5
+ablation,variant_3,128.0,ns_per_call,138.4
+ablation,variant_4,128.0,ns_per_call,104.7
+ablation,variant_5,128.0,ns_per_call,68.5
+ablation,variant_6,128.0,ns_per_call,293.3
+ablation,variant_1,535.7,ns_per_call,24.0
+ablation,variant_2,535.7,ns_per_call,77.9
+ablation,variant_3,535.7,ns_per_call,180.6
+ablation,variant_4,535.7,ns_per_call,110.8
+ablation,variant_5,535.7,ns_per_call,82.5
+ablation,variant_6,535.7,ns_per_call,336.9
+ablation,variant_1,1898.6,ns_per_call,26.3
+ablation,variant_2,1898.6,ns_per_call,83.0
+ablation,variant_3,1898.6,ns_per_call,207.2
+ablation,variant_4,1898.6,ns_per_call,115.4
+ablation,variant_5,1898.6,ns_per_call,102.7
+ablation,variant_6,1898.6,ns_per_call,373.6
+scaling,threads_1,,stream_gbps,1.74
+scaling,threads_1,,dense_gbps,0.94
+scaling,threads_1,,dense_gbps_core,0.941
+scaling,threads_1,,dense_ns,228.1
+scaling,threads_2,,stream_gbps,3.13
+scaling,threads_2,,dense_gbps,1.58
+scaling,threads_2,,dense_gbps_core,0.792
+scaling,threads_2,,dense_ns,135.6
+scaling,threads_4,,stream_gbps,5.84
+scaling,threads_4,,dense_gbps,3.0
+scaling,threads_4,,dense_gbps_core,0.751
+scaling,threads_4,,dense_ns,71.5
+scaling,threads_8,,stream_gbps,11.62
+scaling,threads_8,,dense_gbps,5.98
+scaling,threads_8,,dense_gbps_core,0.748
+scaling,threads_8,,dense_ns,35.9
+scaling,threads_16,,stream_gbps,20.37
+scaling,threads_16,,dense_gbps,11.51
+scaling,threads_16,,dense_gbps_core,0.719
+scaling,threads_16,,dense_ns,18.7
+scaling,threads_32,,stream_gbps,33.32
+scaling,threads_32,,dense_gbps,21.01
+scaling,threads_32,,dense_gbps_core,0.657
+scaling,threads_32,,dense_ns,10.2
+scaling,threads_64,,stream_gbps,34.03
+scaling,threads_64,,dense_gbps,31.9
+scaling,threads_64,,dense_gbps_core,0.498
+scaling,threads_64,,dense_ns,6.7
+scaling,threads_128,,stream_gbps,22.86
+scaling,threads_128,,dense_gbps,24.41
+scaling,threads_128,,dense_gbps_core,0.191
+scaling,threads_128,,dense_ns,8.8
+production,setup_?thr,,M,16.0
+production,setup_?thr,,efC,200.0
+production,setup_?thr,,ef,150.0
+production,setup_?thr,,alpha,0.8
+production,setup_?thr,,beta,3.0
+production,setup_?thr,,heuristic,1.0
+production,setup_?thr,,k,10.0
+production,setup_?thr,,nq,6980.0
+production,setup_?thr,,build_threads,64.0
+production,setup_?thr,,dim,30109.0
+production,setup_?thr,,npoints,8841823.0
+production,setup_?thr,,q_dense_KB,117.613
+production,setup_?thr,,avg_row_bytes,507.225
+production,setup_?thr,,prune_s,57.7794
+production,setup_?thr,,nnz_before,1121199371.0
+production,setup_?thr,,nnz_after,474649750.0
+production,setup_?thr,,keep_frac,0.423341
+production,setup_?thr,,avg_row_bytes_pruned,214.729
+production,setup_?thr,,build_s,229.738
+production,replay_1thr,,search_threads,1.0
+production,replay_1thr,,nq,2000.0
+production,replay_1thr,,k,10.0
+production,replay_1thr,,k_hat,30.0
+production,replay_1thr,,ef,150.0
+production,replay_1thr,,alpha,0.8
+production,replay_1thr,,beta,3.0
+production,replay_1thr,,recorded,4557954.0
+production,replay_1thr,,full_s,0.606278
+production,replay_1thr,,overhead_s,0.165883
+production,replay_1thr,,distance_s,0.440395
+production,replay_1thr,,distance_share,0.726392
+production,replay_1thr,,overhead_share,0.273608
+production,replay_1thr,,ndist,4557954.0
+production,replay_1thr,,ns_per_dist_true,96.6213
+production,replay_1thr,,ns_per_dist_naive,133.015
+production,replay_1thr,,vec_bytes,1011989860.0
+production,replay_1thr,,graph_bytes,28153392.0
+production,replay_1thr,,graph_frac_of_bytes,0.0270668
+production,replay_1thr,,replay_ndist,4557954.0
+production,replay_1thr,,ndist_match,1.0
+production,repeat_1thr,,search_threads,1.0
+production,repeat_1thr,,nq,2000.0
+production,repeat_1thr,,k,10.0
+production,repeat_1thr,,k_hat,30.0
+production,repeat_1thr,,ef,150.0
+production,repeat_1thr,,alpha,0.8
+production,repeat_1thr,,beta,3.0
+production,repeat_1thr,,cold_s,0.60711
+production,repeat_1thr,,warm_s,0.318154
+production,repeat_1thr,,mem_share,0.475953
+production,repeat_1thr,,cold_us_per_query,303.555
+production,repeat_1thr,,warm_us_per_query,159.077
+production,repeat_1thr,,ndist,4557954.0
+production,repeat_1thr,,cold_ns_per_dist,133.198
+production,repeat_1thr,,warm_ns_per_dist,69.802
+production,repeat_1thr,,bytes_per_query_avg,505995.0
+production,repeat_1thr,,bytes_per_query_max,1519212.0
+production,repeat_1thr,,path_mismatches,0.0
+production,batch_1thr,,search_threads,1.0
+production,batch_1thr,,nq,6980.0
+production,batch_1thr,,k,10.0
+production,batch_1thr,,k_hat,30.0
+production,batch_1thr,,ef,150.0
+production,batch_1thr,,alpha,0.8
+production,batch_1thr,,beta,3.0
+production,batch_1thr,,search_s,2.2644
+production,batch_1thr,,qps,3082.49
+production,batch_1thr,,recall,92.3653
+production,batch_1thr,,ndist,15951970.0
+production,batch_1thr,,bytes,3569050792.0
+production,batch_1thr,,ndist_per_query,2285.38
+production,batch_1thr,,bytes_per_query,511325.0
+production,batch_1thr,,ns_per_dist,141.951
+production,batch_1thr,,achieved_GBps,1.57616
+production,batch_1thr,,GBps_per_thread,1.57616
+production,batch_1thr,,graph_bytes,98471024.0
+production,batch_1thr,,graph_frac_of_bytes,0.0268495
+production,batch_1thr,,refine_ndist,209400.0
+production,batch_1thr,,refine_bytes,107551492.0
+production,batch_1thr,,refine_frac_of_ndist,0.0129568
+production,batch_1thr,,refine_frac_of_bytes,0.029253
+production,batch_1thr,,total_bytes,3775073308.0
+production,batch_1thr,,total_GBps,1.66714
+production,batch_64thr,,search_threads,64.0
+production,batch_64thr,,nq,6980.0
+production,batch_64thr,,k,10.0
+production,batch_64thr,,k_hat,30.0
+production,batch_64thr,,ef,150.0
+production,batch_64thr,,alpha,0.8
+production,batch_64thr,,beta,3.0
+production,batch_64thr,,search_s,0.0694902
+production,batch_64thr,,qps,100446.0
+production,batch_64thr,,recall,92.3653
+production,batch_64thr,,ndist,15951970.0
+production,batch_64thr,,bytes,3569050792.0
+production,batch_64thr,,ndist_per_query,2285.38
+production,batch_64thr,,bytes_per_query,511325.0
+production,batch_64thr,,ns_per_dist,4.35621
+production,batch_64thr,,achieved_GBps,51.3605
+production,batch_64thr,,GBps_per_thread,0.802508
+production,batch_64thr,,graph_bytes,98471024.0
+production,batch_64thr,,graph_frac_of_bytes,0.0268495
+production,batch_64thr,,refine_ndist,209400.0
+production,batch_64thr,,refine_bytes,107551492.0
+production,batch_64thr,,refine_frac_of_ndist,0.0129568
+production,batch_64thr,,refine_frac_of_bytes,0.029253
+production,batch_64thr,,total_bytes,3775073308.0
+production,batch_64thr,,total_GBps,54.3253
+production,batch_64thr,,M,16.0
+production,batch_64thr,,efC,200.0
+production,batch_64thr,,heuristic,1.0
+production,batch_64thr,,build_threads,64.0
+production,batch_64thr,,dim,30109.0
+production,batch_64thr,,npoints,8841823.0
+production,batch_64thr,,q_dense_KB,117.613
+production,batch_64thr,,avg_row_bytes,507.225
+production,batch_64thr,,prune_s,57.7952
+production,batch_64thr,,nnz_before,1121199371.0
+production,batch_64thr,,nnz_after,474649750.0
+production,batch_64thr,,keep_frac,0.423341
+production,batch_64thr,,avg_row_bytes_pruned,214.729
+production,batch_64thr,,build_s,229.71
+production,batch_1thr,,search_threads,1.0
+production,batch_1thr,,nq,6980.0
+production,batch_1thr,,k,10.0
+production,batch_1thr,,k_hat,30.0
+production,batch_1thr,,ef,150.0
+production,batch_1thr,,alpha,0.8
+production,batch_1thr,,beta,3.0
+production,batch_1thr,,search_s,2.63636
+production,batch_1thr,,qps,2647.59
+production,batch_1thr,,recall,92.361
+production,batch_1thr,,ndist,15959778.0
+production,batch_1thr,,bytes,3570787928.0
+production,batch_1thr,,ndist_per_query,2286.5
+production,batch_1thr,,bytes_per_query,511574.0
+production,batch_1thr,,ns_per_dist,165.188
+production,batch_1thr,,achieved_GBps,1.35444
+production,batch_1thr,,GBps_per_thread,1.35444
+production,batch_1thr,,graph_bytes,98497180.0
+production,batch_1thr,,graph_frac_of_bytes,0.0268437
+production,batch_1thr,,refine_ndist,209400.0
+production,batch_1thr,,refine_bytes,107594680.0
+production,batch_1thr,,refine_frac_of_ndist,0.0129506
+production,batch_1thr,,refine_frac_of_bytes,0.0292505
+production,batch_1thr,,total_bytes,3776879788.0
+production,batch_1thr,,total_GBps,1.43261
+production,batch_1thr,,M,16.0
+production,batch_1thr,,efC,200.0
+production,batch_1thr,,heuristic,1.0
+production,batch_1thr,,build_threads,64.0
+production,batch_1thr,,dim,30109.0
+production,batch_1thr,,npoints,8841823.0
+production,batch_1thr,,q_dense_KB,117.613
+production,batch_1thr,,avg_row_bytes,507.225
+production,batch_1thr,,prune_s,57.7846
+production,batch_1thr,,nnz_before,1121199371.0
+production,batch_1thr,,nnz_after,474649750.0
+production,batch_1thr,,keep_frac,0.423341
+production,batch_1thr,,avg_row_bytes_pruned,214.729
+production,batch_1thr,,build_s,229.846
+production,batch_1thr,,search_threads,1.0
+production,batch_1thr,,nq,6980.0
+production,batch_1thr,,k,10.0
+production,batch_1thr,,k_hat,30.0
+production,batch_1thr,,ef,150.0
+production,batch_1thr,,alpha,0.8
+production,batch_1thr,,beta,3.0
+production,batch_1thr,,search_s,2.63339
+production,batch_1thr,,qps,2650.57
+production,batch_1thr,,recall,92.3997
+production,batch_1thr,,ndist,15962035.0
+production,batch_1thr,,bytes,3570218412.0
+production,batch_1thr,,ndist_per_query,2286.82
+production,batch_1thr,,bytes_per_query,511493.0
+production,batch_1thr,,ns_per_dist,164.979
+production,batch_1thr,,achieved_GBps,1.35575
+production,batch_1thr,,GBps_per_thread,1.35575
+production,batch_1thr,,graph_bytes,98508508.0
+production,batch_1thr,,graph_frac_of_bytes,0.0268509
+production,batch_1thr,,refine_ndist,209400.0
+production,batch_1thr,,refine_bytes,107535336.0
+production,batch_1thr,,refine_frac_of_ndist,0.0129488
+production,batch_1thr,,refine_frac_of_bytes,0.0292394
+production,batch_1thr,,total_bytes,3776262256.0
+production,batch_1thr,,total_GBps,1.43399
+production,batch_1thr,,M,16.0
+production,batch_1thr,,efC,200.0
+production,batch_1thr,,heuristic,1.0
+production,batch_1thr,,build_threads,64.0
+production,batch_1thr,,dim,30109.0
+production,batch_1thr,,npoints,8841823.0
+production,batch_1thr,,q_dense_KB,117.613
+production,batch_1thr,,avg_row_bytes,507.225
+production,batch_1thr,,prune_s,57.8181
+production,batch_1thr,,nnz_before,1121199371.0
+production,batch_1thr,,nnz_after,474649750.0
+production,batch_1thr,,keep_frac,0.423341
+production,batch_1thr,,avg_row_bytes_pruned,214.729
+production,batch_1thr,,build_s,229.573
+production,batch_1thr,,search_threads,1.0
+production,batch_1thr,,nq,6980.0
+production,batch_1thr,,k,10.0
+production,batch_1thr,,k_hat,30.0
+production,batch_1thr,,ef,150.0
+production,batch_1thr,,alpha,0.8
+production,batch_1thr,,beta,3.0
+production,batch_1thr,,search_s,2.31851
+production,batch_1thr,,qps,3010.55
+production,batch_1thr,,recall,92.2736
+production,batch_1thr,,ndist,15980409.0
+production,batch_1thr,,bytes,3575166280.0
+production,batch_1thr,,ndist_per_query,2289.46
+production,batch_1thr,,bytes_per_query,512201.0
+production,batch_1thr,,ns_per_dist,145.085
+production,batch_1thr,,achieved_GBps,1.54201
+production,batch_1thr,,GBps_per_thread,1.54201
+production,batch_1thr,,graph_bytes,98568544.0
+production,batch_1thr,,graph_frac_of_bytes,0.0268306
+production,batch_1thr,,refine_ndist,209400.0
+production,batch_1thr,,refine_bytes,107528140.0
+production,batch_1thr,,refine_frac_of_ndist,0.0129341
+production,batch_1thr,,refine_frac_of_bytes,0.0291982
+production,batch_1thr,,total_bytes,3781262964.0
+production,batch_1thr,,total_GBps,1.6309
+production,batch_1thr,,M,16.0
+production,batch_1thr,,efC,200.0
+production,batch_1thr,,heuristic,1.0
+production,batch_1thr,,build_threads,64.0
+production,batch_1thr,,dim,30109.0
+production,batch_1thr,,npoints,8841823.0
+production,batch_1thr,,q_dense_KB,117.613
+production,batch_1thr,,avg_row_bytes,507.225
+production,batch_1thr,,prune_s,57.9015
+production,batch_1thr,,nnz_before,1121199371.0
+production,batch_1thr,,nnz_after,474649750.0
+production,batch_1thr,,keep_frac,0.423341
+production,batch_1thr,,avg_row_bytes_pruned,214.729
+production,batch_1thr,,build_s,231.443
+production,batch_1thr,,search_threads,1.0
+production,batch_1thr,,nq,6980.0
+production,batch_1thr,,k,10.0
+production,batch_1thr,,k_hat,30.0
+production,batch_1thr,,ef,150.0
+production,batch_1thr,,alpha,0.8
+production,batch_1thr,,beta,3.0
+production,batch_1thr,,search_s,2.7209
+production,batch_1thr,,qps,2565.33
+production,batch_1thr,,recall,92.4312
+production,batch_1thr,,ndist,15975702.0
+production,batch_1thr,,bytes,3574369108.0
+production,batch_1thr,,ndist_per_query,2288.78
+production,batch_1thr,,bytes_per_query,512087.0
+production,batch_1thr,,ns_per_dist,170.315
+production,batch_1thr,,achieved_GBps,1.31367
+production,batch_1thr,,GBps_per_thread,1.31367
+production,batch_1thr,,graph_bytes,98565536.0
+production,batch_1thr,,graph_frac_of_bytes,0.0268356
+production,batch_1thr,,refine_ndist,209400.0
+production,batch_1thr,,refine_bytes,107565280.0
+production,batch_1thr,,refine_frac_of_ndist,0.0129378
+production,batch_1thr,,refine_frac_of_bytes,0.0292143
+production,batch_1thr,,total_bytes,3780499924.0
+production,batch_1thr,,total_GBps,1.38943
+counters,variant 1 (compute floor (rows in L1)),,cycles:u,185854268
+counters,variant 1 (compute floor (rows in L1)),,instructions:u,498625335
+counters,variant 1 (compute floor (rows in L1)),,ls_mab_alloc.loads:u,17714216
+counters,variant 1 (compute floor (rows in L1)),,ls_dmnd_fills_from_sys.mem_io_local:u,527
+counters,variant 1 (compute floor (rows in L1)),,ls_dmnd_fills_from_sys.lcl_l2:u,44665119
+counters,variant 1 (compute floor (rows in L1)),,ls_dmnd_fills_from_sys.mem_io_remote:u,0
+counters,variant 1 (compute floor (rows in L1)),,ls_dmnd_fills_from_sys.ext_cache_local:u,0
+counters,variant 1 (compute floor (rows in L1)),,ls_dmnd_fills_from_sys.ext_cache_remote:u,0
+counters,variant 1 (compute floor (rows in L1)),,ls_l1_d_tlb_miss.all:u,701
+counters,variant 1 (compute floor (rows in L1)),,ls_l1_d_tlb_miss.tlb_reload_4k_l2_miss:u,7
+counters,variant 1 (compute floor (rows in L1)),,ls_l1_d_tlb_miss.tlb_reload_2m_l2_miss:u,18
+counters,variant 1 (compute floor (rows in L1)),,ex_ret_brn_misp:u,155
+counters,variant 3 (production kernel (dense)),,cycles:u,1458050266
+counters,variant 3 (production kernel (dense)),,instructions:u,466960743
+counters,variant 3 (production kernel (dense)),,ls_mab_alloc.loads:u,17766467
+counters,variant 3 (production kernel (dense)),,ls_dmnd_fills_from_sys.mem_io_local:u,6842025
+counters,variant 3 (production kernel (dense)),,ls_dmnd_fills_from_sys.lcl_l2:u,46558408
+counters,variant 3 (production kernel (dense)),,ls_dmnd_fills_from_sys.mem_io_remote:u,0
+counters,variant 3 (production kernel (dense)),,ls_dmnd_fills_from_sys.ext_cache_local:u,0
+counters,variant 3 (production kernel (dense)),,ls_dmnd_fills_from_sys.ext_cache_remote:u,0
+counters,variant 3 (production kernel (dense)),,ls_l1_d_tlb_miss.all:u,3152309
+counters,variant 3 (production kernel (dense)),,ls_l1_d_tlb_miss.tlb_reload_4k_l2_miss:u,7276
+counters,variant 3 (production kernel (dense)),,ls_l1_d_tlb_miss.tlb_reload_2m_l2_miss:u,3009
+counters,variant 3 (production kernel (dense)),,ex_ret_brn_misp:u,3801783
+counters,variant 4 (+ batched prefetch),,cycles:u,808888401
+counters,variant 4 (+ batched prefetch),,instructions:u,490460536
+counters,variant 4 (+ batched prefetch),,ls_mab_alloc.loads:u,21843888
+counters,variant 4 (+ batched prefetch),,ls_dmnd_fills_from_sys.mem_io_local:u,3231322
+counters,variant 4 (+ batched prefetch),,ls_dmnd_fills_from_sys.lcl_l2:u,55028839
+counters,variant 4 (+ batched prefetch),,ls_dmnd_fills_from_sys.mem_io_remote:u,0
+counters,variant 4 (+ batched prefetch),,ls_dmnd_fills_from_sys.ext_cache_local:u,0
+counters,variant 4 (+ batched prefetch),,ls_dmnd_fills_from_sys.ext_cache_remote:u,0
+counters,variant 4 (+ batched prefetch),,ls_l1_d_tlb_miss.all:u,7382077
+counters,variant 4 (+ batched prefetch),,ls_l1_d_tlb_miss.tlb_reload_4k_l2_miss:u,6408
+counters,variant 4 (+ batched prefetch),,ls_l1_d_tlb_miss.tlb_reload_2m_l2_miss:u,3488
+counters,variant 4 (+ batched prefetch),,ex_ret_brn_misp:u,3858986
+counters,variant 6 (old merge kernel),,cycles:u,2633931000
+counters,variant 6 (old merge kernel),,instructions:u,2843822831
+counters,variant 6 (old merge kernel),,ls_mab_alloc.loads:u,269777
+counters,variant 6 (old merge kernel),,ls_dmnd_fills_from_sys.mem_io_local:u,3987792
+counters,variant 6 (old merge kernel),,ls_dmnd_fills_from_sys.lcl_l2:u,215447
+counters,variant 6 (old merge kernel),,ls_dmnd_fills_from_sys.mem_io_remote:u,0
+counters,variant 6 (old merge kernel),,ls_dmnd_fills_from_sys.ext_cache_local:u,0
+counters,variant 6 (old merge kernel),,ls_dmnd_fills_from_sys.ext_cache_remote:u,0
+counters,variant 6 (old merge kernel),,ls_l1_d_tlb_miss.all:u,2676185
+counters,variant 6 (old merge kernel),,ls_l1_d_tlb_miss.tlb_reload_4k_l2_miss:u,10352
+counters,variant 6 (old merge kernel),,ls_l1_d_tlb_miss.tlb_reload_2m_l2_miss:u,4865
+counters,variant 6 (old merge kernel),,ex_ret_brn_misp:u,3167250
+counters,E2: counters on the real search (gated),,cycles:u,42707057189
+counters,E2: counters on the real search (gated),,cycles:u_per_dist,2672.463
+counters,E2: counters on the real search (gated),,instructions:u,31668737605
+counters,E2: counters on the real search (gated),,instructions:u_per_dist,1984.284
+counters,E2: counters on the real search (gated),,ls_mab_alloc.loads:u,136368961
+counters,E2: counters on the real search (gated),,ls_mab_alloc.loads:u_per_dist,8.545
+counters,E2: counters on the real search (gated),,ls_dmnd_fills_from_sys.mem_io_local:u,2467823
+counters,E2: counters on the real search (gated),,ls_dmnd_fills_from_sys.mem_io_local:u_per_dist,0.155
+counters,E2: counters on the real search (gated),,ls_dmnd_fills_from_sys.lcl_l2:u,312424330
+counters,E2: counters on the real search (gated),,ls_dmnd_fills_from_sys.lcl_l2:u_per_dist,19.576
+counters,E2: counters on the real search (gated),,ls_dmnd_fills_from_sys.mem_io_remote:u,3891561
+counters,E2: counters on the real search (gated),,ls_dmnd_fills_from_sys.mem_io_remote:u_per_dist,0.244
+counters,E2: counters on the real search (gated),,ls_dmnd_fills_from_sys.ext_cache_local:u,30771
+counters,E2: counters on the real search (gated),,ls_dmnd_fills_from_sys.ext_cache_local:u_per_dist,0.002
+counters,E2: counters on the real search (gated),,ls_dmnd_fills_from_sys.ext_cache_remote:u,56752
+counters,E2: counters on the real search (gated),,ls_dmnd_fills_from_sys.ext_cache_remote:u_per_dist,0.004
+counters,E2: counters on the real search (gated),,ls_l1_d_tlb_miss.all:u,98308776
+counters,E2: counters on the real search (gated),,ls_l1_d_tlb_miss.all:u_per_dist,6.152
+counters,E2: counters on the real search (gated),,ls_l1_d_tlb_miss.tlb_reload_4k_l2_miss:u,217965
+counters,E2: counters on the real search (gated),,ls_l1_d_tlb_miss.tlb_reload_4k_l2_miss:u_per_dist,0.014
+counters,E2: counters on the real search (gated),,ls_l1_d_tlb_miss.tlb_reload_2m_l2_miss:u,456981
+counters,E2: counters on the real search (gated),,ls_l1_d_tlb_miss.tlb_reload_2m_l2_miss:u_per_dist,0.029
+counters,E2: counters on the real search (gated),,ex_ret_brn_misp:u,78441954
+counters,E2: counters on the real search (gated),,ex_ret_brn_misp:u_per_dist,4.909

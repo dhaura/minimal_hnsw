@@ -2,6 +2,9 @@
 #define SPARSE_HNSW_H
 
 #include "csr_matrix.h"
+#include "prune.h"
+#include "quant_csr.h"
+#include "inverted_seed.h"
 #include <vector>
 #include <queue>
 #include <random>
@@ -30,6 +33,32 @@ namespace sparse_hnsw {
         std::vector<uint32_t> visited_list;
         std::vector<uint32_t> filtered_neighbors;
 
+        std::vector<float> q_dense;
+        bool dense_query = false;
+
+        std::vector<std::pair<float, uint32_t>> seed_terms;
+        std::vector<uint32_t> seed_ids;
+
+        std::vector<float> kbest;
+        int patience_k = 0;
+
+        void scatterQuery(int dim, const IndiceDataPair* q_indices, uint32_t q_num) {
+            if (q_dense.size() < static_cast<size_t>(dim)) {
+                q_dense.assign(static_cast<size_t>(dim), 0.0f);
+            }
+            for (uint32_t i = 0; i < q_num; ++i) {
+                q_dense[q_indices[i].indice] = static_cast<float>(q_indices[i].data);
+            }
+            dense_query = true;
+        }
+
+        void unscatterQuery(const IndiceDataPair* q_indices, uint32_t q_num) {
+            for (uint32_t i = 0; i < q_num; ++i) {
+                q_dense[q_indices[i].indice] = 0.0f;
+            }
+            dense_query = false;
+        }
+
 #ifdef SPARSE_HNSW_PROFILE
         // Accumulated across searchLayer calls (never reset by prepare();
         // callers snapshot-and-diff). bytes = doc-row bytes each distance
@@ -39,6 +68,13 @@ namespace sparse_hnsw {
         uint64_t prof_ndist = 0;
         uint64_t prof_bytes = 0;
         uint64_t prof_graph_bytes = 0;
+
+        // The beta>1 refine pass re-scores k*beta candidates against the
+        // UNPRUNED matrix using the old merge kernel. It runs in
+        // searchKNNBatch, not searchLayer, and streams different (longer)
+        // rows -- so it is counted apart from the traversal above.
+        uint64_t prof_refine_ndist = 0;
+        uint64_t prof_refine_bytes = 0;
 
         // Record/replay, used to measure what share of search time distance()
         // actually owns (mode=replay). searchLayer is deterministic given the
@@ -83,8 +119,7 @@ namespace sparse_hnsw {
     class SPARSE_HNSW {
     public:
         SPARSE_HNSW(int dim, CSRMatrix *data_matrix, int M = 16, int ef_construction = 200, int max_elements = 1000, 
-            bool use_heuristic = false, bool extend_candidates = false, bool keep_pruned = false, 
-            bool use_mkl = false, size_t mklThreshold = 256);
+            bool use_heuristic = false, bool extend_candidates = false, bool keep_pruned = false, float alpha = 1.0, int beta = 1);
         
         // Kept out-of-line in a profile build so `perf report` can attribute
         // cycles to distance() as its own symbol instead of folding them into
@@ -93,11 +128,44 @@ namespace sparse_hnsw {
         __attribute__((noinline))
 #endif
         float distance(const void *pVect1, const void *pVect2, const void *qty_ptr, const void *other_ptr) const;
+
+#ifdef SPARSE_HNSW_PROFILE
+        __attribute__((noinline))
+#endif
+        float distanceDense(const CSRMatrix* m, uint32_t p_idx, const std::vector<float>& q_dense) const;
+
+#ifdef SPARSE_HNSW_PROFILE
+        __attribute__((noinline))
+        float distanceDenseRefine(const CSRMatrix* m, uint32_t p_idx, const std::vector<float>& q_dense) const;
+#endif
+
+#ifdef SPARSE_HNSW_PROFILE
+        __attribute__((noinline))
+#endif
+        float distanceQuant(uint32_t p_idx, const std::vector<float>& q_dense) const;
+
+        void enableQuantizedTraversal();
+        bool quantized() const { return quantized_; }
+        size_t quantizedBytes() const { return quant_.bytes(); }
+
+        void buildSeedTable(uint32_t top_k);
+        void setSeedParams(int terms, int per_term);
+
+        void setPatience(int patience) { patience_ = std::max(0, patience); }
+        int patience() const { return patience_; }
+        bool seedingEnabled() const { return seed_terms_ > 0 && !seed_table_.empty(); }
+        size_t seedTableBytes() const { return seed_table_.bytes(); }
+        uint32_t seedTableTopK() const { return seed_table_.top_k; }
+
         void addPoint(uint32_t node_id, uint32_t label);
         void addPointsBatch(int num_points);
         std::priority_queue<std::pair<float, uint32_t>> searchKNN(uint32_t query_id, CSRMatrix *query_matrix, int k, int ef = 50) const;
         void searchKNNBatch(CSRMatrix *query_matrix, int num_queries, int k, int ef,
                             std::vector<uint32_t>& out_labels) const;
+        CSRMatrix* pruneMatrix(const CSRMatrix *m);
+        void setPrunedDataMatrix(CSRMatrix *pruned_data_matrix);
+        void setBeta(int beta) { beta_ = beta; }
+        int getBeta() const { return beta_; }
         void setLabelRemapping(std::vector<uint32_t> old_to_new, std::vector<uint32_t> new_to_old);
         void relabelGroundTruth(std::vector<std::vector<uint32_t>>& groundtruth) const;
         void printInfo() const;
@@ -112,13 +180,17 @@ namespace sparse_hnsw {
         uint64_t profNDist() const { return prof_ndist_.load(std::memory_order_relaxed); }
         uint64_t profBytes() const { return prof_bytes_.load(std::memory_order_relaxed); }
         uint64_t profGraphBytes() const { return prof_graph_bytes_.load(std::memory_order_relaxed); }
+        uint64_t profRefineNDist() const { return prof_refine_ndist_.load(std::memory_order_relaxed); }
+        uint64_t profRefineBytes() const { return prof_refine_bytes_.load(std::memory_order_relaxed); }
         void profReset() const {
             prof_ndist_.store(0); prof_bytes_.store(0); prof_graph_bytes_.store(0);
+            prof_refine_ndist_.store(0); prof_refine_bytes_.store(0);
         }
 #endif
 
     private:
         CSRMatrix *data_matrix_;    
+        CSRMatrix *original_data_matrix_;
         int dim_;
         int M_;  // maximum number of connections per layer
         int ef_construction_;
@@ -138,6 +210,16 @@ namespace sparse_hnsw {
         // Scratch reused across the serial insertion path.
         SearchScratch insert_scratch_;
 
+        // Quantized copy of the data matrix for traversal.
+        QuantCSR quant_;
+        bool quantized_ = false;
+
+        // Inverted-seed table.
+        InvertedSeedTable seed_table_;
+        int seed_terms_ = 0;
+        int seed_per_term_ = 1;
+        int patience_ = 0;
+
         // Oone mutex per element guarding its neighbor lists.
         // A global mutex for entry_point_ / max_level_.
         mutable std::vector<std::mutex> link_locks_;
@@ -147,6 +229,8 @@ namespace sparse_hnsw {
         mutable std::atomic<uint64_t> prof_ndist_{0};
         mutable std::atomic<uint64_t> prof_bytes_{0};
         mutable std::atomic<uint64_t> prof_graph_bytes_{0};
+        mutable std::atomic<uint64_t> prof_refine_ndist_{0};
+        mutable std::atomic<uint64_t> prof_refine_bytes_{0};
 
         float profDistance(uint32_t q, uint32_t p, const void* qty,
                            SearchScratch& s) const {
@@ -154,6 +238,28 @@ namespace sparse_hnsw {
                 return s.replay[s.replay_idx++];
             }
             float d = distance(&q, &p, data_matrix_, qty);
+            if (s.record) {
+                s.record->push_back(d);
+            }
+            return d;
+        }
+
+        float profDistanceDense(uint32_t p, SearchScratch& s) const {
+            if (s.replay) {
+                return s.replay[s.replay_idx++];
+            }
+            float d = distanceDense(data_matrix_, p, s.q_dense);
+            if (s.record) {
+                s.record->push_back(d);
+            }
+            return d;
+        }
+
+        float profDistanceQuant(uint32_t p, SearchScratch& s) const {
+            if (s.replay) {
+                return s.replay[s.replay_idx++];
+            }
+            float d = distanceQuant(p, s.q_dense);
             if (s.record) {
                 s.record->push_back(d);
             }
@@ -168,8 +274,8 @@ namespace sparse_hnsw {
         bool use_heuristic_;
         bool extend_candidates_;
         bool keep_pruned_;
-        bool use_mkl_;
-        size_t mklThreshold_;
+        float alpha_;
+        int beta_;
 
         std::mt19937 rng_;
         std::uniform_real_distribution<double> level_generator_;
@@ -187,6 +293,7 @@ namespace sparse_hnsw {
         void setNeighborsAtLevel(uint32_t node_id, int level, const std::vector<uint32_t>& neighbors, int max_degree);
         std::priority_queue<std::pair<float, uint32_t>> searchLayer(uint32_t query_id, const void *qty_ptr, std::vector<uint32_t> entry_points, int ef, int layer, SearchScratch& scratch, bool lock_links = false) const;
         std::priority_queue<std::pair<float, uint32_t>> searchKNN(uint32_t query_id, CSRMatrix *query_matrix, int k, int ef, SearchScratch& scratch) const;
+        void collectSeeds(CSRMatrix* query_matrix, uint32_t query_id, SearchScratch& scratch) const;
         void addPointInternal(uint32_t node_id, uint32_t label, SearchScratch& scratch);
         void connectNeighbors(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int level, int M);
         std::vector<uint32_t> selectNeighbors(uint32_t node_id, std::priority_queue<std::pair<float, uint32_t>> candidates, int M);
