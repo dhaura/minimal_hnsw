@@ -98,7 +98,7 @@ int main(int argc, char* argv[]) {
 
     if (argc < 13)
     {
-        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <alpha> <beta> <input_filepath> <query_filepath> <gt_filepath> <results_csv_path> [quantize=0]" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <alpha> <beta> <input_filepath> <query_filepath> <gt_filepath> <results_csv_path> [quantize=0] [seed_top_k=0] [seed_terms=0] [seed_per_term=1]" << std::endl;
         return 1;
     }
 
@@ -116,6 +116,9 @@ int main(int argc, char* argv[]) {
     std::string gt_filepath = argv[11];
     std::string results_csv_path = argv[12];
     bool quantize = (argc > 13) && (std::stoi(argv[13]) != 0);
+    int seed_top_k = (argc > 14) ? std::stoi(argv[14]) : 0;
+    int seed_terms = (argc > 15) ? std::stoi(argv[15]) : 0;
+    int seed_per_term = (argc > 16) ? std::stoi(argv[16]) : 1;
 
     int num_omp_threads = omp_get_max_threads();
     std::cout << "Number of OpenMP threads: " << num_omp_threads << "\n";
@@ -179,6 +182,19 @@ int main(int argc, char* argv[]) {
         auto q_time = std::chrono::duration_cast<std::chrono::microseconds>(end_q - start_q);
         std::cout << "Quantization completed in " << q_time.count() << " microseconds ("
                   << index.quantizedBytes() / (1024.0 * 1024.0) << " MiB)\n";
+    }
+
+    if (seed_top_k > 0 && seed_terms > 0) {
+        std::cout << "Building inverted seed table (top-" << seed_top_k << " per column)...\n";
+        auto start_seed = std::chrono::steady_clock::now();
+        index.buildSeedTable(static_cast<uint32_t>(seed_top_k));
+        index.setSeedParams(seed_terms, seed_per_term);
+        auto end_seed = std::chrono::steady_clock::now();
+        std::cout << "Seed table built in "
+                  << std::chrono::duration_cast<std::chrono::microseconds>(
+                         end_seed - start_seed).count()
+                  << " us (" << index.seedTableBytes() / 1024.0 << " KiB); seeding with "
+                  << seed_terms << " terms x " << seed_per_term << " docs\n";
     }
 
     // Search for nearest neighbors.

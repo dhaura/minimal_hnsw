@@ -23,6 +23,7 @@ int main(int argc, char *argv[]) {
                      " <input_filepath> <query_filepath> <gt_filepath>"
                      " <results_csv_path> [model_name=SparseHNSW]"
                      " [repeats=5] [warmup=1] [quantize=0]"
+                     " [seed_top_k=0] [seed_spec=off] [patience_list=0]"
                   << std::endl;
         return 1;
     }
@@ -43,6 +44,28 @@ int main(int argc, char *argv[]) {
     int repeats = (argc > 14) ? std::stoi(argv[14]) : 5;
     int warmup = (argc > 15) ? std::stoi(argv[15]) : 1;
     bool quantize = (argc > 16) && (std::stoi(argv[16]) != 0);
+    const int seed_top_k = (argc > 17) ? std::stoi(argv[17]) : 0;
+    const std::string seed_spec = (argc > 18) ? argv[18] : "off";
+    const std::vector<int> patience_list =
+        bench::parseList<int>((argc > 19) ? argv[19] : "0", bench::toInt);
+
+    std::vector<std::pair<int, int>> seed_cfgs;
+    if (seed_spec == "off" || seed_top_k <= 0) {
+        seed_cfgs.push_back({0, 0});
+    } else {
+        std::stringstream ss(seed_spec);
+        std::string tok;
+        while (std::getline(ss, tok, ',')) {
+            if (tok.empty()) continue;
+            const size_t colon = tok.find(':');
+            if (colon == std::string::npos) {
+                std::cerr << "seed_spec entry '" << tok << "' must be <terms>:<per_term>\n";
+                return 1;
+            }
+            seed_cfgs.push_back({std::stoi(tok.substr(0, colon)),
+                                 std::stoi(tok.substr(colon + 1))});
+        }
+    }
 
     if (ef_list.empty()) {
         std::cerr << "ef_list is empty." << std::endl;
@@ -125,6 +148,17 @@ int main(int argc, char *argv[]) {
                   << " MiB)\n";
     }
 
+    if (seed_top_k > 0) {
+        std::cout << "Building inverted seed table (top-" << seed_top_k << " per column)...\n";
+        auto start_seed = std::chrono::steady_clock::now();
+        index.buildSeedTable(static_cast<uint32_t>(seed_top_k));
+        auto end_seed = std::chrono::steady_clock::now();
+        std::cout << "Seed table built in "
+                  << std::chrono::duration_cast<std::chrono::microseconds>(
+                         end_seed - start_seed).count() / 1e6
+                  << " s (" << index.seedTableBytes() / 1024.0 << " KiB)\n";
+    }
+
     CSRMatrix *querymatrix = new CSRMatrix(query_filepath, true);
     int query_count = querymatrix->nrow;
 
@@ -146,12 +180,26 @@ int main(int argc, char *argv[]) {
 
     const bool multi_beta = beta_list.size() > 1;
 
-    for (int beta : beta_list) {
+    const bool multi_seed = seed_cfgs.size() > 1;
+
+    const bool multi_pat = patience_list.size() > 1;
+
+    for (int patience : patience_list) {
+      index.setPatience(patience);
+      for (const auto& sc : seed_cfgs) {
+      index.setSeedParams(sc.first, sc.second);
+      for (int beta : beta_list) {
         index.setBeta(beta);
         // Only the search side changes, so no rebuild -- see setBeta().
         std::string row_model = multi_beta
                 ? model_name + "_b" + std::to_string(beta)
                 : model_name;
+        if (multi_seed) {
+            row_model += "_s" + std::to_string(sc.first) + "x" + std::to_string(sc.second);
+        }
+        if (multi_pat) {
+            row_model += "_p" + std::to_string(patience);
+        }
 
         for (int ef : ef_list) {
             if (ef < static_cast<int>(k)) {
@@ -173,12 +221,21 @@ int main(int argc, char *argv[]) {
             if (quantize) {
                 params << " q=u8";
             }
+            if (index.seedingEnabled()) {
+                params << " seedT=" << seed_top_k
+                       << " seedH=" << sc.first << " seedS=" << sc.second;
+            }
+            if (patience > 0) {
+                params << " pat=" << patience;
+            }
 
             bench::printPoint(params.str(), recall, bench::median(times), query_count, rr);
             bench::appendRow(results_csv_path, row_model, params.str(), num_omp_threads,
                              recall, rr, indexing_time_sec, load_time_sec, 0.0,
                              times, query_count, k);
         }
+      }
+      }
     }
 
     std::cout << "\nResults appended to " << results_csv_path << "\n";

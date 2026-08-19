@@ -31,6 +31,7 @@ BETAS=${BETAS:-1 2 3 4 5}
 
 echo "dataset=$SPKNN_DATASET  M=$M efC=$EFC  ef=[$EF_LIST]  threads=$BENCH_THREADS"
 echo "alphas=[$ALPHAS]  betas=[$BETAS]  quantize=${QUANTIZE:-0}"
+echo "seed_top_k=${SEED_TOP_K:-0}  seed_spec=${SEED_SPEC:-off}  patience=${PATIENCE_LIST:-0}"
 echo "=========================================================================="
 
 for ALPHA in $ALPHAS; do
@@ -50,7 +51,8 @@ for ALPHA in $ALPHAS; do
     "$M" "$EFC" "$EF_LIST" 1 0 0 "$ALPHA" "$BETA_CSV" \
     "$SPKNN_BASE" "$SPKNN_QUERIES" "$SPKNN_GT" \
     "$CSV" "$MODEL" \
-    "${REPEATS:-5}" "${WARMUP:-1}" "${QUANTIZE:-0}"
+    "${REPEATS:-5}" "${WARMUP:-1}" "${QUANTIZE:-0}" \
+    "${SEED_TOP_K:-0}" "${SEED_SPEC:-off}" "${PATIENCE_LIST:-0}"
 done
 
 echo

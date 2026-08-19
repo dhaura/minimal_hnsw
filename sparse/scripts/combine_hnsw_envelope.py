@@ -17,6 +17,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("outdir")
     ap.add_argument("--model", default="SparseHNSW")
+    ap.add_argument("--targets", default=None,
+                    help="comma-separated recall targets, e.g. "
+                         "0.80,0.85,0.90,0.94,0.96,0.97,0.98,0.99. For each, keep "
+                         "the fastest point that MEETS it; omit to keep the full front")
     args = ap.parse_args()
 
     srcs = sorted(glob.glob(os.path.join(args.outdir, "sparse_hnsw_results_*.csv")))
@@ -41,6 +45,21 @@ def main():
             keep.append(r)
             best_qps = q
     keep.sort(key=lambda r: float(r["Recall"]))
+
+    if args.targets:
+        targets = [float(t) for t in args.targets.split(",") if t.strip()]
+        picked, seen = [], set()
+        for t in sorted(targets):
+            # fastest point at or above the target; the front is sorted by
+            # recall so the earliest qualifying entry is also the fastest.
+            hit = next((r for r in keep if float(r["Recall"]) >= t), None)
+            if hit is not None and id(hit) not in seen:
+                seen.add(id(hit))
+                picked.append(hit)
+        if picked:
+            print(f"  thinned {len(keep)} front points -> {len(picked)} "
+                  f"at targets {args.targets}")
+            keep = picked
 
     for r in keep:
         r["Model"] = args.model

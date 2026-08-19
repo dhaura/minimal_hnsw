@@ -238,6 +238,49 @@ void SPARSE_HNSW::enableQuantizedTraversal() {
     quantized_ = true;
 }
 
+void SPARSE_HNSW::buildSeedTable(uint32_t top_k) {
+    const CSRMatrix* src = original_data_matrix_ ? original_data_matrix_ : data_matrix_;
+    seed_table_.build(*src, top_k);
+}
+
+void SPARSE_HNSW::setSeedParams(int terms, int per_term) {
+    seed_terms_ = std::max(0, terms);
+    seed_per_term_ = std::max(1, per_term);
+}
+
+void SPARSE_HNSW::collectSeeds(CSRMatrix* query_matrix, uint32_t query_id,
+                               SearchScratch& scratch) const {
+    scratch.seed_ids.clear();
+    if (!seedingEnabled()) {
+        return;
+    }
+
+    const int64_t q_start = query_matrix->indptr[query_id];
+    const int64_t q_end = query_matrix->indptr[query_id + 1];
+    scratch.seed_terms.clear();
+    scratch.seed_terms.reserve(static_cast<size_t>(q_end - q_start));
+    for (int64_t i = q_start; i < q_end; ++i) {
+        scratch.seed_terms.push_back({static_cast<float>(query_matrix->indices_data[i].data),
+                                      query_matrix->indices_data[i].indice});
+    }
+
+    const size_t h = std::min<size_t>(static_cast<size_t>(seed_terms_), scratch.seed_terms.size());
+    std::partial_sort(scratch.seed_terms.begin(), scratch.seed_terms.begin() + h,
+                      scratch.seed_terms.end(),
+                      std::greater<std::pair<float, uint32_t>>());
+
+    const uint32_t take = std::min<uint32_t>(static_cast<uint32_t>(seed_per_term_),
+                                             seed_table_.top_k);
+    for (size_t t = 0; t < h; ++t) {
+        const uint32_t* col = seed_table_.column(scratch.seed_terms[t].second);
+        for (uint32_t u = 0; u < take; ++u) {
+            if (col[u] != InvertedSeedTable::kNone) {
+                scratch.seed_ids.push_back(col[u]);
+            }
+        }
+    }
+}
+
 int SPARSE_HNSW::getRandomLevel() {
     double r = level_generator_(rng_);
     // Ensure r is not too close to 0 to avoid log(0).
@@ -252,6 +295,31 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
     std::priority_queue<std::pair<float, uint32_t>> top_candidates;
 
     const bool use_quant = quantized_ && scratch.dense_query;
+    const bool use_patience = patience_ > 0 && layer == 0 &&
+                              scratch.dense_query && scratch.patience_k > 0;
+    uint32_t stale_expansions = 0;
+    if (use_patience) {
+        scratch.kbest.clear();
+        scratch.kbest.reserve(static_cast<size_t>(scratch.patience_k));
+    }
+
+    auto touchTopK = [&](float d) -> bool {
+        if (!use_patience) {
+            return false;
+        }
+        if (static_cast<int>(scratch.kbest.size()) < scratch.patience_k) {
+            scratch.kbest.push_back(d);
+            std::push_heap(scratch.kbest.begin(), scratch.kbest.end());
+            return true;
+        }
+        if (d < scratch.kbest.front()) {
+            std::pop_heap(scratch.kbest.begin(), scratch.kbest.end());
+            scratch.kbest.back() = d;
+            std::push_heap(scratch.kbest.begin(), scratch.kbest.end());
+            return true;
+        }
+        return false;
+    };
     const int64_t* qrow_off = quant_.row_off.empty() ? nullptr : quant_.row_off.data();
     const uint8_t* qblob = quant_.blob.empty() ? nullptr : quant_.blob.data();
 
@@ -264,6 +332,7 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
                   data_matrix_->indptr[entry_point + 1] - data_matrix_->indptr[entry_point]) * sizeof(IndiceDataPair);
 #endif
         float d = SPARSE_HNSW_TRAVERSAL_DISTANCE(entry_point);
+        touchTopK(d);
         candidates.push({d, entry_point});
         top_candidates.push({d, entry_point});
         scratch.markVisited(entry_point);
@@ -325,6 +394,8 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
         const uint32_t nfilter = static_cast<uint32_t>(scratch.filtered_neighbors.size());
         const uint32_t* filtered = scratch.filtered_neighbors.data();
 
+        bool improved = false;
+
         if (!SPARSE_HNSW_REPLAYING) {
             for (uint32_t j = 0; j < nfilter; ++j) {
                 const char* vec = use_quant
@@ -360,6 +431,10 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
 #endif
             float dist = SPARSE_HNSW_TRAVERSAL_DISTANCE(neighbor_id);
 
+            if (touchTopK(dist)) {
+                improved = true;
+            }
+
             if (top_candidates.size() < static_cast<size_t>(ef) || dist < top_candidates.top().first) {
                 candidates.push({dist, neighbor_id});
                 // The best pending candidate is the likely next expansion.
@@ -369,6 +444,14 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
                 if (top_candidates.size() > static_cast<size_t>(ef)) {
                     top_candidates.pop();
                 }
+            }
+        }
+
+        if (use_patience) {
+            if (improved) {
+                stale_expansions = 0;
+            } else if (++stale_expansions >= static_cast<uint32_t>(patience_)) {
+                break;
             }
         }
     }
@@ -622,7 +705,17 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchKNN(uint32_t 
         }
     }
 
-    // Search at layer 0 with ef >= k candidates, then keep only the k nearest.
+    // Inverted-list seeding: enter layer 0 additionally at the strongest
+    // documents of the query's heaviest terms.
+    collectSeeds(query_matrix, query_id, scratch);
+    if (!scratch.seed_ids.empty()) {
+        entry_points.insert(entry_points.end(),
+                            scratch.seed_ids.begin(), scratch.seed_ids.end());
+        std::sort(entry_points.begin(), entry_points.end());
+        entry_points.erase(std::unique(entry_points.begin(), entry_points.end()),
+                           entry_points.end());
+    }
+    scratch.patience_k = k;
     std::priority_queue<std::pair<float, uint32_t>> result =
         searchLayer(query_id, query_matrix, entry_points, std::max(ef, k), 0, scratch);
 
