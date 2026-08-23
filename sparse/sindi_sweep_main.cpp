@@ -81,11 +81,16 @@ int main(int argc, char *argv[]) {
     int repeats = (argc > 13) ? std::stoi(argv[13]) : 5;
     int warmup = (argc > 14) ? std::stoi(argv[14]) : 1;
 
-    if (use_quantization == "0")
+    std::string quant_json;
+    if (use_quantization == "0") {
         use_quantization = "false";
-    else if (use_quantization == "1")
+        quant_json = "false";
+    } else if (use_quantization == "1") {
         use_quantization = "true";
-    else if (use_quantization != "fp16") {
+        quant_json = "true";
+    } else if (use_quantization == "fp16") {
+        quant_json = "\"fp16\"";
+    } else {
         std::cerr << "use_quantization must be 0, 1 (SQ8) or fp16" << std::endl;
         return 1;
     }
@@ -151,7 +156,7 @@ int main(int argc, char *argv[]) {
             "metric_type": "ip",
             "index_param": {
                 "use_reorder": )" << (use_reorder ? "true" : "false") << R"(,
-                "use_quantization": )" << use_quantization << R"(,
+                "use_quantization": )" << quant_json << R"(,
                 "term_id_limit": )" << dim << R"(,
                 "doc_prune_ratio": )" << doc_prune_ratio << R"(,
                 "window_size": )" << window_size << R"(
