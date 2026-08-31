@@ -164,6 +164,11 @@ namespace sparse_hnsw {
                             std::vector<uint32_t>& out_labels) const;
         CSRMatrix* pruneMatrix(const CSRMatrix *m);
         void setPrunedDataMatrix(CSRMatrix *pruned_data_matrix);
+        void setSearchMatrix(CSRMatrix *search_matrix);
+
+        void setAlpha(float alpha) { alpha_ = alpha; }
+        float getAlpha() const { return alpha_; }
+
         void setBeta(int beta) { beta_ = beta; }
         int getBeta() const { return beta_; }
         void setLabelRemapping(std::vector<uint32_t> old_to_new, std::vector<uint32_t> new_to_old);

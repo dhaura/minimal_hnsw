@@ -39,14 +39,22 @@ for p in sys.argv[1:]:
         d = dict(re.findall(r"(\w+)=([0-9.]+)", r["Params"]))
         seen[(d.get('alpha'), d.get('beta'), d.get('ef'))] += 1
 if len(gens) > 1:
-    print("FATAL: the selected CSVs span more than one sweep generation; "
-          "every (alpha,beta,ef) would be plotted once per code version.", file=sys.stderr)
+    # Set AB_ALLOW_MIXED_GEN=1 only when you know the tags share one binary and
+    # differ only in which knobs the batch swept (e.g. v7 patience <= 256 and v8
+    # patience >= 512): the per-(alpha,beta) Pareto then just gets more points.
+    override = os.environ.get("AB_ALLOW_MIXED_GEN") == "1"
+    print(("WARNING (AB_ALLOW_MIXED_GEN=1)" if override else "FATAL")
+          + ": the selected CSVs span more than one sweep generation; "
+          "every (alpha,beta,ef) would be plotted once per code version.",
+          file=sys.stderr)
     for g, files in sorted(gens.items()):
         print(f"  {g}: {', '.join(files)}", file=sys.stderr)
-    print("Narrow CSV_GLOB to one generation.", file=sys.stderr)
-    sys.exit(1)
+    if not override:
+        print("Narrow CSV_GLOB to one generation, or set AB_ALLOW_MIXED_GEN=1 "
+              "if the tags really are one binary.", file=sys.stderr)
+        sys.exit(1)
 dupes = sum(1 for n in seen.values() if n > 1)
-gen = next(iter(gens))
+gen = "+".join(sorted(gens))
 print(f"  ok: generation={gen}, {len(seen)} unique (alpha,beta,ef) points"
       + (f", {dupes} measured twice (overlapping grid seam -- expected)" if dupes else ""))
 PY

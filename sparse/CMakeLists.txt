@@ -5,10 +5,16 @@ add_library(sparse_hnsw_lib sparse_hnsw.cpp sparse_hnsw.h)
 add_executable(sparse_hnsw_demo main.cpp)
 add_executable(grassRMA_demo grassRMA_main.cpp)
 add_executable(sparse_hnsw_sweep sweep_main.cpp)
+add_executable(sparse_decouple_sweep decouple_main.cpp)
 
 # Link the library to the executable
 target_link_libraries(sparse_hnsw_demo sparse_hnsw_lib)
 target_link_libraries(sparse_hnsw_sweep sparse_hnsw_lib)
+target_link_libraries(sparse_decouple_sweep sparse_hnsw_lib)
+target_include_directories(sparse_decouple_sweep PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+set_target_properties(sparse_decouple_sweep PROPERTIES
+    CXX_STANDARD 17
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # Link OpenMP for parallelization
 find_package(OpenMP)
@@ -16,6 +22,7 @@ if(OpenMP_CXX_FOUND)
     target_link_libraries(sparse_hnsw_lib PUBLIC OpenMP::OpenMP_CXX)
     target_link_libraries(sparse_hnsw_demo OpenMP::OpenMP_CXX)
     target_link_libraries(sparse_hnsw_sweep OpenMP::OpenMP_CXX)
+    target_link_libraries(sparse_decouple_sweep OpenMP::OpenMP_CXX)
     target_link_libraries(grassRMA_demo OpenMP::OpenMP_CXX)
 endif()
 

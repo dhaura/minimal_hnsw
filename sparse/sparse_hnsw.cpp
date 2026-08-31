@@ -836,9 +836,15 @@ void SPARSE_HNSW::searchKNNBatch(CSRMatrix *query_matrix, int num_queries, int k
     }
 }
 
+void SPARSE_HNSW::setSearchMatrix(CSRMatrix *search_matrix) {
+    if (!original_data_matrix_) {
+        original_data_matrix_ = data_matrix_;
+    }
+    data_matrix_ = search_matrix;
+}
+
 void SPARSE_HNSW::setPrunedDataMatrix(CSRMatrix *pruned_data_matrix) {
-    original_data_matrix_ = data_matrix_;
-    data_matrix_ = pruned_data_matrix;
+    setSearchMatrix(pruned_data_matrix);
 }
 
 CSRMatrix* SPARSE_HNSW::pruneMatrix(const CSRMatrix *m) {
