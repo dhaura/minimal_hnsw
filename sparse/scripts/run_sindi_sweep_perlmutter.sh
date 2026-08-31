@@ -16,7 +16,17 @@ module load python/3.11-24.1.0
 
 source /global/homes/d/dhaura/repos/SpKNN/spknn-playground/common/bench_env_perlmutter.sh
 bench_provenance
-bench_assert_optimized "$SPKNN_BIN/sindi_sweep"
+
+SINDI_BIN=${SINDI_BIN:-$SPKNN_HNSW_REPO/build-gnu/bin/sindi_sweep}
+bench_assert_optimized "$SINDI_BIN"
+if ldd "$SINDI_BIN" | grep -q libiomp5; then
+    echo "FATAL $SINDI_BIN links libiomp5 as well as libgomp; its search" >&2
+    echo "      throughput under OMP_PROC_BIND is not trustworthy. Rebuild it" >&2
+    echo "      in build-gnu (cmake -DCMAKE_CXX_COMPILER=g++-14)." >&2
+    exit 1
+fi
+echo "### sindi binary: $SINDI_BIN"
+ldd "$SINDI_BIN" | grep -E 'omp|vsag' | sed 's/^/###   /'
 
 OUT=${SPKNN_OUT:-$SPKNN_OUT_ROOT/sindi}
 mkdir -p "$OUT"
@@ -24,10 +34,10 @@ mkdir -p "$OUT"
 CSV="$OUT/sindi_results${TAG:+_$TAG}.csv"
 rm -f "$CSV"
 
-$BENCH_LAUNCH stdbuf -oL -eL "$SPKNN_BIN/sindi_sweep" \
-  "${DPR:-0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7}" \
-  "${QPR:-0.5,0.4,0.3,0.2,0.1,0.0}" \
-  "${NCAND:-10,20,50}" \
+$BENCH_LAUNCH stdbuf -oL -eL "$SINDI_BIN" \
+  "${DPR:-0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9}" \
+  "${QPR:-0.0,0.1,0.2,0.3,0.5,0.7,0.9}" \
+  "${NCAND:-10,20,50,200,1000,5000}" \
   "$SPKNN_BASE" \
   "$SPKNN_QUERIES" \
   "$SPKNN_GT" \
