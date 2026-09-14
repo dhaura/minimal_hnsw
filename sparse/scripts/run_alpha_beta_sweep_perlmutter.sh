@@ -26,6 +26,16 @@ rm -f "$CSV"
 M=${M:-32}
 EFC=${EFC:-200}
 EF_LIST=${EF_LIST:-10,20,50,100,200,400,800,1600,3200}
+# PRESET=full reproduces the published production grid.
+if [ "${PRESET:-}" = "full" ]; then
+    ALPHAS=${ALPHAS:-0.7 0.75 0.775 0.8 0.825 0.85 0.9}
+    BETAS=${BETAS:-1 2 3 4 5 6 8}
+    EF_LIST=${EF_LIST:-10,20,50,100,200,400,800,1600,3200}
+    QUANTIZE=${QUANTIZE:-1}
+    SEED_TOP_K=${SEED_TOP_K:-8}
+    SEED_SPEC=${SEED_SPEC:-8:4}
+    PATIENCE_LIST=${PATIENCE_LIST:-64,128,256,512,1024,2048}
+fi
 ALPHAS=${ALPHAS:-0.5 0.6 0.7 0.8 0.9 1.0}
 BETAS=${BETAS:-1 2 3 4 5}
 

@@ -28,6 +28,14 @@ fi
 echo "### sindi binary: $SINDI_BIN"
 ldd "$SINDI_BIN" | grep -E 'omp|vsag' | sed 's/^/###   /'
 
+case "${PRESET:-v1grid}" in
+    v1grid)  : ;;
+    bigcand) DPR=${DPR:-0.3,0.4,0.5,0.6,0.7}
+             QPR=${QPR:-0.5,0.7,0.9}
+             NCAND=${NCAND:-5000,10000,20000,50000,100000} ;;
+    *) echo "unknown PRESET='$PRESET'; known: v1grid, bigcand" >&2; exit 1 ;;
+esac
+
 OUT=${SPKNN_OUT:-$SPKNN_OUT_ROOT/sindi}
 mkdir -p "$OUT"
 

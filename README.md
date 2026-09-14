@@ -158,12 +158,21 @@ cmake --build $REPO/build-gnu --target sindi_demo sindi_sweep -j16
 
 ### Datasets
 
-|              | `msmarco_full`       | `nq_splade`        |
-| ------------ | -------------------- | ------------------ |
-| base         | `base_full.csr`      | `base_nq.csr`      |
-| queries      | `queries.dev.csr`    | `queries.test.csr` |
-| ground truth | `base_full.dev.gt`   | `base_nq.test.gt`  |
-| docs / queries / dim | 8,841,823 / 6,980 / 30,109 | 2,680,893 / 3,452 / 30,522 |
+|              | `msmarco_full`       | `nq_splade`        | `msmarco_v2_splade`     |
+| ------------ | -------------------- | ------------------ | ----------------------- |
+| base         | `base_full.csr`      | `base_nq.csr`      | `base_v2_splade.csr`    |
+| queries      | `queries.dev.csr`    | `queries.test.csr` | `queries.$QSET.csr`     |
+| ground truth | `base_full.dev.gt`   | `base_nq.test.gt`  | `base_v2_splade.$QSET.gt` |
+| docs / queries / dim | 8,841,823 / 6,980 / 30,109 | 2,680,893 / 3,452 / 30,522 | 138,364,198 / 3,903 / 30,522 |
+| nnz          | 1.12e9 (0.26x uint32) | 4.12e8 | **1.75e10 (4.07x uint32)** |
+
+All three are SPLADE++ CoCondenser-EnsembleDistil
+(`naver/splade-cocondenser-ensembledistil`) - the big-ann sparse track and the
+Pyserini `splade-pp-ed` corpora are the same model, so v1 and v2 results are
+model-comparable. They are *not* index-comparable: the big-ann packaging
+compacts the BERT vocabulary to 30,109 live dimensions and ships raw float
+weights, while the Pyserini corpora keep all 30,522 and ship integer impacts
+(documents x100, queries x1000). Never mix a query file across the two.
 
 ```bash
 # msmarco_full (big-ann sparse track). base_1M / base_small are drop-in smaller
@@ -173,6 +182,22 @@ wget https://storage.googleapis.com/ann-challenge-sparse-vectors/csr/base_full.c
 wget https://storage.googleapis.com/ann-challenge-sparse-vectors/csr/queries.dev.csr.gz
 wget https://storage.googleapis.com/ann-challenge-sparse-vectors/csr/base_full.dev.gt
 gunzip base_full.csr.gz queries.dev.csr.gz
+
+# msmarco_v2_splade: SPLADE++ ED pre-encoded corpus (~70 GB tar) + pre-encoded
+# topics from castorini/eval. Budget ~350 GB and about 2 h end to end.
+mkdir -p $REPO/sparse/data/msmarco_v2_splade && cd $REPO/sparse/data/msmarco_v2_splade
+curl -O https://rgw.cs.uwaterloo.ca/pyserini/data/msmarco_v2_passage_splade_pp_ed.tar
+tar -xf msmarco_v2_passage_splade_pp_ed.tar          # 1000 shards of *.jsonl.gz
+curl -sSL -o bert_vocab.txt https://huggingface.co/bert-base-uncased/resolve/main/vocab.txt
+# Topics live in castorini/eval (the repo anserini-tools was renamed to).
+T=https://raw.githubusercontent.com/castorini/eval/master/topics
+for q in dev dev2; do curl -sSLO $T/topics.msmarco-v2-passage.$q.splade-pp-ed.tsv.gz; done
+for q in dl21 dl22 dl23; do curl -sSLO $T/topics.$q.splade-pp-ed.tsv.gz; done
+# Converts topics -> queries.*.csr, 1000 shards -> base_v2_splade.csr, then
+# computes exact ground truth for every query set. ~30 min on one node.
+sbatch $REPO/sparse/scripts/msmarco_v2/build_msmarco_v2_splade_perlmutter.sh
+# LIMIT_SHARDS=N converts only the first N shards (138,364 passages each) if you
+# want a smaller prototype without touching the full corpus.
 
 # nq_splade: documents.tar.gz + queries.tar.gz from
 # https://huggingface.co/datasets/tuskanny/seismic-nq-splade
@@ -214,6 +239,25 @@ $LAUNCH $REPO/build/bin/sparse_hnsw_demo 32 200 200 1 0 0 0.85 3 \
   $DATA/nq_splade/queries.test.csr \
   $DATA/nq_splade/base_nq.test.gt \
   results_nq_splade.csv 1 8 8 4
+```
+
+```bash
+# msmarco_v2_splade
+export OMP_NUM_THREADS=128 OMP_PLACES=cores OMP_PROC_BIND=spread MKL_NUM_THREADS=1
+numactl --interleave=all $REPO/build/bin/sparse_hnsw_demo 32 200 200 1 0 0 0.85 3 \
+  $DATA/msmarco_v2_splade/base_v2_splade.csr \
+  $DATA/msmarco_v2_splade/queries.dev.csr \
+  $DATA/msmarco_v2_splade/base_v2_splade.dev.gt \
+  results_msmarco_v2.csv 1 8 8 4
+```
+
+Or through the sweep script, which resolves every path from `SPKNN_DATASET` and
+refuses to start if the dataset needs `--interleave=all` and did not get it:
+
+```bash
+sbatch --cpus-per-task=256 \
+  --export=ALL,SPKNN_DATASET=msmarco_v2_splade,PRESET=frontier \
+  $REPO/sparse/scripts/run_hnsw_sweep_perlmutter.sh
 ```
 
 `k` is read from the ground-truth file. `alpha=1.0` disables pruning, and the
