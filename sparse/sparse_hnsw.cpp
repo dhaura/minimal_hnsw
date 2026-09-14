@@ -149,11 +149,11 @@ float SPARSE_HNSW::distance(const void *pVect1, const void *pVect2, const void *
     const uint32_t q_idx = *((uint32_t *) pVect1);
     const uint32_t p_idx = *((uint32_t *) pVect2);
 
-    const uint32_t p_start = csr_matrix->indptr[p_idx];
-    const uint32_t p_end = csr_matrix->indptr[p_idx + 1];
+    const int64_t p_start = csr_matrix->indptr[p_idx];
+    const int64_t p_end = csr_matrix->indptr[p_idx + 1];
     IndiceDataPair *p_indices = csr_matrix->indices_data + p_start;
 
-    uint32_t q_end, q_start = 0;
+    int64_t q_end, q_start = 0;
     IndiceDataPair *q_indices;
     if (other_ptr == nullptr) {
         q_start = csr_matrix->indptr[q_idx];
@@ -166,8 +166,8 @@ float SPARSE_HNSW::distance(const void *pVect1, const void *pVect2, const void *
         q_indices = csr_matrix_query->indices_data + q_start;
     }
 
-    uint32_t p_num = p_end - p_start;
-    uint32_t q_num = q_end - q_start;
+    uint32_t p_num = static_cast<uint32_t>(p_end - p_start);
+    uint32_t q_num = static_cast<uint32_t>(q_end - q_start);
 
     float res = 0;
 
@@ -232,6 +232,15 @@ float SPARSE_HNSW::distanceQuant(uint32_t p_idx, const std::vector<float>& q_den
     }
     return 1.0f - res * static_cast<float>(scale16);
 }
+
+#ifdef SPARSE_HNSW_PROFILE
+void SPARSE_HNSW::enableAccessProfile() {
+    node_hits_.reset(new std::atomic<uint32_t>[max_elements_]);
+    for (int i = 0; i < max_elements_; ++i) {
+        node_hits_[i].store(0, std::memory_order_relaxed);
+    }
+}
+#endif
 
 void SPARSE_HNSW::enableQuantizedTraversal() {
     quant_.build(*data_matrix_);
@@ -326,6 +335,7 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
     for (uint32_t entry_point : entry_points) {
 #ifdef SPARSE_HNSW_PROFILE
         scratch.prof_ndist++;
+        if (node_hits_) node_hits_[entry_point].fetch_add(1, std::memory_order_relaxed);
         scratch.prof_bytes += use_quant
             ? static_cast<uint64_t>(quant_.rowBytes(entry_point))
             : static_cast<uint64_t>(
@@ -422,6 +432,7 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
 
 #ifdef SPARSE_HNSW_PROFILE
             scratch.prof_ndist++;
+            if (node_hits_) node_hits_[neighbor_id].fetch_add(1, std::memory_order_relaxed);
             if (!scratch.replay) {
                 scratch.prof_bytes += use_quant
                     ? static_cast<uint64_t>(quant_.rowBytes(neighbor_id))

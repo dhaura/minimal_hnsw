@@ -19,6 +19,7 @@
 // Adds distance-call and byte accounting to the search path.
 #ifdef SPARSE_HNSW_PROFILE
 #include <atomic>
+#include <memory>
 #endif
 
 namespace sparse_hnsw {
@@ -181,6 +182,19 @@ namespace sparse_hnsw {
                 SearchScratch& scratch) const {
             return searchKNN(query_id, query_matrix, k, ef, scratch);
         }
+
+        void enableAccessProfile();
+        const std::atomic<uint32_t>* nodeHits() const { return node_hits_.get(); }
+        bool accessProfiling() const { return node_hits_ != nullptr; }
+        int elementLevel(uint32_t id) const { return element_levels_[id]; }
+        uint32_t entryPoint() const { return entry_point_; }
+        int maxLevel() const { return max_level_; }
+        uint64_t rowBytesOf(uint32_t id) const {
+            return quantized_ ? static_cast<uint64_t>(quant_.rowBytes(id))
+                              : static_cast<uint64_t>(data_matrix_->indptr[id + 1] -
+                                    data_matrix_->indptr[id]) * sizeof(IndiceDataPair);
+        }
+
         // Totals aggregated by searchKNNBatch across its worker scratches.
         uint64_t profNDist() const { return prof_ndist_.load(std::memory_order_relaxed); }
         uint64_t profBytes() const { return prof_bytes_.load(std::memory_order_relaxed); }
@@ -236,6 +250,7 @@ namespace sparse_hnsw {
         mutable std::atomic<uint64_t> prof_graph_bytes_{0};
         mutable std::atomic<uint64_t> prof_refine_ndist_{0};
         mutable std::atomic<uint64_t> prof_refine_bytes_{0};
+        mutable std::unique_ptr<std::atomic<uint32_t>[]> node_hits_;
 
         float profDistance(uint32_t q, uint32_t p, const void* qty,
                            SearchScratch& s) const {
