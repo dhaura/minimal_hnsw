@@ -1,0 +1,7 @@
+dataset,ef,pearson_r_terms_vs_miss,pearson_r_candset_vs_miss
+msmarco_full,400,0.03423008575545681,
+msmarco_full,1600,0.016485509198299407,
+msmarco_full,3200,0.02013015829778281,
+nq_splade,400,0.05687231053551998,
+nq_splade,1600,0.05720620542944524,
+nq_splade,3200,0.06458549171462159,

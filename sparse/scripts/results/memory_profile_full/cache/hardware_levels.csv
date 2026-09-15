@@ -1,0 +1,8 @@
+config,level,bytes,note,pct_traffic_served,rows_resident,source,residual_dram_gib
+efc800_ef3200,L1d / core,32768,"32 KiB, private",0.10061103425002732,167,measured,63.97320471426094
+efc800_ef3200,L2 / core,524288,"512 KiB, private (shared by the SMT pair)",0.3556295680941541,1800,measured,63.809896879844295
+efc800_ef3200,L3 / core at 8 busy,4194304,32 MiB CCD / 8 cores,1.481902460808536,15576,measured,63.08865837102377
+efc800_ef3200,L3 / CCD,33554432,"32 MiB, shared by 8 cores",7.424843114901121,144053,measured,59.2829398075267
+efc800_ef3200,L3 / socket,268435456,8 CCDs,34.17767357865582,1233707,measured,42.1510602468773
+efc800_ef3200,L3 / node,536870912,both sockets,53.56704330391327,2575271,interpolated,29.73456669715546
+efc800_ef3200,1 GiB side cache,1073741824,"off-chip, would have to be built",83.6837,5261057,measured,10.44857241756663
