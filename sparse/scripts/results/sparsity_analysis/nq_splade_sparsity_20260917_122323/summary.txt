@@ -1,0 +1,33 @@
+Sparse matrix nnz analysis
+==========================
+Dataset: nq_splade
+Input: /pscratch/sd/d/dhaura/repos/sparse_hnsw/minimal_hnsw/sparse/data/nq_splade/base_nq.csr
+Sparse format: CSR
+Shape: 2,680,893 rows x 30,522 columns
+Structural nnz: 411,886,108
+Definition: structural/stored entries (explicit stored zeros count as nnz)
+Elapsed seconds: 4.659
+
+Row-wise nnz:
+  count:  2,680,893
+  mean:   153.637653
+  median: 155.000000
+  max:    401
+  min:    20
+  p95:    233.000000
+  p99:    264.000000
+  zero-nnz count: 0
+
+Column-wise nnz:
+  count:  30,522
+  mean:   13494.728655
+  median: 2488.500000
+  max:    1700337
+  min:    0
+  p95:    62863.600000
+  p99:    171761.450000
+  zero-nnz count: 1,811
+
+Figures:
+  row_nnz_distribution.png
+  column_nnz_distribution.png

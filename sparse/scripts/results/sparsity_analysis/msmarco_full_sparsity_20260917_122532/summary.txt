@@ -1,0 +1,33 @@
+Sparse matrix nnz analysis
+==========================
+Dataset: msmarco_full
+Input: /pscratch/sd/d/dhaura/repos/sparse_hnsw/minimal_hnsw/sparse/data/msmarco_full/base_full.csr
+Sparse format: CSR
+Shape: 8,841,823 rows x 30,109 columns
+Structural nnz: 1,121,199,371
+Definition: structural/stored entries (explicit stored zeros count as nnz)
+Elapsed seconds: 10.882
+
+Row-wise nnz:
+  count:  8,841,823
+  mean:   126.806358
+  median: 127.000000
+  max:    364
+  min:    14
+  p95:    183.000000
+  p99:    207.000000
+  zero-nnz count: 0
+
+Column-wise nnz:
+  count:  30,109
+  mean:   37238.014248
+  median: 5572.000000
+  max:    5733415
+  min:    0
+  p95:    191425.200000
+  p99:    488626.080000
+  zero-nnz count: 2,389
+
+Figures:
+  row_nnz_distribution.png
+  column_nnz_distribution.png
