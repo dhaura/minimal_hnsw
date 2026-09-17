@@ -1,6 +1,8 @@
 #include "sparse_hnsw.h"
 #include "csr_matrix.h"
+#include "dist_log.h"
 #include <unordered_set>
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -98,7 +100,9 @@ int main(int argc, char* argv[]) {
 
     if (argc < 13)
     {
-        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <alpha> <beta> <input_filepath> <query_filepath> <gt_filepath> <results_csv_path> [quantize=0] [seed_top_k=0] [seed_terms=0] [seed_per_term=1]" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <alpha> <beta> <input_filepath> <query_filepath> <gt_filepath> <results_csv_path> [quantize=0] [seed_top_k=0] [seed_terms=0] [seed_per_term=1]"
+                     " [dist_log_csv=off] [dist_log_stride=1]"
+                     " [dist_hist_csv=off] [dist_hist_bins=100]" << std::endl;
         return 1;
     }
 
@@ -119,6 +123,15 @@ int main(int argc, char* argv[]) {
     int seed_top_k = (argc > 14) ? std::stoi(argv[14]) : 0;
     int seed_terms = (argc > 15) ? std::stoi(argv[15]) : 0;
     int seed_per_term = (argc > 16) ? std::stoi(argv[16]) : 1;
+    // Per-distance-call dead-weight log. Only honoured in a SPARSE_HNSW_DIST_LOG
+    // build.
+    auto off = [](const std::string& v) {
+        return v.empty() || v == "off" || v == "none";
+    };
+    std::string dist_log_csv = (argc > 17) ? argv[17] : "";
+    int dist_log_stride = (argc > 18) ? std::max(1, std::stoi(argv[18])) : 1;
+    std::string dist_hist_csv = (argc > 19) ? argv[19] : "";
+    int dist_hist_bins = (argc > 20) ? std::max(1, std::stoi(argv[20])) : 100;
 
     int num_omp_threads = omp_get_max_threads();
     std::cout << "Number of OpenMP threads: " << num_omp_threads << "\n";
@@ -208,10 +221,52 @@ int main(int argc, char* argv[]) {
     uint32_t n, k;
     get_gt(gt_filepath, I, n, k);
     
+#ifdef SPARSE_HNSW_DIST_LOG
+    const bool want_rows = !off(dist_log_csv);
+    const bool want_hist = !off(dist_hist_csv);
+    if (want_rows || want_hist) {
+        if (!dist_log::open(want_rows ? dist_log_csv.c_str() : nullptr,
+                            static_cast<uint32_t>(dist_log_stride),
+                            want_hist ? dist_hist_csv.c_str() : nullptr,
+                            static_cast<uint32_t>(dist_hist_bins))) {
+            std::cerr << "Failed to open dist-log CSV '" << dist_log_csv << "'\n";
+            return 1;
+        }
+        if (want_rows) {
+            std::cout << "Logging per-call rows to " << dist_log_csv
+                      << " (every " << dist_log_stride << " queries)\n";
+        }
+        if (want_hist) {
+            std::cout << "Logging " << dist_hist_bins << "-bin histogram to "
+                      << dist_hist_csv << " (all queries)\n";
+        }
+    }
+#else
+    if (!off(dist_log_csv) || !off(dist_hist_csv)) {
+        std::cerr << "warning: dist-log args given but this binary was built "
+                     "without SPARSE_HNSW_DIST_LOG; ignoring.\n";
+    }
+#endif
+
     auto start_query_time = std::chrono::steady_clock::now();
 
     std::vector<uint32_t> pred_lables;
     index.searchKNNBatch(querymatrix, query_count, k, ef, pred_lables);
+
+#ifdef SPARSE_HNSW_DIST_LOG
+    // Drains every worker Buffer, fcloses the per-row CSV, then writes the
+    // merged histogram. After the search threads are done, so nothing is
+    // still appending.
+    dist_log::close();
+    if (dist_log::totalCalls()) {
+        std::cout << "Distance calls: " << dist_log::totalCalls()
+                  << " | entries streamed: " << dist_log::totalEntries()
+                  << " | unused: " << dist_log::totalUnused() << " ("
+                  << std::fixed << std::setprecision(2)
+                  << (100.0 * dist_log::totalUnused() / dist_log::totalEntries())
+                  << "%) | zero-overlap calls: " << dist_log::zeroOverlap() << "\n";
+    }
+#endif
 
     auto end_query_time = std::chrono::steady_clock::now();
     auto query_time = std::chrono::duration_cast<std::chrono::microseconds>(end_query_time - start_query_time);

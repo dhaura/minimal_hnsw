@@ -1,4 +1,5 @@
 #include "sparse_hnsw.h"
+#include "dist_log.h"
 #include <iostream>
 #include <cstring>
 
@@ -226,10 +227,21 @@ float SPARSE_HNSW::distanceQuant(uint32_t p_idx, const std::vector<float>& q_den
     const float* q = q_dense.data();
 
     float res = 0.0f;
+#ifdef SPARSE_HNSW_DIST_LOG
+    uint32_t used = 0;
+    #pragma omp simd reduction(+:res) reduction(+:used)
+    for (uint32_t i = 0; i < p_num; ++i) {
+        const float qv = q[idx[i]];
+        res += static_cast<float>(code[i]) * qv;
+        used += (qv != 0.0f) ? 1u : 0u;
+    }
+    dist_log::emit(p_idx, p_num, p_num - used);
+#else
     #pragma omp simd reduction(+:res)
     for (uint32_t i = 0; i < p_num; ++i) {
         res += static_cast<float>(code[i]) * q[idx[i]];
     }
+#endif
     return 1.0f - res * static_cast<float>(scale16);
 }
 
@@ -701,6 +713,9 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchKNN(uint32_t 
     const IndiceDataPair* q_indices = query_matrix->indices_data + q_start;
     const uint32_t q_num = static_cast<uint32_t>(q_end - q_start);
     scratch.scatterQuery(dim_, q_indices, q_num);
+#ifdef SPARSE_HNSW_DIST_LOG
+    dist_log::setQuery(query_id);
+#endif
 
     std::vector<uint32_t> entry_points = {entry_point_};
 
@@ -836,6 +851,10 @@ void SPARSE_HNSW::searchKNNBatch(CSRMatrix *query_matrix, int num_queries, int k
                 out_labels = std::move(approx_labels);
             }
         }
+
+#ifdef SPARSE_HNSW_DIST_LOG
+        dist_log::flushThread();
+#endif
 
 #ifdef SPARSE_HNSW_PROFILE
         prof_ndist_.fetch_add(scratch.prof_ndist, std::memory_order_relaxed);

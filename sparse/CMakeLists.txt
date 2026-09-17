@@ -81,7 +81,12 @@ target_compile_definitions(sparse_diag_sweep PRIVATE SPARSE_HNSW_PROFILE)
 add_executable(sparse_access_profile access_profile_main.cpp sparse_hnsw.cpp)
 target_compile_definitions(sparse_access_profile PRIVATE SPARSE_HNSW_PROFILE)
 
-foreach(tgt bench_distance bench_scale sparse_profile sparse_diag_sweep sparse_access_profile)
+# Per-distance-call byte-efficiency log to CSV (argv[17]=path, argv[18]=stride).
+add_executable(sparse_hnsw_demo_distlog main.cpp sparse_hnsw.cpp)
+target_compile_definitions(sparse_hnsw_demo_distlog PRIVATE SPARSE_HNSW_DIST_LOG)
+
+foreach(tgt bench_distance bench_scale sparse_profile sparse_diag_sweep sparse_access_profile
+            sparse_hnsw_demo_distlog)
     target_include_directories(${tgt} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     # -gdwarf-4, not plain -g: GCC 13 defaults to DWARF 5, which the RHEL 8
     # binutils `as` on Grace rejects with "unrecognized option '--gdwarf-5'".

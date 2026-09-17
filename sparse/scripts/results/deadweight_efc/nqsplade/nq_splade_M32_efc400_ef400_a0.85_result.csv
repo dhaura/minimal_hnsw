@@ -1,0 +1,2 @@
+alpha,beta,dataset_size,threads,pruning_time_sec,indexing_time_sec,searching_time_sec,recall
+0.85,4,2680893,64,22.514344,399.656147,0.244854,99.2468
