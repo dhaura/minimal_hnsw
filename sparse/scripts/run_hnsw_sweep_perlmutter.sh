@@ -65,6 +65,24 @@ case "${PRESET:-default}" in
         PATIENCE_LIST=${PATIENCE_LIST:-0,256}
         QUANTIZE=${QUANTIZE:-1}; SEED_TOP_K=${SEED_TOP_K:-8}; SEED_SPEC=${SEED_SPEC:-8:4}
         ;;
+    extreme)    # un-clip the grid: the exhaustive preset's winners sat pinned at
+                # ef=MIN, beta=MAX and efC=MAX in 5 of 6 recall bins, so none of
+                # those three were ever bracketed from the far side.
+        M=${M:-32}; EFC=${EFC:-1600}; ALPHA=${ALPHA:-0.85}
+        BETAS=${BETAS:-2,3,4,8,12,16}
+        EF_LIST=${EF_LIST:-10,20,50,100,200,400,800,1600,3200,6400}
+        PATIENCE_LIST=${PATIENCE_LIST:-0,256}
+        QUANTIZE=${QUANTIZE:-1}; SEED_TOP_K=${SEED_TOP_K:-8}; SEED_SPEC=${SEED_SPEC:-8:4}
+        ;;
+    betamax)    # beta to 32. beta=8 looked optimal until `extreme` tested 12/16,
+                # which then won >=98% and >=99.5% (the latter by 1.76x). beta=16
+                # is again the max and again wins, so it is still unbracketed.
+        M=${M:-32}; EFC=${EFC:-1600}; ALPHA=${ALPHA:-0.85}
+        BETAS=${BETAS:-8,12,16,24,32}
+        EF_LIST=${EF_LIST:-50,100,200,400,800,1600,3200,6400}
+        PATIENCE_LIST=${PATIENCE_LIST:-0,256}
+        QUANTIZE=${QUANTIZE:-1}; SEED_TOP_K=${SEED_TOP_K:-8}; SEED_SPEC=${SEED_SPEC:-8:4}
+        ;;
     quick)      # smoke test: one build, three points
         M=${M:-32}; EFC=${EFC:-200}; ALPHA=${ALPHA:-0.85}
         BETAS=${BETAS:-3}
@@ -80,7 +98,7 @@ case "${PRESET:-default}" in
         QUANTIZE=${QUANTIZE:-0}; SEED_TOP_K=${SEED_TOP_K:-0}; SEED_SPEC=${SEED_SPEC:-off}
         ;;
     *)
-        echo "unknown PRESET='$PRESET'; known: default, frontier, highrecall, exhaustive, quick" >&2
+        echo "unknown PRESET='$PRESET'; known: default, frontier, highrecall, exhaustive, extreme, betamax, quick" >&2
         exit 1
         ;;
 esac
