@@ -1,0 +1,4 @@
+Model,Params,Threads,Recall,RR@10,IndexSec,LoadSec,ConvertSec,SearchSecMedian,SearchSecRuns,AmortizedUsPerQuery,QPS,LatencyUsSingleThread,PeakRSSGB,IndexBytes,NumQueries,K,ResultsOrdered,Host,JobID
+SparseHNSW_qmap_abc_dense,"M=32 efC=200 ef=800 alpha=0.85 beta=8 qmap=dense q=u8",64,0.9899856734,1.0000,5.4611,0.1066,0.0000,0.200043,"0.200501;0.199909;0.200079;0.200043;0.200006",28.659456,34892.50,,0.15,0,6980,10,True,nid004774,58633558
+SparseHNSW_qmap_abc_hash,"M=32 efC=200 ef=800 alpha=0.85 beta=8 qmap=hash q=u8",64,0.9899856734,1.0000,5.4611,0.1066,0.0000,0.458394,"0.459064;0.458394;0.458356;0.458816;0.458247",65.672493,15227.08,,0.15,0,6980,10,True,nid004774,58633558
+SparseHNSW_qmap_abc_slot,"M=32 efC=200 ef=800 alpha=0.85 beta=8 qmap=slot q=u8",64,0.9899856734,1.0000,5.4611,0.1066,0.0000,0.193491,"0.193571;0.193386;0.193374;0.193491;0.193535",27.720774,36074.03,,0.15,0,6980,10,True,nid004774,58633558
