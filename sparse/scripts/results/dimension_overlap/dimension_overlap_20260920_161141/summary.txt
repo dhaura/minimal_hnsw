@@ -2,7 +2,7 @@ Query-ground-truth dimension overlap analysis
 =============================================
 One sample per query/ground-truth-document pair.
 GT neighbors per query: 10
-Overlap denominator: query
+Overlap denominators: document, query
 Pruning: fp16 mass-ratio pruning matching sparse/prune.h; deterministic dim-ID tie-break.
 Recall notes are reference HNSW runs; this script analyzes exact GT pairs and does not run ANN search.
 
@@ -17,9 +17,29 @@ Pairs: 69,800
 Alpha: 0.85
 Reference ANN recall: 98.3926%
 Mean GT-document nnz: 127.363940 unpruned -> 62.280401 pruned
-Elapsed seconds: 13.330
+Elapsed seconds: 4.771
 
-Unpruned overlap:
+Document-normalized overlap
+Unpruned:
+  samples: 69,800
+  mean:    25.229602%
+  median:  23.943662%
+  p05:     12.000000%
+  p95:     42.990654%
+  min:     1.515152%
+  max:     88.461538%
+
+Pruned:
+  samples: 69,800
+  mean:    32.623821%
+  median:  31.250000%
+  p05:     15.189873%
+  p95:     54.347826%
+  min:     2.439024%
+  max:     100.000000%
+
+Query-normalized overlap
+Unpruned:
   samples: 69,800
   mean:    63.753877%
   median:  65.384615%
@@ -28,7 +48,7 @@ Unpruned overlap:
   min:     4.166667%
   max:     100.000000%
 
-Pruned overlap:
+Pruned:
   samples: 69,800
   mean:    41.214752%
   median:  41.071429%
@@ -48,9 +68,29 @@ Pairs: 34,520
 Alpha: 0.85
 Reference ANN recall: 98.6066%
 Mean GT-document nnz: 161.334849 unpruned -> 80.295046 pruned
-Elapsed seconds: 24.126
+Elapsed seconds: 2.059
 
-Unpruned overlap:
+Document-normalized overlap
+Unpruned:
+  samples: 34,520
+  mean:    19.538445%
+  median:  18.604651%
+  p05:     10.045662%
+  p95:     32.142857%
+  min:     2.450980%
+  max:     82.692308%
+
+Pruned:
+  samples: 34,520
+  mean:    25.220175%
+  median:  23.636364%
+  p05:     12.149533%
+  p95:     43.589744%
+  min:     3.370787%
+  max:     95.238095%
+
+Query-normalized overlap
+Unpruned:
   samples: 34,520
   mean:    60.167143%
   median:  61.290323%
@@ -59,7 +99,7 @@ Unpruned overlap:
   min:     5.747126%
   max:     100.000000%
 
-Pruned overlap:
+Pruned:
   samples: 34,520
   mean:    38.600268%
   median:  38.461538%
@@ -70,8 +110,11 @@ Pruned overlap:
 
 Outputs
 -------
-dimension_overlap_comparison.png
-msmarco_full_histogram.csv
-nq_splade_histogram.csv
+dimension_overlap_document_normalized.png
+dimension_overlap_query_normalized.png
+msmarco_full_document_histogram.csv
+msmarco_full_query_histogram.csv
+nq_splade_document_histogram.csv
+nq_splade_query_histogram.csv
 msmarco_full_pair_overlaps.csv.gz
 nq_splade_pair_overlaps.csv.gz

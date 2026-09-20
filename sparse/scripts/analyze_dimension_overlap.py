@@ -2,15 +2,15 @@
 """Compare query/ground-truth dimension overlap before and after pruning.
 
 For every query and each of its selected exact ground-truth neighbors, this
-script computes
+script computes the intersection once and emits both requested normalizations:
 
-    overlap (%) = 100 * |query dimensions intersect document dimensions|
-                        / |query dimensions|
+    document-normalized = 100 * |query dims intersect document dims| / |document dims|
+    query-normalized    = 100 * |query dims intersect document dims| / |query dims|
 
-The default denominator measures query-dimension coverage: the percentage of
-active query dimensions also present in the ground-truth document.
-``--denominator document`` provides the complement of the repository's
-deadweight metric, while ``--denominator union`` provides Jaccard overlap.
+The document-normalized figure is the complement of the repository's
+deadweight metric. The query-normalized figure measures query-dimension
+coverage. Use ``--denominators`` to select a subset or additionally request
+union-normalized Jaccard overlap.
 
 The pruned version uses the same mass-ratio rule as sparse/prune.h: cast stored
 weights to fp16, retain the fewest largest weights whose fp32 running sum
@@ -26,6 +26,7 @@ Examples
   module load python/3.11-24.1.0
   python analyze_dimension_overlap.py
   python analyze_dimension_overlap.py --gt-k 1 --bins 50
+  python analyze_dimension_overlap.py --denominators query
   python analyze_dimension_overlap.py --datasets msmarco_full --msmarco-alpha 0.85
 """
 
@@ -195,14 +196,22 @@ def mass_ratio_pruned_dimensions(indices, values, alpha):
     return np.sort(dimensions[order[:kept]])
 
 
-def overlap_percent(intersection, query_nnz, document_nnz, denominator):
+def overlap_percentages(intersection, query_nnz, document_nnz, denominator):
+    """Vectorized overlap percentages, with NaN for an empty denominator."""
     if denominator == "document":
         total = document_nnz
     elif denominator == "query":
         total = query_nnz
     else:
         total = query_nnz + document_nnz - intersection
-    return 100.0 * intersection / total if total else float("nan")
+    percentages = np.full(intersection.shape, np.nan, dtype=np.float64)
+    np.divide(
+        intersection.astype(np.float64) * 100.0,
+        total,
+        out=percentages,
+        where=total != 0,
+    )
+    return percentages
 
 
 def describe(values):
@@ -227,15 +236,20 @@ def describe(values):
 def write_pair_csv(path, result):
     with gzip.open(str(path), "wt", newline="") as stream:
         writer = csv.writer(stream)
-        writer.writerow([
+        header = [
             "query_id", "gt_rank", "document_id", "query_nnz",
             "unpruned_document_nnz", "pruned_document_nnz",
             "unpruned_intersection_nnz", "pruned_intersection_nnz",
-            "unpruned_overlap_pct", "pruned_overlap_pct",
-        ])
+        ]
+        for denominator in result["denominators"]:
+            header.extend([
+                "unpruned_{}_overlap_pct".format(denominator),
+                "pruned_{}_overlap_pct".format(denominator),
+            ])
+        writer.writerow(header)
         top_k = result["top_k"]
         for pair_index in range(result["doc_ids"].size):
-            writer.writerow([
+            row = [
                 pair_index // top_k,
                 pair_index % top_k + 1,
                 int(result["doc_ids"][pair_index]),
@@ -244,12 +258,17 @@ def write_pair_csv(path, result):
                 int(result["pruned_doc_nnz"][pair_index]),
                 int(result["unpruned_intersection"][pair_index]),
                 int(result["pruned_intersection"][pair_index]),
-                "{:.8f}".format(result["unpruned_pct"][pair_index]),
-                "{:.8f}".format(result["pruned_pct"][pair_index]),
-            ])
+            ]
+            for denominator in result["denominators"]:
+                overlap = result["overlaps"][denominator]
+                row.extend([
+                    "{:.8f}".format(overlap["unpruned_pct"][pair_index]),
+                    "{:.8f}".format(overlap["pruned_pct"][pair_index]),
+                ])
+            writer.writerow(row)
 
 
-def analyze_dataset(spec, alpha, top_k, denominator, bins, output_dir):
+def analyze_dataset(spec, alpha, top_k, denominators, bins, output_dir):
     started = time.monotonic()
     directory = Path(spec["directory"]).expanduser().resolve()
     base_path = directory / spec["base"]
@@ -292,8 +311,6 @@ def analyze_dataset(spec, alpha, top_k, denominator, bins, output_dir):
         pruned_doc_nnz = np.empty(pair_count, dtype=np.uint32)
         unpruned_intersection = np.empty(pair_count, dtype=np.uint32)
         pruned_intersection = np.empty(pair_count, dtype=np.uint32)
-        unpruned_pct = np.empty(pair_count, dtype=np.float64)
-        pruned_pct = np.empty(pair_count, dtype=np.float64)
 
         query_mask = np.zeros(base.ncol, dtype=np.bool_)
         for query_id in range(queries.nrow):
@@ -326,12 +343,6 @@ def analyze_dataset(spec, alpha, top_k, denominator, bins, output_dir):
                 pruned_doc_nnz[pair_index] = pruned_dimensions.size
                 unpruned_intersection[pair_index] = full_overlap
                 pruned_intersection[pair_index] = pruned_overlap
-                unpruned_pct[pair_index] = overlap_percent(
-                    full_overlap, query_active, doc_dimensions.size, denominator
-                )
-                pruned_pct[pair_index] = overlap_percent(
-                    pruned_overlap, query_active, pruned_dimensions.size, denominator
-                )
 
             if query_dimensions.size:
                 query_mask[query_dimensions] = False
@@ -346,8 +357,6 @@ def analyze_dataset(spec, alpha, top_k, denominator, bins, output_dir):
         query_count = queries.nrow
         gt_available_k = gt.k
 
-    unpruned_stats = describe(unpruned_pct)
-    pruned_stats = describe(pruned_pct)
     result = {
         "slug": spec["slug"],
         "label": spec["label"],
@@ -366,39 +375,62 @@ def analyze_dataset(spec, alpha, top_k, denominator, bins, output_dir):
         "pruned_doc_nnz": pruned_doc_nnz,
         "unpruned_intersection": unpruned_intersection,
         "pruned_intersection": pruned_intersection,
-        "unpruned_pct": unpruned_pct,
-        "pruned_pct": pruned_pct,
-        "unpruned_stats": unpruned_stats,
-        "pruned_stats": pruned_stats,
+        "denominators": denominators,
+        "overlaps": {},
         "elapsed": time.monotonic() - started,
     }
 
     edges = np.linspace(0.0, 100.0, bins + 1)
-    unpruned_counts, _ = np.histogram(unpruned_pct[np.isfinite(unpruned_pct)], bins=edges)
-    pruned_counts, _ = np.histogram(pruned_pct[np.isfinite(pruned_pct)], bins=edges)
-    result["edges"] = edges
-    result["unpruned_counts"] = unpruned_counts
-    result["pruned_counts"] = pruned_counts
+    for denominator in denominators:
+        unpruned_pct = overlap_percentages(
+            unpruned_intersection, query_nnz, unpruned_doc_nnz, denominator
+        )
+        pruned_pct = overlap_percentages(
+            pruned_intersection, query_nnz, pruned_doc_nnz, denominator
+        )
+        unpruned_counts, _ = np.histogram(
+            unpruned_pct[np.isfinite(unpruned_pct)], bins=edges
+        )
+        pruned_counts, _ = np.histogram(
+            pruned_pct[np.isfinite(pruned_pct)], bins=edges
+        )
+        result["overlaps"][denominator] = {
+            "unpruned_pct": unpruned_pct,
+            "pruned_pct": pruned_pct,
+            "unpruned_stats": describe(unpruned_pct),
+            "pruned_stats": describe(pruned_pct),
+            "edges": edges,
+            "unpruned_counts": unpruned_counts,
+            "pruned_counts": pruned_counts,
+        }
+
+        histogram_csv = output_dir / "{}_{}_histogram.csv".format(
+            spec["slug"], denominator
+        )
+        with histogram_csv.open("w", newline="", encoding="utf-8") as stream:
+            writer = csv.writer(stream)
+            writer.writerow(["bin_lo_pct", "bin_hi_pct", "unpruned_count", "pruned_count"])
+            for index in range(bins):
+                writer.writerow([
+                    "{:.6f}".format(edges[index]),
+                    "{:.6f}".format(edges[index + 1]),
+                    int(unpruned_counts[index]),
+                    int(pruned_counts[index]),
+                ])
 
     pair_csv = output_dir / "{}_pair_overlaps.csv.gz".format(spec["slug"])
     write_pair_csv(pair_csv, result)
-    histogram_csv = output_dir / "{}_histogram.csv".format(spec["slug"])
-    with histogram_csv.open("w", newline="", encoding="utf-8") as stream:
-        writer = csv.writer(stream)
-        writer.writerow(["bin_lo_pct", "bin_hi_pct", "unpruned_count", "pruned_count"])
-        for index in range(bins):
-            writer.writerow([
-                "{:.6f}".format(edges[index]),
-                "{:.6f}".format(edges[index + 1]),
-                int(unpruned_counts[index]),
-                int(pruned_counts[index]),
-            ])
 
-    print(
-        "  pairs: {:,}; mean overlap {:.2f}% unpruned -> {:.2f}% pruned; {:.2f}s".format(
-            pair_count, unpruned_stats["mean"], pruned_stats["mean"], result["elapsed"]
+    print("  pairs: {:,}; {:.2f}s".format(pair_count, result["elapsed"]))
+    for denominator in denominators:
+        overlap = result["overlaps"][denominator]
+        print(
+            "  {}-normalized mean: {:.2f}% unpruned -> {:.2f}% pruned".format(
+                denominator,
+                overlap["unpruned_stats"]["mean"],
+                overlap["pruned_stats"]["mean"],
+            )
         )
-    )
     return result
 
 
@@ -413,9 +445,10 @@ def plot_results(results, denominator, log_y, output_path):
     for index, result in enumerate(results):
         axis = axes[0, index]
         style_axes(axis)
-        edges = result["edges"]
-        full_counts = result["unpruned_counts"]
-        pruned_counts = result["pruned_counts"]
+        overlap = result["overlaps"][denominator]
+        edges = overlap["edges"]
+        full_counts = overlap["unpruned_counts"]
+        pruned_counts = overlap["pruned_counts"]
 
         axis.stairs(
             full_counts, edges, color=colors[0], linewidth=2.0,
@@ -428,11 +461,11 @@ def plot_results(results, denominator, log_y, output_path):
             label="Pruned, α={}".format(result["alpha"]),
         )
         axis.axvline(
-            result["unpruned_stats"]["mean"], color=colors[0],
+            overlap["unpruned_stats"]["mean"], color=colors[0],
             linestyle=(0, (4, 3)), linewidth=1.4,
         )
         axis.axvline(
-            result["pruned_stats"]["mean"], color=colors[1],
+            overlap["pruned_stats"]["mean"], color=colors[1],
             linestyle=(0, (4, 3)), linewidth=1.4,
         )
         axis.set_xlim(0, 100)
@@ -444,8 +477,8 @@ def plot_results(results, denominator, log_y, output_path):
         legend = axis.legend(frameon=False, fontsize=9, loc="upper right")
         for text in legend.get_texts():
             text.set_color(INK_SECONDARY)
-        full_stats = result["unpruned_stats"]
-        pruned_stats = result["pruned_stats"]
+        full_stats = overlap["unpruned_stats"]
+        pruned_stats = overlap["pruned_stats"]
         stats_text = (
             "Unpruned: min {fmin:.2f}%  |  mean {fmean:.2f}%  |  max {fmax:.2f}%\n"
             "Pruned:    min {pmin:.2f}%  |  mean {pmean:.2f}%  |  max {pmax:.2f}%"
@@ -467,7 +500,9 @@ def plot_results(results, denominator, log_y, output_path):
         "union": "|query intersect document| / |query union document| (Jaccard)",
     }[denominator]
     figure.suptitle(
-        "Query-Ground-Truth Dimension Overlap",
+        "Query-Ground-Truth Dimension Overlap — {} normalized".format(
+            denominator.title()
+        ),
         color=INK_PRIMARY, fontsize=17, fontweight="bold", y=0.985,
     )
     figure.text(
@@ -533,8 +568,13 @@ def parse_args():
         help="number of ground-truth neighbors analyzed per query",
     )
     parser.add_argument(
-        "--denominator", choices=("document", "query", "union"),
-        default="query", help="denominator used for overlap percentage",
+        "--denominators", nargs="+", choices=("document", "query", "union"),
+        default=("document", "query"),
+        help="normalizations to plot (one output figure per choice)",
+    )
+    parser.add_argument(
+        "--denominator", choices=("document", "query", "union"), default=None,
+        help="legacy alias that selects one normalization instead of --denominators",
     )
     parser.add_argument("--bins", type=int, default=100, help="number of 0-100%% bins")
     parser.add_argument("--log-y", action="store_true", help="use a logarithmic count axis")
@@ -548,6 +588,10 @@ def parse_args():
     for name, alpha in (("--msmarco-alpha", args.msmarco_alpha), ("--nq-alpha", args.nq_alpha)):
         if not 0.0 < alpha <= 1.0:
             parser.error("{} must be in (0, 1]".format(name))
+    if args.denominator is not None:
+        args.denominators = [args.denominator]
+    # Preserve user order while avoiding duplicate output files/work.
+    args.denominators = list(dict.fromkeys(args.denominators))
     return args
 
 
@@ -569,20 +613,25 @@ def main():
             alpha = args.msmarco_alpha if slug == "msmarco_full" else args.nq_alpha
             results.append(
                 analyze_dataset(
-                    specs[slug], alpha, args.gt_k, args.denominator,
+                    specs[slug], alpha, args.gt_k, args.denominators,
                     args.bins, output_dir,
                 )
             )
 
-        figure_path = output_dir / "dimension_overlap_comparison.png"
-        plot_results(results, args.denominator, args.log_y, figure_path)
+        figure_paths = {}
+        for denominator in args.denominators:
+            figure_path = output_dir / "dimension_overlap_{}_normalized.png".format(
+                denominator
+            )
+            plot_results(results, denominator, args.log_y, figure_path)
+            figure_paths[denominator] = figure_path
 
         summary = [
             "Query-ground-truth dimension overlap analysis",
             "=============================================",
             "One sample per query/ground-truth-document pair.",
             "GT neighbors per query: {}".format(args.gt_k),
-            "Overlap denominator: {}".format(args.denominator),
+            "Overlap denominators: {}".format(", ".join(args.denominators)),
             "Pruning: fp16 mass-ratio pruning matching sparse/prune.h; deterministic dim-ID tie-break.",
             "Recall notes are reference HNSW runs; this script analyzes exact GT pairs and does not run ANN search.",
             "",
@@ -609,16 +658,25 @@ def main():
                 ),
                 "Elapsed seconds: {:.3f}".format(result["elapsed"]),
                 "",
-                *format_stats("Unpruned overlap", result["unpruned_stats"]),
-                "",
-                *format_stats("Pruned overlap", result["pruned_stats"]),
-                "",
             ])
+            for denominator in args.denominators:
+                overlap = result["overlaps"][denominator]
+                summary.extend([
+                    "{}-normalized overlap".format(denominator.title()),
+                    *format_stats("Unpruned", overlap["unpruned_stats"]),
+                    "",
+                    *format_stats("Pruned", overlap["pruned_stats"]),
+                    "",
+                ])
         summary.extend([
             "Outputs",
             "-------",
-            figure_path.name,
-            *["{}_histogram.csv".format(result["slug"]) for result in results],
+            *[figure_paths[denominator].name for denominator in args.denominators],
+            *[
+                "{}_{}_histogram.csv".format(result["slug"], denominator)
+                for result in results
+                for denominator in args.denominators
+            ],
             *["{}_pair_overlaps.csv.gz".format(result["slug"]) for result in results],
         ])
         summary_path = output_dir / "summary.txt"
