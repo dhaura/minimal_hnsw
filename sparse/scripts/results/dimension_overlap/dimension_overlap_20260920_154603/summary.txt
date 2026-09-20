@@ -1,0 +1,77 @@
+Query-ground-truth dimension overlap analysis
+=============================================
+One sample per query/ground-truth-document pair.
+GT neighbors per query: 10
+Overlap denominator: query
+Pruning: fp16 mass-ratio pruning matching sparse/prune.h; deterministic dim-ID tie-break.
+Recall notes are reference HNSW runs; this script analyzes exact GT pairs and does not run ANN search.
+
+MS MARCO (Full)
+---------------
+Base: /pscratch/sd/d/dhaura/repos/sparse_hnsw/minimal_hnsw/sparse/data/msmarco_full/base_full.csr
+Queries: /pscratch/sd/d/dhaura/repos/sparse_hnsw/minimal_hnsw/sparse/data/msmarco_full/queries.dev.csr
+Ground truth: /pscratch/sd/d/dhaura/repos/sparse_hnsw/minimal_hnsw/sparse/data/msmarco_full/base_full.dev.gt
+Base shape: 8,841,823 x 30,109
+Queries: 6,980
+Pairs: 69,800
+Alpha: 0.85
+Reference ANN recall: 98.3926%
+Mean GT-document nnz: 127.363940 unpruned -> 62.280401 pruned
+Elapsed seconds: 13.330
+
+Unpruned overlap:
+  samples: 69,800
+  mean:    63.753877%
+  median:  65.384615%
+  p05:     35.849057%
+  p95:     86.046512%
+  min:     4.166667%
+  max:     100.000000%
+
+Pruned overlap:
+  samples: 69,800
+  mean:    41.214752%
+  median:  41.071429%
+  p05:     20.000000%
+  p95:     62.790698%
+  min:     2.985075%
+  max:     94.736842%
+
+Natural Questions (SPLADE)
+--------------------------
+Base: /pscratch/sd/d/dhaura/repos/sparse_hnsw/minimal_hnsw/sparse/data/nq_splade/base_nq.csr
+Queries: /pscratch/sd/d/dhaura/repos/sparse_hnsw/minimal_hnsw/sparse/data/nq_splade/queries.test.csr
+Ground truth: /pscratch/sd/d/dhaura/repos/sparse_hnsw/minimal_hnsw/sparse/data/nq_splade/base_nq.test.gt
+Base shape: 2,680,893 x 30,522
+Queries: 3,452
+Pairs: 34,520
+Alpha: 0.85
+Reference ANN recall: 98.6066%
+Mean GT-document nnz: 161.334849 unpruned -> 80.295046 pruned
+Elapsed seconds: 24.126
+
+Unpruned overlap:
+  samples: 34,520
+  mean:    60.167143%
+  median:  61.290323%
+  p05:     34.175672%
+  p95:     82.352941%
+  min:     5.747126%
+  max:     100.000000%
+
+Pruned overlap:
+  samples: 34,520
+  mean:    38.600268%
+  median:  38.461538%
+  p05:     19.736842%
+  p95:     58.064516%
+  min:     2.631579%
+  max:     85.714286%
+
+Outputs
+-------
+dimension_overlap_comparison.png
+msmarco_full_histogram.csv
+nq_splade_histogram.csv
+msmarco_full_pair_overlaps.csv.gz
+nq_splade_pair_overlaps.csv.gz
