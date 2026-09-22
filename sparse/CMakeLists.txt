@@ -81,7 +81,7 @@ target_compile_definitions(sparse_diag_sweep PRIVATE SPARSE_HNSW_PROFILE)
 add_executable(sparse_access_profile access_profile_main.cpp sparse_hnsw.cpp)
 target_compile_definitions(sparse_access_profile PRIVATE SPARSE_HNSW_PROFILE)
 
-# Per-distance-call byte-efficiency log to CSV (argv[17]=path, argv[18]=stride).
+# Per-distance-call overlap/candidate-insertion log to CSV.
 add_executable(sparse_hnsw_demo_distlog main.cpp sparse_hnsw.cpp)
 target_compile_definitions(sparse_hnsw_demo_distlog PRIVATE SPARSE_HNSW_DIST_LOG)
 

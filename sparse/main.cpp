@@ -102,7 +102,9 @@ int main(int argc, char* argv[]) {
     {
         std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <alpha> <beta> <input_filepath> <query_filepath> <gt_filepath> <results_csv_path> [quantize=0] [seed_top_k=0] [seed_terms=0] [seed_per_term=1]"
                      " [dist_log_csv=off] [dist_log_stride=1]"
-                     " [dist_hist_csv=off] [dist_hist_bins=100]" << std::endl;
+                     " [dist_hist_csv=off] [dist_hist_bins=100]"
+                     " [dist_log_matrix=pruned|unpruned]"
+                     " [dist_query_hist_csv=off]" << std::endl;
         return 1;
     }
 
@@ -123,8 +125,8 @@ int main(int argc, char* argv[]) {
     int seed_top_k = (argc > 14) ? std::stoi(argv[14]) : 0;
     int seed_terms = (argc > 15) ? std::stoi(argv[15]) : 0;
     int seed_per_term = (argc > 16) ? std::stoi(argv[16]) : 1;
-    // Per-distance-call dead-weight log. Only honoured in a SPARSE_HNSW_DIST_LOG
-    // build.
+    // Per-distance-call overlap/candidate-insertion log. Only honoured in a
+    // SPARSE_HNSW_DIST_LOG build.
     auto off = [](const std::string& v) {
         return v.empty() || v == "off" || v == "none";
     };
@@ -132,6 +134,8 @@ int main(int argc, char* argv[]) {
     int dist_log_stride = (argc > 18) ? std::max(1, std::stoi(argv[18])) : 1;
     std::string dist_hist_csv = (argc > 19) ? argv[19] : "";
     int dist_hist_bins = (argc > 20) ? std::max(1, std::stoi(argv[20])) : 100;
+    std::string dist_log_matrix = (argc > 21) ? argv[21] : "pruned";
+    std::string dist_query_hist_csv = (argc > 22) ? argv[22] : "";
 
     int num_omp_threads = omp_get_max_threads();
     std::cout << "Number of OpenMP threads: " << num_omp_threads << "\n";
@@ -222,13 +226,21 @@ int main(int argc, char* argv[]) {
     get_gt(gt_filepath, I, n, k);
     
 #ifdef SPARSE_HNSW_DIST_LOG
+    if (dist_log_matrix != "pruned" && dist_log_matrix != "unpruned") {
+        std::cerr << "dist_log_matrix must be 'pruned' or 'unpruned', got '"
+                  << dist_log_matrix << "'\n";
+        return 1;
+    }
+    index.setDistLogUseOriginalMatrix(dist_log_matrix == "unpruned");
     const bool want_rows = !off(dist_log_csv);
     const bool want_hist = !off(dist_hist_csv);
-    if (want_rows || want_hist) {
+    const bool want_query_hist = !off(dist_query_hist_csv);
+    if (want_rows || want_hist || want_query_hist) {
         if (!dist_log::open(want_rows ? dist_log_csv.c_str() : nullptr,
                             static_cast<uint32_t>(dist_log_stride),
                             want_hist ? dist_hist_csv.c_str() : nullptr,
-                            static_cast<uint32_t>(dist_hist_bins))) {
+                            static_cast<uint32_t>(dist_hist_bins),
+                            want_query_hist ? dist_query_hist_csv.c_str() : nullptr)) {
             std::cerr << "Failed to open dist-log CSV '" << dist_log_csv << "'\n";
             return 1;
         }
@@ -238,11 +250,19 @@ int main(int argc, char* argv[]) {
         }
         if (want_hist) {
             std::cout << "Logging " << dist_hist_bins << "-bin histogram to "
-                      << dist_hist_csv << " (all queries)\n";
+                      << dist_hist_csv << " (all queries; " << dist_log_matrix
+                      << " document rows)\n";
+        }
+        if (want_query_hist) {
+            std::cout << "Logging " << dist_hist_bins
+                      << "-bin query-normalized histogram to "
+                      << dist_query_hist_csv << " (all queries; "
+                      << dist_log_matrix << " document rows)\n";
         }
     }
 #else
-    if (!off(dist_log_csv) || !off(dist_hist_csv)) {
+    if (!off(dist_log_csv) || !off(dist_hist_csv) ||
+        !off(dist_query_hist_csv)) {
         std::cerr << "warning: dist-log args given but this binary was built "
                      "without SPARSE_HNSW_DIST_LOG; ignoring.\n";
     }
@@ -264,7 +284,11 @@ int main(int argc, char* argv[]) {
                   << " | unused: " << dist_log::totalUnused() << " ("
                   << std::fixed << std::setprecision(2)
                   << (100.0 * dist_log::totalUnused() / dist_log::totalEntries())
-                  << "%) | zero-overlap calls: " << dist_log::zeroOverlap() << "\n";
+                  << "%) | zero-overlap calls: " << dist_log::zeroOverlap()
+                  << " | added to candidate list: " << dist_log::addedCalls()
+                  << " (" << std::setprecision(2)
+                  << (100.0 * dist_log::addedCalls() / dist_log::totalCalls())
+                  << "%)\n";
     }
 #endif
 

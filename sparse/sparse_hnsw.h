@@ -143,7 +143,9 @@ namespace sparse_hnsw {
 #ifdef SPARSE_HNSW_PROFILE
         __attribute__((noinline))
 #endif
-        float distanceQuant(uint32_t p_idx, const std::vector<float>& q_dense) const;
+        float distanceQuant(uint32_t p_idx, const std::vector<float>& q_dense,
+                            uint32_t* log_total_nnz = nullptr,
+                            uint32_t* log_unused_nnz = nullptr) const;
 
         void enableQuantizedTraversal();
         bool quantized() const { return quantized_; }
@@ -172,6 +174,13 @@ namespace sparse_hnsw {
 
         void setBeta(int beta) { beta_ = beta; }
         int getBeta() const { return beta_; }
+#ifdef SPARSE_HNSW_DIST_LOG
+        // Select whether overlap is measured against the matrix traversed by
+        // search (normally alpha-pruned) or the original unpruned matrix.
+        void setDistLogUseOriginalMatrix(bool use_original) {
+            dist_log_use_original_matrix_ = use_original;
+        }
+#endif
         void setLabelRemapping(std::vector<uint32_t> old_to_new, std::vector<uint32_t> new_to_old);
         void relabelGroundTruth(std::vector<std::vector<uint32_t>>& groundtruth) const;
         void printInfo() const;
@@ -238,6 +247,9 @@ namespace sparse_hnsw {
         int seed_terms_ = 0;
         int seed_per_term_ = 1;
         int patience_ = 0;
+#ifdef SPARSE_HNSW_DIST_LOG
+        bool dist_log_use_original_matrix_ = false;
+#endif
 
         // Oone mutex per element guarding its neighbor lists.
         // A global mutex for entry_point_ / max_level_.

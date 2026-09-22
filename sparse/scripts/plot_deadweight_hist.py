@@ -96,6 +96,16 @@ def discover(indir):
 
 def load(run):
     df = pd.read_csv(run["path"])
+    # Histograms from the candidate-insertion instrumentation use overlap bins
+    # so that a strict <10% threshold has an exact boundary. Mirror those bins
+    # back to dead weight for this legacy view. Older four-column histograms
+    # already use dead-weight bins and need no conversion.
+    if {"added_count", "not_added_count"}.issubset(df.columns):
+        overlap_lo = df["bin_lo"].copy()
+        overlap_hi = df["bin_hi"].copy()
+        df["bin_lo"] = 100.0 - overlap_hi
+        df["bin_hi"] = 100.0 - overlap_lo
+        df = df.sort_values("bin_lo").reset_index(drop=True)
     total = df["count"].sum()
     if total == 0:
         raise ValueError(f"{run['path']}: histogram is empty")
