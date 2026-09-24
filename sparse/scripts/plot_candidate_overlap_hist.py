@@ -2,8 +2,10 @@
 """Plot query/document overlap split by candidate-queue insertion.
 
 The input is the all-query histogram emitted by ``sparse_hnsw_demo_distlog``.
-Each output figure has one panel for documents added to the pending expansion
-queue and one for documents rejected from it.
+The standard output figure has one panel for documents added to the pending
+expansion queue and one for documents rejected from it. For query-normalized
+histograms, ``--retention-rate`` additionally plots the percentage retained
+within each overlap bin: ``100 * added_count / count``.
 
 Examples
 --------
@@ -167,7 +169,8 @@ def x_limit(frame, columns, keep=0.995):
     return min(100.0, math.ceil(upper / 10.0) * 10.0)
 
 
-def draw(run, outdir, threshold):
+def draw(run, outdir, threshold, gate_threshold=None,
+         distance_calculated_only=False):
     frame = run["df"]
     groups = [
         ("added_count", "Added for future expansion", "added", run["added_total"]),
@@ -239,10 +242,17 @@ def draw(run, outdir, threshold):
         ),
         color=INK_PRIMARY, fontsize=16, fontweight="bold", y=0.985,
     )
+    gate = ""
+    if gate_threshold is not None:
+        gate = " · query gate={:g}%".format(gate_threshold)
+    population = ""
+    if distance_calculated_only:
+        population = " · distance-calculated docs only"
     fig.text(
         0.5, 0.925,
-        "M={} · efC={} · ef={} · alpha={:g}{}".format(
-            run["M"], run["efc"], run["ef"], run["alpha"], recall
+        "M={} · efC={} · ef={} · alpha={:g}{}{}{}".format(
+            run["M"], run["efc"], run["ef"], run["alpha"], gate,
+            population, recall
         ),
         ha="center", color=INK_MUTED, fontsize=9,
     )
@@ -267,6 +277,107 @@ def draw(run, outdir, threshold):
     return output, low_added, low_total, low_add_rate, overall_add_rate
 
 
+def draw_retention_rate(run, outdir, threshold, gate_threshold=None,
+                        distance_calculated_only=False):
+    """Plot added_count/count within each query-normalized overlap bin."""
+    if run["normalization"] != "query":
+        raise ValueError(
+            "retention-rate plots require a query-normalized histogram"
+        )
+
+    frame = run["df"]
+    counts = frame["count"].to_numpy(dtype=np.float64)
+    added = frame["added_count"].to_numpy(dtype=np.float64)
+    rates = np.divide(
+        100.0 * added,
+        counts,
+        out=np.full(counts.shape, np.nan, dtype=np.float64),
+        where=counts > 0,
+    )
+    widths = frame["overlap_hi"] - frame["overlap_lo"]
+    xmax = x_limit(frame, ["count"])
+
+    fig, axis = plt.subplots(figsize=(9.2, 5.3))
+    fig.patch.set_facecolor(SURFACE)
+    style_axes(axis)
+    color = COLORS["added"]
+    axis.bar(
+        frame["overlap_lo"], rates, width=widths, align="edge",
+        color=color, alpha=0.52, edgecolor=color, linewidth=0.45,
+    )
+    axis.axvspan(0.0, threshold, color=INK_MUTED, alpha=0.10, zorder=0)
+    axis.axvline(
+        threshold, color=INK_MUTED, linewidth=1.0,
+        linestyle=(0, (4, 3)), zorder=2,
+    )
+    axis.set_xlabel(
+        "Intersecting dimensions / query nnz (%)", color=INK_SECONDARY
+    )
+    axis.set_ylabel(
+        "Candidates retained for future expansion (%)", color=INK_SECONDARY
+    )
+    axis.set_xlim(0.0, xmax)
+    axis.set_ylim(0.0, 100.0)
+    axis.set_yticks(np.arange(0.0, 101.0, 10.0))
+
+    overall_rate = 100.0 * run["added_total"] / run["total"]
+    axis.text(
+        0.98, 0.95,
+        "{:,} candidates\n{:.2f}% retained overall".format(
+            run["total"], overall_rate
+        ),
+        transform=axis.transAxes, ha="right", va="top",
+        color=INK_SECONDARY, fontsize=9,
+    )
+
+    fig.suptitle(
+        "Candidate Retention Rate by Query Overlap — {} ({})".format(
+            pretty_dataset(run["dataset"]), run["matrix"]
+        ),
+        color=INK_PRIMARY, fontsize=16, fontweight="bold", y=0.985,
+    )
+    gate = ""
+    if gate_threshold is not None:
+        gate = " · query gate={:g}%".format(gate_threshold)
+    population = ""
+    if distance_calculated_only:
+        population = " · distance-calculated docs only"
+    recall = ""
+    if run["recall"] is not None:
+        recall = " · recall {:.2f}%".format(run["recall"])
+    fig.text(
+        0.5, 0.925,
+        "M={} · efC={} · ef={} · alpha={:g}{}{}{}".format(
+            run["M"], run["efc"], run["ef"], run["alpha"], gate,
+            population, recall
+        ),
+        ha="center", color=INK_MUTED, fontsize=9,
+    )
+
+    clipping = "Full 0–100% overlap range shown."
+    if xmax < 100.0:
+        clipping = (
+            "Overlap axis clipped to 0–{:.0f}% "
+            "(≥99.5% of candidates shown).".format(xmax)
+        )
+    fig.text(
+        0.008, 0.014,
+        "Each bar is 100 × added_count / count for that query-overlap bin. "
+        + clipping,
+        color=INK_MUTED, fontsize=8.5, ha="left",
+    )
+    fig.tight_layout(rect=[0.0, 0.055, 1.0, 0.89])
+
+    os.makedirs(outdir, exist_ok=True)
+    stem = os.path.basename(run["path"]).replace("_hist.csv", "")
+    output = os.path.join(
+        outdir, stem + "_candidate_retention_rate.png"
+    )
+    fig.savefig(output, dpi=200, facecolor=SURFACE)
+    plt.close(fig)
+    return output
+
+
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     parser = argparse.ArgumentParser(
@@ -286,10 +397,27 @@ def main():
                         default=None)
     parser.add_argument("--threshold", type=float, default=10.0,
                         help="low-overlap threshold in percent (default: 10)")
+    parser.add_argument(
+        "--gate-threshold", type=float, default=None,
+        help="query-overlap gate used by the run; shown in the figure subtitle",
+    )
+    parser.add_argument(
+        "--distance-calculated-only", action="store_true",
+        help="annotate that gate-rejected/no-distance documents are excluded",
+    )
+    parser.add_argument(
+        "--retention-rate", action="store_true",
+        help=(
+            "also plot added_count/count per bin for query-normalized "
+            "histograms"
+        ),
+    )
     args = parser.parse_args()
 
     if not 0.0 < args.threshold < 100.0:
         parser.error("--threshold must be between 0 and 100")
+    if args.gate_threshold is not None and not 0.0 < args.gate_threshold <= 100.0:
+        parser.error("--gate-threshold must be in (0, 100]")
 
     if args.hist:
         runs = [run_from_path(path) for path in args.hist]
@@ -309,7 +437,8 @@ def main():
         load(run)
         outdir = args.outdir or os.path.dirname(run["path"])
         output, low_added, low_total, low_rate, overall_rate = draw(
-            run, outdir, args.threshold
+            run, outdir, args.threshold, args.gate_threshold,
+            args.distance_calculated_only
         )
         print(
             "{} [{}; {}-normalized]: {:,}/{:,} candidates below {:.0f}% "
@@ -321,6 +450,12 @@ def main():
             )
         )
         print("  ->", output)
+        if args.retention_rate and run["normalization"] == "query":
+            retention_output = draw_retention_rate(
+                run, outdir, args.threshold, args.gate_threshold,
+                args.distance_calculated_only,
+            )
+            print("  ->", retention_output)
 
 
 if __name__ == "__main__":
