@@ -45,7 +45,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from plot_style import (  # noqa: E402
     INK_MUTED,
     INK_PRIMARY,
@@ -56,7 +56,7 @@ from plot_style import (  # noqa: E402
 )
 
 
-SCRIPT_DIR = Path(__file__).resolve().parent
+SCRIPT_DIR = Path(__file__).resolve().parent.parent  # sparse/scripts
 DATA_ROOT = SCRIPT_DIR.parent / "data"
 DEFAULT_OUTPUT_ROOT = SCRIPT_DIR / "results" / "dimension_overlap"
 
