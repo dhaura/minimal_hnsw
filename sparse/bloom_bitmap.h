@@ -25,11 +25,17 @@ public:
     struct Query {
         std::vector<Token> terms;
         uint32_t nnz = 0;
+        // Smallest match count that passes: min m with 100*m > cutoff (set by setCutoff).
+        uint32_t need = 0;
+        // For h == 1 only: level[j] has bit p set iff more than j query terms hash to p,
+        // so sum_j popcount(row & level[j]) counts terms exactly as the term loop does.
+        std::vector<std::array<uint64_t, 8>> level;
 
         void build(const IndiceDataPair* entries, uint32_t count, uint8_t hashes) {
             BloomBitmap::validateHashes(hashes);
             terms.clear();
             terms.reserve(count);
+            level.clear();
             for (uint32_t i = 0; i < count; ++i) {
                 if (entries[i].data == 0) { continue; }
                 Token token;
@@ -37,8 +43,22 @@ public:
                     token.positions[h] = BloomBitmap::position(entries[i].indice, h);
                 }
                 terms.push_back(token);
+                if (hashes == 1) {
+                    const uint16_t bit = token.positions[0];
+                    const uint64_t mask = uint64_t{1} << (bit & 63);
+                    size_t j = 0;
+                    while (j < level.size() && (level[j][bit >> 6] & mask)) { ++j; }
+                    if (j == level.size()) { level.push_back({}); }
+                    level[j][bit >> 6] |= mask;
+                }
             }
             nnz = static_cast<uint32_t>(terms.size());
+        }
+
+        // cutoff = threshold_pct * nnz; same comparison the per-term loop used.
+        void setCutoff(double cutoff) {
+            need = 0;
+            while (100.0 * need <= cutoff) { ++need; }
         }
     };
 
@@ -76,17 +96,27 @@ public:
     const Row* row(size_t document) const { return &rows_[document]; }
     uint8_t hashes() const { return hashes_; }
 
-    bool passes(size_t document, const Query& query, double cutoff) const {
+    // Pass iff at least query.need query terms appear present. Call setCutoff first.
+    bool passes(size_t document, const Query& query) const {
         const Row& bits = rows_[document];
-        uint32_t possible_matches = 0;
+        if (hashes_ == 1) {
+            uint32_t matches = 0;
+            for (const auto& mask : query.level) {
+                for (int w = 0; w < 8; ++w) {
+                    matches += static_cast<uint32_t>(__builtin_popcountll(bits.words[w] & mask[w]));
+                }
+            }
+            return matches >= query.need;
+        }
+        uint32_t matches = 0;
         for (const Token& term : query.terms) {
             bool present = true;
             for (uint8_t h = 0; h < hashes_; ++h) {
                 const uint16_t bit = term.positions[h];
                 present &= (bits.words[bit >> 6] & (uint64_t{1} << (bit & 63))) != 0;
             }
-            possible_matches += present;
-            if (100.0 * possible_matches > cutoff) { return true; }
+            matches += present;
+            if (matches >= query.need) { return true; }
         }
         return false;
     }
