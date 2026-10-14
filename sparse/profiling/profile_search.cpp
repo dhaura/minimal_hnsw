@@ -38,6 +38,7 @@
 //                  <keep_pruned> <alpha> <beta>
 //                  <base.csr> <queries.csr> <gt>
 //                  [modes=batch] [num_queries=all] [gate=cold|warm|all] [quantize=0]
+//                  [seed_top_k=0] [seed_terms=0] [seed_per_term=1] [patience=0]
 //
 // Env:
 //   PROF_BUILD_THREADS  threads for index construction (default: OMP max).
@@ -336,7 +337,8 @@ int main(int argc, char* argv[]) {
                   << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates>"
                      " <keep_pruned> <alpha> <beta>"
                      " <input_filepath> <query_filepath> <gt_filepath>"
-                     " [modes=batch] [num_queries=all] [gate=cold|warm|all] [quantize=0]\n"
+                     " [modes=batch] [num_queries=all] [gate=cold|warm|all] [quantize=0]"
+                     " [seed_top_k=0] [seed_terms=0] [seed_per_term=1] [patience=0]\n"
                      "   modes: comma-separated <mode>[@threads][:nq], e.g.\n"
                      "          batch@48,batch@1,repeat@1:2000,replay@1:2000\n";
         return 1;
@@ -357,6 +359,10 @@ int main(int argc, char* argv[]) {
     long nq_arg          = (argc > 13) ? std::stol(argv[13]) : 0;
     std::string gate     = (argc > 14) ? argv[14] : "cold";
     bool quantize        = (argc > 15) && (std::stoi(argv[15]) != 0);
+    const int seed_top_k   = (argc > 16) ? std::stoi(argv[16]) : 0;
+    const int seed_terms   = (argc > 17) ? std::stoi(argv[17]) : 0;
+    const int seed_per_term= (argc > 18) ? std::stoi(argv[18]) : 1;
+    const int patience     = (argc > 19) ? std::stoi(argv[19]) : 0;
 
     if (alpha > 1.0 || alpha <= 0.0) {
         std::cerr << "Invalid alpha " << alpha << "; expected (0, 1].\n";
@@ -432,7 +438,21 @@ int main(int argc, char* argv[]) {
                   << " u8_row_bytes=" << u8_row
                   << " row_byte_ratio=" << fp16_row / u8_row << "\n";
     }
-    std::cout << "PROF quantized=" << (index.quantized() ? 1 : 0) << "\n";
+    if (seed_top_k > 0 && seed_terms > 0) {
+        auto s0 = std::chrono::steady_clock::now();
+        index.buildSeedTable(static_cast<uint32_t>(seed_top_k));
+        index.setSeedParams(seed_terms, seed_per_term);
+        auto s1 = std::chrono::steady_clock::now();
+        std::cout << "PROF seed_s=" << std::chrono::duration<double>(s1 - s0).count()
+                  << " seed_KiB=" << index.seedTableBytes() / 1024.0
+                  << " seed_top_k=" << seed_top_k
+                  << " seed_terms=" << seed_terms
+                  << " seed_per_term=" << seed_per_term << "\n";
+    }
+    index.setPatience(patience);
+    std::cout << "PROF quantized=" << (index.quantized() ? 1 : 0)
+              << " seeding=" << (index.seedingEnabled() ? 1 : 0)
+              << " patience=" << index.patience() << "\n";
     std::cout.flush();
 
     // The traversal searches for k*beta candidates before the refine pass trims

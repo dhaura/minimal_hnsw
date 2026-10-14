@@ -41,7 +41,7 @@
 *.dwo
 
 # cache folders
-*/__pycache__/*
+**/__pycache__
 
 # CMake build artifacts
 build/
@@ -57,10 +57,14 @@ Makefile
 !CMakeLists.txt
 
 # Large data files
-*/data/*
+**/data/*
 
 # Temporary files
-*/tmp/*
+**/tmp/*
+
+# Configuration files
+**/.vscode
+**/.idea
 
 # Other library files
 dense/hnswlib/*

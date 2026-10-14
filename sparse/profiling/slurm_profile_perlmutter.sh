@@ -36,6 +36,11 @@ BETA=${BETA:-3}
 THREADS=${THREADS:-64}
 TAG=${TAG:-}
 QUANTIZE=${QUANTIZE:-1}
+SEED_TOP_K=${SEED_TOP_K:-8}
+SEED_TERMS=${SEED_TERMS:-8}
+SEED_PER_TERM=${SEED_PER_TERM:-4}
+PATIENCE=${PATIENCE:-0}
+SEARCH_ARGS="$QUANTIZE $SEED_TOP_K $SEED_TERMS $SEED_PER_TERM $PATIENCE"
 HNSW_ARGS="$M $EFC $EF 1 0 0 $ALPHA $BETA $BASE $QUERIES $GT"
 
 export OMP_NUM_THREADS=$THREADS
@@ -45,7 +50,8 @@ echo "### cpu=$(lscpu | awk -F: '/Model name/{gsub(/^ +/,"",$2); print $2; exit}
 echo "### avx=$(lscpu | grep -o -E 'avx[0-9a-z_]*' | sort -u | tr '\n' ' ')"
 echo "### THP=$(cat /sys/kernel/mm/transparent_hugepage/enabled 2>/dev/null)"
 echo "### perf_event_paranoid=$(cat /proc/sys/kernel/perf_event_paranoid 2>/dev/null)"
-echo "### config: M=$M efC=$EFC ef=$EF alpha=$ALPHA beta=$BETA threads=$THREADS quantize=$QUANTIZE${TAG:+ tag=$TAG}"
+echo "### config: M=$M efC=$EFC ef=$EF alpha=$ALPHA beta=$BETA threads=$THREADS quantize=$QUANTIZE"
+echo "### search: seed_top_k=$SEED_TOP_K seed=${SEED_TERMS}x${SEED_PER_TERM} patience=$PATIENCE${TAG:+ tag=$TAG}"
 echo "### binaries from $BIN"
 numactl --hardware | head -20
 
@@ -91,13 +97,13 @@ export PROF_BUILD_THREADS=$THREADS
 export OMP_PROC_BIND=close
 numactl --cpunodebind=0-3 --interleave=0-3 stdbuf -oL -eL \
   $BIN/sparse_profile $HNSW_ARGS \
-  "replay@1:2000,repeat@1:2000,batch@1,batch@$THREADS" 0 cold $QUANTIZE
+  "replay@1:2000,repeat@1:2000,batch@1,batch@$THREADS" 0 cold $SEARCH_ARGS
 
 if [ "$HAVE_PERF" = "1" ]; then
     echo; echo "########## E2: counters on the real search (gated) ##########"
-    OMP_NUM_THREADS=1 $PROF/perf_groups.sh $BIN/sparse_profile $HNSW_ARGS batch@1 0 cold $QUANTIZE
+    OMP_NUM_THREADS=1 $PROF/perf_groups.sh $BIN/sparse_profile $HNSW_ARGS batch@1 0 cold $SEARCH_ARGS
     echo; echo "########## E6b: what the non-distance time IS ##########"
-    OMP_NUM_THREADS=1 $PROF/perf_hotspots.sh $BIN/sparse_profile $HNSW_ARGS batch@1 0 cold $QUANTIZE
+    OMP_NUM_THREADS=1 $PROF/perf_hotspots.sh $BIN/sparse_profile $HNSW_ARGS batch@1 0 cold $SEARCH_ARGS
 fi
 
 echo; echo "########## Done ##########"

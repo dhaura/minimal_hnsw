@@ -19,6 +19,7 @@
 // Adds distance-call and byte accounting to the search path.
 #ifdef SPARSE_HNSW_PROFILE
 #include <atomic>
+#include <memory>
 #endif
 
 namespace sparse_hnsw {
@@ -142,11 +143,33 @@ namespace sparse_hnsw {
 #ifdef SPARSE_HNSW_PROFILE
         __attribute__((noinline))
 #endif
-        float distanceQuant(uint32_t p_idx, const std::vector<float>& q_dense) const;
+        float distanceQuant(uint32_t p_idx, const std::vector<float>& q_dense,
+                            uint32_t* log_total_nnz = nullptr,
+                            uint32_t* log_unused_nnz = nullptr) const;
 
-        void enableQuantizedTraversal();
+        // u8-quantized traversal rows. Default: fixed-size, 64-byte-aligned slots
+        // (no per-call row-offset lookup). slot_size = 0 keeps the packed,
+        // offset-indexed layout (QuantCSR), e.g. for layout A/B runs.
+        static constexpr uint32_t kDefaultSlotSize = 320;
+        void enableQuantizedTraversal(uint32_t slot_size = kDefaultSlotSize);
         bool quantized() const { return quantized_; }
-        size_t quantizedBytes() const { return quant_.bytes(); }
+        size_t quantizedBytes() const { return quant_.bytes() + qslots_.bytes(); }
+        // Bytes a distance call on quantized row id streams, in either layout.
+        uint32_t quantRowBytes(uint32_t id) const {
+            return slotted_ ? QuantSlots::rowBytes(qslots_.row(id)) : quant_.rowBytes(id);
+        }
+
+        void buildRowSlots(uint32_t slot_size) { qslots_.build(*data_matrix_, slot_size); }
+        void setSlottedRows(bool on) { slotted_ = slots_only_ || (on && quantized_ && !qslots_.empty()); }
+        void enableSlottedTraversal(uint32_t slot_size) {
+            buildRowSlots(slot_size);
+            quantized_ = true;
+            slots_only_ = true;
+            slotted_ = true;
+        }
+        bool slottedRows() const { return slotted_; }
+        int64_t slotOverflowRows() const { return qslots_.overflow_rows; }
+        size_t slotBytes() const { return qslots_.bytes(); }
 
         void buildSeedTable(uint32_t top_k);
         void setSeedParams(int terms, int per_term);
@@ -164,8 +187,20 @@ namespace sparse_hnsw {
                             std::vector<uint32_t>& out_labels) const;
         CSRMatrix* pruneMatrix(const CSRMatrix *m);
         void setPrunedDataMatrix(CSRMatrix *pruned_data_matrix);
+        void setSearchMatrix(CSRMatrix *search_matrix);
+
+        void setAlpha(float alpha) { alpha_ = alpha; }
+        float getAlpha() const { return alpha_; }
+
         void setBeta(int beta) { beta_ = beta; }
         int getBeta() const { return beta_; }
+#ifdef SPARSE_HNSW_DIST_LOG
+        // Select whether overlap is measured against the matrix traversed by
+        // search (normally alpha-pruned) or the original unpruned matrix.
+        void setDistLogUseOriginalMatrix(bool use_original) {
+            dist_log_use_original_matrix_ = use_original;
+        }
+#endif
         void setLabelRemapping(std::vector<uint32_t> old_to_new, std::vector<uint32_t> new_to_old);
         void relabelGroundTruth(std::vector<std::vector<uint32_t>>& groundtruth) const;
         void printInfo() const;
@@ -176,6 +211,19 @@ namespace sparse_hnsw {
                 SearchScratch& scratch) const {
             return searchKNN(query_id, query_matrix, k, ef, scratch);
         }
+
+        void enableAccessProfile();
+        const std::atomic<uint32_t>* nodeHits() const { return node_hits_.get(); }
+        bool accessProfiling() const { return node_hits_ != nullptr; }
+        int elementLevel(uint32_t id) const { return element_levels_[id]; }
+        uint32_t entryPoint() const { return entry_point_; }
+        int maxLevel() const { return max_level_; }
+        uint64_t rowBytesOf(uint32_t id) const {
+            return quantized_ ? static_cast<uint64_t>(quantRowBytes(id))
+                              : static_cast<uint64_t>(data_matrix_->indptr[id + 1] -
+                                    data_matrix_->indptr[id]) * sizeof(IndiceDataPair);
+        }
+
         // Totals aggregated by searchKNNBatch across its worker scratches.
         uint64_t profNDist() const { return prof_ndist_.load(std::memory_order_relaxed); }
         uint64_t profBytes() const { return prof_bytes_.load(std::memory_order_relaxed); }
@@ -213,12 +261,20 @@ namespace sparse_hnsw {
         // Quantized copy of the data matrix for traversal.
         QuantCSR quant_;
         bool quantized_ = false;
+        
+        // Slotted and quantized copy of the data matrix for traversal. 
+        QuantSlots qslots_;
+        bool slotted_ = false;
+        bool slots_only_ = false;
 
         // Inverted-seed table.
         InvertedSeedTable seed_table_;
         int seed_terms_ = 0;
         int seed_per_term_ = 1;
         int patience_ = 0;
+#ifdef SPARSE_HNSW_DIST_LOG
+        bool dist_log_use_original_matrix_ = false;
+#endif
 
         // Oone mutex per element guarding its neighbor lists.
         // A global mutex for entry_point_ / max_level_.
@@ -231,6 +287,7 @@ namespace sparse_hnsw {
         mutable std::atomic<uint64_t> prof_graph_bytes_{0};
         mutable std::atomic<uint64_t> prof_refine_ndist_{0};
         mutable std::atomic<uint64_t> prof_refine_bytes_{0};
+        mutable std::unique_ptr<std::atomic<uint32_t>[]> node_hits_;
 
         float profDistance(uint32_t q, uint32_t p, const void* qty,
                            SearchScratch& s) const {

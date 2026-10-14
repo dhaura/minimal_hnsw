@@ -1,4 +1,5 @@
 #include "sparse_hnsw.h"
+#include "dist_log.h"
 #include <iostream>
 #include <cstring>
 
@@ -24,7 +25,12 @@ using namespace sparse_hnsw;
 #else
 #define SPARSE_HNSW_DISTANCE(q, p) distance(&(q), &(p), data_matrix_, qty_ptr)
 #define SPARSE_HNSW_DISTANCE_DENSE(p) distanceDense(data_matrix_, (p), scratch.q_dense)
+#ifdef SPARSE_HNSW_DIST_LOG
+#define SPARSE_HNSW_DISTANCE_QUANT(p) \
+    distanceQuant((p), scratch.q_dense, &log_total_nnz, &log_unused_nnz)
+#else
 #define SPARSE_HNSW_DISTANCE_QUANT(p) distanceQuant((p), scratch.q_dense)
+#endif
 #define SPARSE_HNSW_DISTANCE_DENSE_REFINE(m, p) distanceDense((m), (p), scratch.q_dense)
 #define SPARSE_HNSW_REPLAYING false
 #endif
@@ -149,11 +155,11 @@ float SPARSE_HNSW::distance(const void *pVect1, const void *pVect2, const void *
     const uint32_t q_idx = *((uint32_t *) pVect1);
     const uint32_t p_idx = *((uint32_t *) pVect2);
 
-    const uint32_t p_start = csr_matrix->indptr[p_idx];
-    const uint32_t p_end = csr_matrix->indptr[p_idx + 1];
+    const int64_t p_start = csr_matrix->indptr[p_idx];
+    const int64_t p_end = csr_matrix->indptr[p_idx + 1];
     IndiceDataPair *p_indices = csr_matrix->indices_data + p_start;
 
-    uint32_t q_end, q_start = 0;
+    int64_t q_end, q_start = 0;
     IndiceDataPair *q_indices;
     if (other_ptr == nullptr) {
         q_start = csr_matrix->indptr[q_idx];
@@ -166,8 +172,8 @@ float SPARSE_HNSW::distance(const void *pVect1, const void *pVect2, const void *
         q_indices = csr_matrix_query->indices_data + q_start;
     }
 
-    uint32_t p_num = p_end - p_start;
-    uint32_t q_num = q_end - q_start;
+    uint32_t p_num = static_cast<uint32_t>(p_end - p_start);
+    uint32_t q_num = static_cast<uint32_t>(q_end - q_start);
 
     float res = 0;
 
@@ -212,8 +218,11 @@ float SPARSE_HNSW::distanceDenseRefine(const CSRMatrix* m, uint32_t p_idx, const
 }
 #endif
 
-float SPARSE_HNSW::distanceQuant(uint32_t p_idx, const std::vector<float>& q_dense) const {
-    const uint8_t* p = quant_.blob.data() + quant_.row_off[p_idx];
+float SPARSE_HNSW::distanceQuant(uint32_t p_idx, const std::vector<float>& q_dense,
+                                 uint32_t* log_total_nnz,
+                                 uint32_t* log_unused_nnz) const {
+    const uint8_t* p = slotted_ ? qslots_.row(p_idx)
+                                : quant_.blob.data() + quant_.row_off[p_idx];
 
     uint16_t n16;
     _Float16 scale16;
@@ -226,14 +235,61 @@ float SPARSE_HNSW::distanceQuant(uint32_t p_idx, const std::vector<float>& q_den
     const float* q = q_dense.data();
 
     float res = 0.0f;
+#ifdef SPARSE_HNSW_DIST_LOG
+    uint32_t quant_overlap = 0;
+    #pragma omp simd reduction(+:res) reduction(+:quant_overlap)
+    for (uint32_t i = 0; i < p_num; ++i) {
+        const float qv = q[idx[i]];
+        res += static_cast<float>(code[i]) * qv;
+        quant_overlap += (qv != 0.0f) ? 1u : 0u;
+    }
+#else
     #pragma omp simd reduction(+:res)
     for (uint32_t i = 0; i < p_num; ++i) {
         res += static_cast<float>(code[i]) * q[idx[i]];
     }
+#endif
+
+#ifdef SPARSE_HNSW_DIST_LOG
+    if (log_total_nnz && log_unused_nnz) {
+        if (dist_log_use_original_matrix_ && original_data_matrix_) {
+            const int64_t start = original_data_matrix_->indptr[p_idx];
+            const int64_t end = original_data_matrix_->indptr[p_idx + 1];
+            const IndiceDataPair* row = original_data_matrix_->indices_data + start;
+            const uint32_t total = static_cast<uint32_t>(end - start);
+            uint32_t overlap = 0;
+            #pragma omp simd reduction(+:overlap)
+            for (uint32_t i = 0; i < total; ++i) {
+                overlap += (q[row[i].indice] != 0.0f) ? 1u : 0u;
+            }
+            *log_total_nnz = total;
+            *log_unused_nnz = total - overlap;
+        } else {
+            *log_total_nnz = p_num;
+            *log_unused_nnz = p_num - quant_overlap;
+        }
+    }
+#else
+    (void)log_total_nnz;
+    (void)log_unused_nnz;
+#endif
     return 1.0f - res * static_cast<float>(scale16);
 }
 
-void SPARSE_HNSW::enableQuantizedTraversal() {
+#ifdef SPARSE_HNSW_PROFILE
+void SPARSE_HNSW::enableAccessProfile() {
+    node_hits_.reset(new std::atomic<uint32_t>[max_elements_]);
+    for (int i = 0; i < max_elements_; ++i) {
+        node_hits_[i].store(0, std::memory_order_relaxed);
+    }
+}
+#endif
+
+void SPARSE_HNSW::enableQuantizedTraversal(uint32_t slot_size) {
+    if (slot_size > 0) {
+        enableSlottedTraversal(slot_size);
+        return;
+    }
     quant_.build(*data_matrix_);
     quantized_ = true;
 }
@@ -323,18 +379,34 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
     const int64_t* qrow_off = quant_.row_off.empty() ? nullptr : quant_.row_off.data();
     const uint8_t* qblob = quant_.blob.empty() ? nullptr : quant_.blob.data();
 
+    // Slotted rows: a row's first line is at sbase + id * slot_size, no offset lookup.
+    const bool use_slots = use_quant && slotted_;
+    const uint8_t* sbase = qslots_.base;
+    const size_t slot_size = qslots_.slot_size;
+    const uint32_t pf_end = use_slots ? static_cast<uint32_t>(slot_size) : 256;
+
     for (uint32_t entry_point : entry_points) {
 #ifdef SPARSE_HNSW_PROFILE
         scratch.prof_ndist++;
+        if (node_hits_) node_hits_[entry_point].fetch_add(1, std::memory_order_relaxed);
         scratch.prof_bytes += use_quant
-            ? static_cast<uint64_t>(quant_.rowBytes(entry_point))
+            ? static_cast<uint64_t>(quantRowBytes(entry_point))
             : static_cast<uint64_t>(
                   data_matrix_->indptr[entry_point + 1] - data_matrix_->indptr[entry_point]) * sizeof(IndiceDataPair);
+#endif
+#ifdef SPARSE_HNSW_DIST_LOG
+        uint32_t log_total_nnz = 0;
+        uint32_t log_unused_nnz = 0;
 #endif
         float d = SPARSE_HNSW_TRAVERSAL_DISTANCE(entry_point);
         touchTopK(d);
         candidates.push({d, entry_point});
         top_candidates.push({d, entry_point});
+#ifdef SPARSE_HNSW_DIST_LOG
+        if (use_quant) {
+            dist_log::emit(entry_point, log_total_nnz, log_unused_nnz, true);
+        }
+#endif
         scratch.markVisited(entry_point);
     }
 
@@ -383,7 +455,9 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
                 if (!scratch.isVisited(neighbor_id)) {
                     scratch.markVisited(neighbor_id);
                     scratch.filtered_neighbors.push_back(neighbor_id);
-                    if (!SPARSE_HNSW_REPLAYING) {
+                    if (use_slots) {
+                        __builtin_prefetch(sbase + neighbor_id * slot_size, 0, 3);
+                    } else if (!SPARSE_HNSW_REPLAYING) {
                         __builtin_prefetch(use_quant ? static_cast<const void*>(qrow_off + neighbor_id)
                                                      : static_cast<const void*>(indptr + neighbor_id), 0, 3);
                     }
@@ -398,7 +472,9 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
 
         if (!SPARSE_HNSW_REPLAYING) {
             for (uint32_t j = 0; j < nfilter; ++j) {
-                const char* vec = use_quant
+                const char* vec = use_slots
+                    ? reinterpret_cast<const char*>(sbase + filtered[j] * slot_size)
+                    : use_quant
                     ? reinterpret_cast<const char*>(qblob + qrow_off[filtered[j]])
                     : reinterpret_cast<const char*>(vec_base + indptr[filtered[j]]);
                 __builtin_prefetch(vec, 0, 2);
@@ -411,23 +487,31 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
             uint32_t neighbor_id = filtered[j];
 
             if (j + 1 < nfilter && !SPARSE_HNSW_REPLAYING) {
-                const char* next_vec = use_quant
+                const char* next_vec = use_slots
+                    ? reinterpret_cast<const char*>(sbase + filtered[j + 1] * slot_size)
+                    : use_quant
                     ? reinterpret_cast<const char*>(qblob + qrow_off[filtered[j + 1]])
                     : reinterpret_cast<const char*>(vec_base + indptr[filtered[j + 1]]);
+                // Same four lines as before, but never past the end of a slot.
                 __builtin_prefetch(next_vec, 0, 3);
                 __builtin_prefetch(next_vec + 64, 0, 3);
-                __builtin_prefetch(next_vec + 128, 0, 3);
-                __builtin_prefetch(next_vec + 192, 0, 3);
+                if (128 < pf_end) { __builtin_prefetch(next_vec + 128, 0, 3); }
+                if (192 < pf_end) { __builtin_prefetch(next_vec + 192, 0, 3); }
             }
 
 #ifdef SPARSE_HNSW_PROFILE
             scratch.prof_ndist++;
+            if (node_hits_) node_hits_[neighbor_id].fetch_add(1, std::memory_order_relaxed);
             if (!scratch.replay) {
                 scratch.prof_bytes += use_quant
-                    ? static_cast<uint64_t>(quant_.rowBytes(neighbor_id))
+                    ? static_cast<uint64_t>(quantRowBytes(neighbor_id))
                     : static_cast<uint64_t>(
                           indptr[neighbor_id + 1] - indptr[neighbor_id]) * sizeof(IndiceDataPair);
             }
+#endif
+#ifdef SPARSE_HNSW_DIST_LOG
+            uint32_t log_total_nnz = 0;
+            uint32_t log_unused_nnz = 0;
 #endif
             float dist = SPARSE_HNSW_TRAVERSAL_DISTANCE(neighbor_id);
 
@@ -435,7 +519,16 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
                 improved = true;
             }
 
-            if (top_candidates.size() < static_cast<size_t>(ef) || dist < top_candidates.top().first) {
+            const bool added_to_candidate_list =
+                top_candidates.size() < static_cast<size_t>(ef) ||
+                dist < top_candidates.top().first;
+#ifdef SPARSE_HNSW_DIST_LOG
+            if (use_quant) {
+                dist_log::emit(neighbor_id, log_total_nnz, log_unused_nnz,
+                               added_to_candidate_list);
+            }
+#endif
+            if (added_to_candidate_list) {
                 candidates.push({dist, neighbor_id});
                 // The best pending candidate is the likely next expansion.
                 __builtin_prefetch(get_neighbor_list_at_level(candidates.top().second, layer), 0, 3);
@@ -690,6 +783,9 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchKNN(uint32_t 
     const IndiceDataPair* q_indices = query_matrix->indices_data + q_start;
     const uint32_t q_num = static_cast<uint32_t>(q_end - q_start);
     scratch.scatterQuery(dim_, q_indices, q_num);
+#ifdef SPARSE_HNSW_DIST_LOG
+    dist_log::setQuery(query_id, q_num);
+#endif
 
     std::vector<uint32_t> entry_points = {entry_point_};
 
@@ -826,6 +922,10 @@ void SPARSE_HNSW::searchKNNBatch(CSRMatrix *query_matrix, int num_queries, int k
             }
         }
 
+#ifdef SPARSE_HNSW_DIST_LOG
+        dist_log::flushThread();
+#endif
+
 #ifdef SPARSE_HNSW_PROFILE
         prof_ndist_.fetch_add(scratch.prof_ndist, std::memory_order_relaxed);
         prof_bytes_.fetch_add(scratch.prof_bytes, std::memory_order_relaxed);
@@ -836,9 +936,15 @@ void SPARSE_HNSW::searchKNNBatch(CSRMatrix *query_matrix, int num_queries, int k
     }
 }
 
+void SPARSE_HNSW::setSearchMatrix(CSRMatrix *search_matrix) {
+    if (!original_data_matrix_) {
+        original_data_matrix_ = data_matrix_;
+    }
+    data_matrix_ = search_matrix;
+}
+
 void SPARSE_HNSW::setPrunedDataMatrix(CSRMatrix *pruned_data_matrix) {
-    original_data_matrix_ = data_matrix_;
-    data_matrix_ = pruned_data_matrix;
+    setSearchMatrix(pruned_data_matrix);
 }
 
 CSRMatrix* SPARSE_HNSW::pruneMatrix(const CSRMatrix *m) {

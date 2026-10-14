@@ -1,0 +1,47 @@
+recall_target_pct,selection,original_recall_pct,original_qps,original_params,bloom_recall_pct,bloom_qps,bloom_params,bloom_vs_original_qps
+90.0,nearest_0.2pct_bin,,,,89.9957,47540.24,M=32 efC=1600 ef=20 alpha=0.85 beta=16 q=u8 seedT=8 seedH=8 seedS=4 bloomH=2 bloomT=30 bloomSrc=pruned,
+90.2,nearest_0.2pct_bin,90.2393,260827.32,M=32 efC=200 ef=30 alpha=0.75 beta=2 q=u8 seedT=8 seedH=8 seedS=4,,,,
+90.4,nearest_0.2pct_bin,,,,90.3338,93545.62,M=32 efC=200 ef=100 alpha=0.9 beta=2 q=u8 seedT=8 seedH=8 seedS=4 bloomH=2 bloomT=30 bloomSrc=pruned,
+90.6,nearest_0.2pct_bin,,,,90.5573,46692.40,M=32 efC=400 ef=200 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 bloomH=2 bloomT=30 bloomSrc=pruned,
+90.8,nearest_0.2pct_bin,,,,90.7951,53474.71,M=32 efC=800 ef=200 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,
+91.0,nearest_0.2pct_bin,90.9642,260807.83,M=32 efC=200 ef=30 alpha=0.8 beta=2 q=u8 seedT=8 seedH=8 seedS=4,91.0630,50466.71,M=32 efC=800 ef=200 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,0.1935
+91.2,nearest_0.2pct_bin,,,,91.1862,49456.90,M=32 efC=800 ef=400 alpha=0.85 beta=2 q=u8 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,
+91.4,nearest_0.2pct_bin,91.4971,259036.59,M=32 efC=200 ef=30 alpha=0.825 beta=2 q=u8 seedT=8 seedH=8 seedS=4,91.3410,46852.56,M=32 efC=1600 ef=400 alpha=0.85 beta=2 q=u8 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,0.1809
+91.6,nearest_0.2pct_bin,91.5516,257431.59,M=32 efC=200 ef=30 alpha=0.8 beta=3 q=u8 seedT=8 seedH=8 seedS=4,91.5516,45853.48,M=32 efC=800 ef=400 alpha=0.85 beta=3 q=u8 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,0.1781
+91.8,nearest_0.2pct_bin,91.8524,255116.96,M=32 efC=200 ef=30 alpha=0.825 beta=3 q=u8 seedT=8 seedH=8 seedS=4,91.7722,40451.81,M=32 efC=1600 ef=400 alpha=0.85 beta=4 q=u8 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,0.1586
+92.0,nearest_0.2pct_bin,92.0258,244869.32,M=32 efC=200 ef=35 alpha=0.775 beta=3 q=u8 seedT=8 seedH=8 seedS=4,91.9097,32382.88,M=32 efC=1600 ef=400 alpha=0.85 beta=8 q=u8 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,0.1322
+92.2,nearest_0.2pct_bin,92.1691,241865.62,M=32 efC=200 ef=35 alpha=0.825 beta=3 q=u8 seedT=8 seedH=8 seedS=4,,,,
+92.4,nearest_0.2pct_bin,92.4226,221327.33,M=32 efC=200 ef=40 alpha=0.825 beta=2 q=u8 seedT=8 seedH=8 seedS=4,,,,
+92.6,nearest_0.2pct_bin,92.6160,221278.21,M=32 efC=200 ef=40 alpha=0.775 beta=3 q=u8 seedT=8 seedH=8 seedS=4,,,,
+92.8,nearest_0.2pct_bin,92.8052,219455.45,M=32 efC=200 ef=30 alpha=0.775 beta=4 q=u8 seedT=8 seedH=8 seedS=4,92.7665,55914.70,M=32 efC=200 ef=200 alpha=0.9 beta=2 q=u8 seedT=8 seedH=8 seedS=4 bloomH=2 bloomT=30 bloomSrc=pruned,0.2548
+93.0,nearest_0.2pct_bin,,,,,,,
+93.2,nearest_0.2pct_bin,,,,,,,
+93.4,nearest_0.2pct_bin,,,,,,,
+93.6,nearest_0.2pct_bin,,,,93.6032,27683.47,M=64 efC=1600 ef=400 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,
+93.8,nearest_0.2pct_bin,,,,,,,
+94.0,nearest_0.2pct_bin,,,,,,,
+94.2,nearest_0.2pct_bin,,,,94.2765,33866.89,M=48 efC=1600 ef=400 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,
+94.4,nearest_0.2pct_bin,,,,94.3639,51870.07,M=32 efC=800 ef=400 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,
+94.6,nearest_0.2pct_bin,94.5315,201518.61,M=32 efC=400 ef=20 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256,94.5544,49357.92,M=32 efC=800 ef=800 alpha=0.85 beta=2 q=u8 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,0.2449
+94.8,nearest_0.2pct_bin,94.7837,199479.87,M=32 efC=400 ef=20 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256,94.7593,44934.27,M=32 efC=800 ef=400 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,0.2253
+95.0,nearest_0.2pct_bin,,,,95.0043,46469.21,M=32 efC=1600 ef=800 alpha=0.85 beta=2 q=u8 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,
+95.2,nearest_0.2pct_bin,,,,95.1032,40764.36,M=32 efC=800 ef=800 alpha=0.85 beta=5 q=u8 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,
+95.4,nearest_0.2pct_bin,,,,95.3338,43254.90,M=32 efC=1600 ef=800 alpha=0.85 beta=3 q=u8 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,
+95.6,nearest_0.2pct_bin,95.5946,175862.94,M=32 efC=800 ef=20 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=512,95.5415,32312.42,M=32 efC=1600 ef=800 alpha=0.85 beta=8 q=u8 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,0.1837
+95.8,nearest_0.2pct_bin,95.8496,174840.94,M=32 efC=800 ef=20 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=128,95.7120,24988.01,M=32 efC=1600 ef=800 alpha=0.85 beta=5 q=u8 pat=256 bloomH=2 bloomT=30 bloomSrc=pruned,0.1429
+96.0,nearest_0.2pct_bin,,,,,,,
+96.2,nearest_0.2pct_bin,96.1905,164235.29,M=32 efC=1600 ef=20 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256,,,,
+96.4,nearest_0.2pct_bin,96.4470,162612.99,M=32 efC=1600 ef=20 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256,,,,
+96.6,nearest_0.2pct_bin,96.6920,149801.48,M=32 efC=800 ef=20 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=2048,,,,
+96.8,nearest_0.2pct_bin,,,,96.7679,50806.50,M=32 efC=800 ef=800 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,
+97.0,nearest_0.2pct_bin,,,,97.0917,47597.94,M=32 efC=1600 ef=800 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,
+97.2,nearest_0.2pct_bin,97.2908,138395.96,M=32 efC=1600 ef=20 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=128,97.1232,47341.93,M=32 efC=800 ef=800 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,0.3421
+97.4,nearest_0.2pct_bin,97.3009,125749.91,M=32 efC=800 ef=50 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=128,97.4226,44516.73,M=32 efC=1600 ef=800 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,0.3540
+97.6,nearest_0.2pct_bin,97.5673,117502.48,M=32 efC=1600 ef=50 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=512,97.5115,41772.14,M=32 efC=1600 ef=800 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,0.3555
+97.8,nearest_0.2pct_bin,97.8467,116808.35,M=32 efC=1600 ef=50 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=2048,97.8840,46376.89,M=32 efC=800 ef=1600 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,0.3970
+98.0,nearest_0.2pct_bin,97.9054,115737.29,M=32 efC=1600 ef=20 alpha=0.85 beta=5 q=u8 seedT=8 seedH=8 seedS=4 pat=512,98.0330,30001.63,M=32 efC=800 ef=1600 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 bloomH=2 bloomT=30 bloomSrc=pruned,0.2592
+98.2,nearest_0.2pct_bin,98.2321,88067.93,M=64 efC=1600 ef=10 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256,98.1619,43793.88,M=32 efC=1600 ef=1600 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,0.4973
+98.4,nearest_0.2pct_bin,98.4542,86659.63,M=48 efC=1600 ef=50 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=512,98.3539,41364.92,M=32 efC=800 ef=1600 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,0.4773
+98.6,nearest_0.2pct_bin,98.5057,86447.12,M=48 efC=1600 ef=50 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=512,98.5186,41138.44,M=32 efC=1600 ef=1600 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,0.4759
+98.8,nearest_0.2pct_bin,98.7163,67041.25,M=48 efC=800 ef=10 alpha=0.85 beta=8 q=u8 seedT=8 seedH=8 seedS=4 pat=256,98.7221,37554.95,M=32 efC=1600 ef=3200 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,0.5602
+99.0,nearest_0.2pct_bin,98.9054,65507.92,M=32 efC=1600 ef=100 alpha=0.85 beta=5 q=u8 seedT=8 seedH=8 seedS=4 pat=256,98.9799,31876.51,M=32 efC=1600 ef=6400 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=128 bloomH=2 bloomT=30 bloomSrc=pruned,0.4866

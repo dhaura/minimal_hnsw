@@ -1,6 +1,8 @@
 #include "sparse_hnsw.h"
 #include "csr_matrix.h"
+#include "dist_log.h"
 #include <unordered_set>
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -98,7 +100,12 @@ int main(int argc, char* argv[]) {
 
     if (argc < 13)
     {
-        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <alpha> <beta> <input_filepath> <query_filepath> <gt_filepath> <results_csv_path> [quantize=0] [seed_top_k=0] [seed_terms=0] [seed_per_term=1]" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates> <keep_pruned> <alpha> <beta> <input_filepath> <query_filepath> <gt_filepath> <results_csv_path> [quantize=0] [seed_top_k=0] [seed_terms=0] [seed_per_term=1]"
+                     " [dist_log_csv=off] [dist_log_stride=1]"
+                     " [dist_hist_csv=off] [dist_hist_bins=100]"
+                     " [dist_log_matrix=pruned|unpruned]"
+                     " [dist_query_hist_csv=off]"
+                     " [slot_size=320] [layout_ab=0]" << std::endl;
         return 1;
     }
 
@@ -119,6 +126,34 @@ int main(int argc, char* argv[]) {
     int seed_top_k = (argc > 14) ? std::stoi(argv[14]) : 0;
     int seed_terms = (argc > 15) ? std::stoi(argv[15]) : 0;
     int seed_per_term = (argc > 16) ? std::stoi(argv[16]) : 1;
+    // Per-distance-call overlap/candidate-insertion log. Only honoured in a
+    // SPARSE_HNSW_DIST_LOG build.
+    auto off = [](const std::string& v) {
+        return v.empty() || v == "off" || v == "none";
+    };
+    std::string dist_log_csv = (argc > 17) ? argv[17] : "";
+    int dist_log_stride = (argc > 18) ? std::max(1, std::stoi(argv[18])) : 1;
+    std::string dist_hist_csv = (argc > 19) ? argv[19] : "";
+    int dist_hist_bins = (argc > 20) ? std::max(1, std::stoi(argv[20])) : 100;
+    std::string dist_log_matrix = (argc > 21) ? argv[21] : "pruned";
+    std::string dist_query_hist_csv = (argc > 22) ? argv[22] : "";
+    // Quantized row layout: fixed-size slots (default 320 B) or 0 for the
+    // packed, offset-indexed rows. 
+    const int slot_size = (argc > 23) ? std::stoi(argv[23])
+                                        : static_cast<int>(SPARSE_HNSW::kDefaultSlotSize);
+    // layout_ab=1 times both on the same graph,
+    // alternating runs, and checks that their predictions are identical.
+    const bool layout_ab = (argc > 24) && (std::stoi(argv[24]) != 0);
+    if (slot_size < 0 || slot_size % 64 != 0 || (layout_ab && (!quantize || slot_size == 0))) {
+        std::cerr << "slot_size must be 0 or a multiple of 64; layout_ab needs quantize=1 and slot_size>0\n";
+        return 1;
+    }
+#ifdef SPARSE_HNSW_DIST_LOG
+    if (layout_ab) {
+        std::cerr << "layout_ab is not supported in dist-log builds (extra runs would be logged)\n";
+        return 1;
+    }
+#endif
 
     int num_omp_threads = omp_get_max_threads();
     std::cout << "Number of OpenMP threads: " << num_omp_threads << "\n";
@@ -177,11 +212,18 @@ int main(int argc, char* argv[]) {
     if (quantize) {
         std::cout << "Building uint8-quantized traversal copy...\n";
         auto start_q = std::chrono::steady_clock::now();
-        index.enableQuantizedTraversal();
+        index.enableQuantizedTraversal(layout_ab ? 0 : static_cast<uint32_t>(slot_size));
+        if (layout_ab) {
+            index.buildRowSlots(static_cast<uint32_t>(slot_size));
+        }
         auto end_q = std::chrono::steady_clock::now();
         auto q_time = std::chrono::duration_cast<std::chrono::microseconds>(end_q - start_q);
         std::cout << "Quantization completed in " << q_time.count() << " microseconds ("
                   << index.quantizedBytes() / (1024.0 * 1024.0) << " MiB)\n";
+        if (slot_size > 0) {
+            std::cout << "Row slots: slot_size=" << slot_size << " B, overflow rows="
+                      << index.slotOverflowRows() << (layout_ab ? " (A/B with packed rows)" : "") << "\n";
+        }
     }
 
     if (seed_top_k > 0 && seed_terms > 0) {
@@ -208,10 +250,97 @@ int main(int argc, char* argv[]) {
     uint32_t n, k;
     get_gt(gt_filepath, I, n, k);
     
+#ifdef SPARSE_HNSW_DIST_LOG
+    if (dist_log_matrix != "pruned" && dist_log_matrix != "unpruned") {
+        std::cerr << "dist_log_matrix must be 'pruned' or 'unpruned', got '"
+                  << dist_log_matrix << "'\n";
+        return 1;
+    }
+    index.setDistLogUseOriginalMatrix(dist_log_matrix == "unpruned");
+    const bool want_rows = !off(dist_log_csv);
+    const bool want_hist = !off(dist_hist_csv);
+    const bool want_query_hist = !off(dist_query_hist_csv);
+    if (want_rows || want_hist || want_query_hist) {
+        if (!dist_log::open(want_rows ? dist_log_csv.c_str() : nullptr,
+                            static_cast<uint32_t>(dist_log_stride),
+                            want_hist ? dist_hist_csv.c_str() : nullptr,
+                            static_cast<uint32_t>(dist_hist_bins),
+                            want_query_hist ? dist_query_hist_csv.c_str() : nullptr)) {
+            std::cerr << "Failed to open dist-log CSV '" << dist_log_csv << "'\n";
+            return 1;
+        }
+        if (want_rows) {
+            std::cout << "Logging per-call rows to " << dist_log_csv
+                      << " (every " << dist_log_stride << " queries)\n";
+        }
+        if (want_hist) {
+            std::cout << "Logging " << dist_hist_bins << "-bin histogram to "
+                      << dist_hist_csv << " (all queries; " << dist_log_matrix
+                      << " document rows)\n";
+        }
+        if (want_query_hist) {
+            std::cout << "Logging " << dist_hist_bins
+                      << "-bin query-normalized histogram to "
+                      << dist_query_hist_csv << " (all queries; "
+                      << dist_log_matrix << " document rows)\n";
+        }
+    }
+#else
+    if (!off(dist_log_csv) || !off(dist_hist_csv) ||
+        !off(dist_query_hist_csv)) {
+        std::cerr << "warning: dist-log args given but this binary was built "
+                     "without SPARSE_HNSW_DIST_LOG; ignoring.\n";
+    }
+#endif
+
     auto start_query_time = std::chrono::steady_clock::now();
 
     std::vector<uint32_t> pred_lables;
+    index.setSlottedRows(slot_size > 0);  // the timed run below uses the default layout
     index.searchKNNBatch(querymatrix, query_count, k, ef, pred_lables);
+
+    if (layout_ab) {
+        // Alternate layouts each round so drift hits both equally; slotted last.
+        std::vector<uint32_t> labels[2];
+        std::vector<double> secs[2];
+        for (int r = 0; r < 10; ++r) {
+            const int slotted = (r + r / 2) % 2;
+            index.setSlottedRows(slotted == 1);
+            const auto t0 = std::chrono::steady_clock::now();
+            index.searchKNNBatch(querymatrix, query_count, k, ef, labels[slotted]);
+            secs[slotted].push_back(std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count());
+            if (labels[slotted] != pred_lables) {
+                std::cerr << "Layout A/B: predictions differ between layouts\n";
+                return 1;
+            }
+        }
+        for (int l = 0; l < 2; ++l) {
+            std::sort(secs[l].begin(), secs[l].end());
+            std::cout << "Layout A/B " << (l ? "slotted" : "packed ") << ": median "
+                      << secs[l][2] << " s, " << query_count / secs[l][2] << " QPS\n";
+        }
+        std::cout << "Layout A/B speedup (slotted / packed): " << secs[0][2] / secs[1][2] << "x\n";
+        index.setSlottedRows(true);
+    }
+
+#ifdef SPARSE_HNSW_DIST_LOG
+    // Drains every worker Buffer, fcloses the per-row CSV, then writes the
+    // merged histogram. After the search threads are done, so nothing is
+    // still appending.
+    dist_log::close();
+    if (dist_log::totalCalls()) {
+        std::cout << "Distance calls: " << dist_log::totalCalls()
+                  << " | entries streamed: " << dist_log::totalEntries()
+                  << " | unused: " << dist_log::totalUnused() << " ("
+                  << std::fixed << std::setprecision(2)
+                  << (100.0 * dist_log::totalUnused() / dist_log::totalEntries())
+                  << "%) | zero-overlap calls: " << dist_log::zeroOverlap()
+                  << " | added to candidate list: " << dist_log::addedCalls()
+                  << " (" << std::setprecision(2)
+                  << (100.0 * dist_log::addedCalls() / dist_log::totalCalls())
+                  << "%)\n";
+    }
+#endif
 
     auto end_query_time = std::chrono::steady_clock::now();
     auto query_time = std::chrono::duration_cast<std::chrono::microseconds>(end_query_time - start_query_time);

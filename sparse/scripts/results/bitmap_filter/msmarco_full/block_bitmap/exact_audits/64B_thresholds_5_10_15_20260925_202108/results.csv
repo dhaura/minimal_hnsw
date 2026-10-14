@@ -1,0 +1,4 @@
+dataset,M,ef_construction,ef,alpha,beta,quantize,seed_top_k,seed_terms,seed_per_term,threads,queries,k,bitmap_enabled,threshold_pct,bitmap_matrix,recall_pct,searching_time_sec,qps,indexing_time_sec,graph_indexing_time_sec,pruning_time_sec,quantization_time_sec,seed_build_time_sec,bitmap_build_time_sec,bitmap_bytes,bitmap_rejections
+msmarco_full,32,200,1600,0.85,4,1,8,8,4,64,6980,10,1,5,pruned,98.50716332,2.314281448,3016.054943,485.1883172,485.1050367,60.26818858,0.227957063,5.814998333,0.083280506,565876672,39884
+msmarco_full,32,200,1600,0.85,4,1,8,8,4,64,6980,10,1,10,pruned,98.50716332,2.312120621,3018.873642,485.1447399,485.1050367,60.26818858,0.227957063,5.814998333,0.039703212,565876672,629595
+msmarco_full,32,200,1600,0.85,4,1,8,8,4,64,6980,10,1,15,pruned,98.50143266,2.303291829,3030.445344,485.1447808,485.1050367,60.26818858,0.227957063,5.814998333,0.039744172,565876672,4108558

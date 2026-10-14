@@ -24,6 +24,7 @@ int main(int argc, char *argv[]) {
                      " <results_csv_path> [model_name=SparseHNSW]"
                      " [repeats=5] [warmup=1] [quantize=0]"
                      " [seed_top_k=0] [seed_spec=off] [patience_list=0]"
+                     " [slot_size=-320]"
                   << std::endl;
         return 1;
     }
@@ -48,6 +49,11 @@ int main(int argc, char *argv[]) {
     const std::string seed_spec = (argc > 18) ? argv[18] : "off";
     const std::vector<int> patience_list =
         bench::parseList<int>((argc > 19) ? argv[19] : "0", bench::toInt);
+    // Default -320: slots only, the library default layout. 0: packed rows only.
+    const int slot_arg = (argc > 20) ? std::stoi(argv[20])
+                                     : -static_cast<int>(SPARSE_HNSW::kDefaultSlotSize);
+    const bool slots_only = slot_arg < 0;
+    const int slot_size = slots_only ? 0 : slot_arg;
 
     std::vector<std::pair<int, int>> seed_cfgs;
     if (seed_spec == "off" || seed_top_k <= 0) {
@@ -136,10 +142,16 @@ int main(int argc, char *argv[]) {
 
     index.printInfo();
 
-    if (quantize) {
+    if (quantize && slots_only) {
+        auto start_q = std::chrono::steady_clock::now();
+        index.enableSlottedTraversal(static_cast<uint32_t>(-slot_arg));
+        std::cout << "Slots-only quantized traversal: slot_size=" << -slot_arg << " B, overflow rows="
+                  << index.slotOverflowRows() << ", " << index.slotBytes() / (1024.0 * 1024.0) << " MiB in "
+                  << std::chrono::duration<double>(std::chrono::steady_clock::now() - start_q).count() << " s\n";
+    } else if (quantize) {
         std::cout << "Building uint8-quantized traversal copy...\n";
         auto start_q = std::chrono::steady_clock::now();
-        index.enableQuantizedTraversal();
+        index.enableQuantizedTraversal(0);  // packed rows (slot_arg >= 0)
         auto end_q = std::chrono::steady_clock::now();
         std::cout << "Quantization completed in "
                   << std::chrono::duration_cast<std::chrono::microseconds>(
@@ -157,6 +169,17 @@ int main(int argc, char *argv[]) {
                   << std::chrono::duration_cast<std::chrono::microseconds>(
                          end_seed - start_seed).count() / 1e6
                   << " s (" << index.seedTableBytes() / 1024.0 << " KiB)\n";
+    }
+
+    if (slot_size > 0) {
+        if (!quantize) {
+            std::cerr << "slot_size needs quantize=1.\n";
+            return 1;
+        }
+        index.buildRowSlots(static_cast<uint32_t>(slot_size));
+        std::cout << "Row slots: slot_size=" << slot_size << " B, overflow rows="
+                  << index.slotOverflowRows() << ", " << index.slotBytes() / (1024.0 * 1024.0)
+                  << " MiB\n";
     }
 
     CSRMatrix *querymatrix = new CSRMatrix(query_filepath, true);
@@ -208,9 +231,34 @@ int main(int argc, char *argv[]) {
             }
 
             std::vector<uint32_t> pred_labels;
-            std::vector<double> times = bench::timedRuns(
-                [&] { index.searchKNNBatch(querymatrix, query_count, k, ef, pred_labels); },
-                repeats, warmup);
+            std::vector<double> times, slot_times;
+            if (slot_size > 0) {
+                // Alternate layouts each round so drift hits both equally.
+                std::vector<uint32_t> slot_labels;
+                for (int w = 0; w < warmup; ++w) {
+                    index.setSlottedRows(false);
+                    index.searchKNNBatch(querymatrix, query_count, k, ef, pred_labels);
+                    index.setSlottedRows(true);
+                    index.searchKNNBatch(querymatrix, query_count, k, ef, slot_labels);
+                }
+                for (int r = 0; r < 2 * std::max(1, repeats); ++r) {
+                    const bool slotted = (r + r / 2) % 2 == 1;
+                    index.setSlottedRows(slotted);
+                    auto t0 = std::chrono::steady_clock::now();
+                    index.searchKNNBatch(querymatrix, query_count, k, ef, slotted ? slot_labels : pred_labels);
+                    (slotted ? slot_times : times).push_back(std::chrono::duration<double>(
+                        std::chrono::steady_clock::now() - t0).count());
+                }
+                index.setSlottedRows(false);
+                if (slot_labels != pred_labels) {
+                    std::cerr << "Slotted predictions differ from the original layout.\n";
+                    return 1;
+                }
+            } else {
+                times = bench::timedRuns(
+                    [&] { index.searchKNNBatch(querymatrix, query_count, k, ef, pred_labels); },
+                    repeats, warmup);
+            }
 
             double recall = bench::calculate_recall(pred_labels, I, k, query_count);
             double rr = bench::calculate_rr(pred_labels, I, k, query_count);
@@ -228,11 +276,21 @@ int main(int argc, char *argv[]) {
             if (patience > 0) {
                 params << " pat=" << patience;
             }
+            if (slots_only) {
+                params << " slots=" << -slot_arg;
+            }
 
             bench::printPoint(params.str(), recall, bench::median(times), query_count, rr);
             bench::appendRow(results_csv_path, row_model, params.str(), num_omp_threads,
                              recall, rr, indexing_time_sec, load_time_sec, 0.0,
                              times, query_count, k);
+            if (slot_size > 0) {
+                const std::string slot_params = params.str() + " slots=" + std::to_string(slot_size);
+                bench::printPoint(slot_params, recall, bench::median(slot_times), query_count, rr);
+                bench::appendRow(results_csv_path, row_model + "_slots", slot_params, num_omp_threads,
+                                 recall, rr, indexing_time_sec, load_time_sec, 0.0,
+                                 slot_times, query_count, k);
+            }
         }
       }
       }

@@ -95,7 +95,7 @@ int main(int argc, char* argv[]) {
                      " <input_filepath> <query_filepath> <gt_filepath>"
                      " <results_csv_path> <diag_csv_path>"
                      " [model_name=SparseHNSW] [repeats=3] [warmup=1]"
-                     " [diag_queries=all] [quantize=0]"
+                     " [diag_queries=all] [quantize=0] [per_query_csv_prefix]"
                   << std::endl;
         return 1;
     }
@@ -118,6 +118,11 @@ int main(int argc, char* argv[]) {
     const int warmup = (argc > 16) ? std::stoi(argv[16]) : 1;
     const long diag_nq_arg = (argc > 17) ? std::stol(argv[17]) : 0;
     const bool quantize = (argc > 18) && (std::stoi(argv[18]) != 0);
+    // Diagnostic: is the traversal-loss tail concentrated in a few
+    // hard queries, or spread evenly? A concentrated tail means a cheap
+    // per-query fallback (detect hard query -> inverted scan) buys the flat
+    // high-recall tail; an even spread means only a better graph will do.
+    const std::string perq_csv = (argc > 19) ? argv[19] : "";
 
     if (ef_list.empty()) {
         std::cerr << "ef_list is empty.\n";
@@ -231,6 +236,14 @@ int main(int argc, char* argv[]) {
         // (this is also why ef=10 and ef=20 score identically in the sweeps).
         const int ef_eff = std::max(ef, k_hat);
         uint64_t hits_ef = 0, hits_khat = 0, cand_total = 0;
+        // per-query containment, only when a path was given
+        std::vector<uint32_t> perq_hits_ef, perq_hits_khat, perq_cands, perq_nterms;
+        if (!perq_csv.empty()) {
+            perq_hits_ef.assign(diag_nq, 0);
+            perq_hits_khat.assign(diag_nq, 0);
+            perq_cands.assign(diag_nq, 0);
+            perq_nterms.assign(diag_nq, 0);
+        }
 
         #pragma omp parallel reduction(+ : hits_ef, hits_khat, cand_total)
         {
@@ -267,8 +280,18 @@ int main(int argc, char* argv[]) {
                 // The last k_hat entries are the k_hat nearest by pruned distance:
                 // exactly the shortlist searchKNNBatch hands to the refine pass.
                 const size_t take = std::min<size_t>(k_hat, cands.size());
+                uint32_t q_khat = 0;
                 for (size_t i = cands.size() - take; i < cands.size(); ++i) {
-                    if (gt.count(cands[i].second)) ++hits_khat;
+                    if (gt.count(cands[i].second)) { ++hits_khat; ++q_khat; }
+                }
+                if (!perq_csv.empty()) {
+                    uint32_t q_ef = 0;
+                    for (const auto& c : cands) if (gt.count(c.second)) ++q_ef;
+                    perq_hits_ef[q] = q_ef;
+                    perq_hits_khat[q] = q_khat;
+                    perq_cands[q] = static_cast<uint32_t>(cands.size());
+                    perq_nterms[q] = static_cast<uint32_t>(
+                        querymatrix->indptr[q + 1] - querymatrix->indptr[q]);
                 }
             }
         }
@@ -296,6 +319,17 @@ int main(int argc, char* argv[]) {
                   << " | rank_loss " << (containment_ef - containment_khat) * 100 << "%"
                   << " | ndist/q " << std::setprecision(1) << ndist_per_query
                   << " | " << std::setprecision(2) << query_count / search_sec << " QPS\n";
+
+        if (!perq_csv.empty()) {
+            const std::string path = perq_csv + ".ef" + std::to_string(ef) + ".csv";
+            std::ofstream pf(path);
+            pf << "query,n_terms,cand_set,hits_at_ef,hits_at_khat,k\n";
+            for (int q = 0; q < diag_nq; ++q) {
+                pf << q << "," << perq_nterms[q] << "," << perq_cands[q] << ","
+                   << perq_hits_ef[q] << "," << perq_hits_khat[q] << "," << k << "\n";
+            }
+            std::cout << "    per-query diagnostic -> " << path << "\n";
+        }
 
         bench::appendRow(results_csv_path, model_name, params.str(), num_omp_threads,
                          recall, rr, indexing_time_sec, load_time_sec, 0.0,
