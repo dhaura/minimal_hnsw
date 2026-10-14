@@ -147,9 +147,29 @@ namespace sparse_hnsw {
                             uint32_t* log_total_nnz = nullptr,
                             uint32_t* log_unused_nnz = nullptr) const;
 
-        void enableQuantizedTraversal();
+        // u8-quantized traversal rows. Default: fixed-size, 64-byte-aligned slots
+        // (no per-call row-offset lookup). slot_size = 0 keeps the packed,
+        // offset-indexed layout (QuantCSR), e.g. for layout A/B runs.
+        static constexpr uint32_t kDefaultSlotSize = 320;
+        void enableQuantizedTraversal(uint32_t slot_size = kDefaultSlotSize);
         bool quantized() const { return quantized_; }
-        size_t quantizedBytes() const { return quant_.bytes(); }
+        size_t quantizedBytes() const { return quant_.bytes() + qslots_.bytes(); }
+        // Bytes a distance call on quantized row id streams, in either layout.
+        uint32_t quantRowBytes(uint32_t id) const {
+            return slotted_ ? QuantSlots::rowBytes(qslots_.row(id)) : quant_.rowBytes(id);
+        }
+
+        void buildRowSlots(uint32_t slot_size) { qslots_.build(*data_matrix_, slot_size); }
+        void setSlottedRows(bool on) { slotted_ = slots_only_ || (on && quantized_ && !qslots_.empty()); }
+        void enableSlottedTraversal(uint32_t slot_size) {
+            buildRowSlots(slot_size);
+            quantized_ = true;
+            slots_only_ = true;
+            slotted_ = true;
+        }
+        bool slottedRows() const { return slotted_; }
+        int64_t slotOverflowRows() const { return qslots_.overflow_rows; }
+        size_t slotBytes() const { return qslots_.bytes(); }
 
         void buildSeedTable(uint32_t top_k);
         void setSeedParams(int terms, int per_term);
@@ -199,7 +219,7 @@ namespace sparse_hnsw {
         uint32_t entryPoint() const { return entry_point_; }
         int maxLevel() const { return max_level_; }
         uint64_t rowBytesOf(uint32_t id) const {
-            return quantized_ ? static_cast<uint64_t>(quant_.rowBytes(id))
+            return quantized_ ? static_cast<uint64_t>(quantRowBytes(id))
                               : static_cast<uint64_t>(data_matrix_->indptr[id + 1] -
                                     data_matrix_->indptr[id]) * sizeof(IndiceDataPair);
         }
@@ -241,6 +261,11 @@ namespace sparse_hnsw {
         // Quantized copy of the data matrix for traversal.
         QuantCSR quant_;
         bool quantized_ = false;
+        
+        // Slotted and quantized copy of the data matrix for traversal. 
+        QuantSlots qslots_;
+        bool slotted_ = false;
+        bool slots_only_ = false;
 
         // Inverted-seed table.
         InvertedSeedTable seed_table_;

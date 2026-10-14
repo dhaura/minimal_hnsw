@@ -221,7 +221,8 @@ float SPARSE_HNSW::distanceDenseRefine(const CSRMatrix* m, uint32_t p_idx, const
 float SPARSE_HNSW::distanceQuant(uint32_t p_idx, const std::vector<float>& q_dense,
                                  uint32_t* log_total_nnz,
                                  uint32_t* log_unused_nnz) const {
-    const uint8_t* p = quant_.blob.data() + quant_.row_off[p_idx];
+    const uint8_t* p = slotted_ ? qslots_.row(p_idx)
+                                : quant_.blob.data() + quant_.row_off[p_idx];
 
     uint16_t n16;
     _Float16 scale16;
@@ -284,7 +285,11 @@ void SPARSE_HNSW::enableAccessProfile() {
 }
 #endif
 
-void SPARSE_HNSW::enableQuantizedTraversal() {
+void SPARSE_HNSW::enableQuantizedTraversal(uint32_t slot_size) {
+    if (slot_size > 0) {
+        enableSlottedTraversal(slot_size);
+        return;
+    }
     quant_.build(*data_matrix_);
     quantized_ = true;
 }
@@ -374,12 +379,18 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
     const int64_t* qrow_off = quant_.row_off.empty() ? nullptr : quant_.row_off.data();
     const uint8_t* qblob = quant_.blob.empty() ? nullptr : quant_.blob.data();
 
+    // Slotted rows: a row's first line is at sbase + id * slot_size, no offset lookup.
+    const bool use_slots = use_quant && slotted_;
+    const uint8_t* sbase = qslots_.base;
+    const size_t slot_size = qslots_.slot_size;
+    const uint32_t pf_end = use_slots ? static_cast<uint32_t>(slot_size) : 256;
+
     for (uint32_t entry_point : entry_points) {
 #ifdef SPARSE_HNSW_PROFILE
         scratch.prof_ndist++;
         if (node_hits_) node_hits_[entry_point].fetch_add(1, std::memory_order_relaxed);
         scratch.prof_bytes += use_quant
-            ? static_cast<uint64_t>(quant_.rowBytes(entry_point))
+            ? static_cast<uint64_t>(quantRowBytes(entry_point))
             : static_cast<uint64_t>(
                   data_matrix_->indptr[entry_point + 1] - data_matrix_->indptr[entry_point]) * sizeof(IndiceDataPair);
 #endif
@@ -444,7 +455,9 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
                 if (!scratch.isVisited(neighbor_id)) {
                     scratch.markVisited(neighbor_id);
                     scratch.filtered_neighbors.push_back(neighbor_id);
-                    if (!SPARSE_HNSW_REPLAYING) {
+                    if (use_slots) {
+                        __builtin_prefetch(sbase + neighbor_id * slot_size, 0, 3);
+                    } else if (!SPARSE_HNSW_REPLAYING) {
                         __builtin_prefetch(use_quant ? static_cast<const void*>(qrow_off + neighbor_id)
                                                      : static_cast<const void*>(indptr + neighbor_id), 0, 3);
                     }
@@ -459,7 +472,9 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
 
         if (!SPARSE_HNSW_REPLAYING) {
             for (uint32_t j = 0; j < nfilter; ++j) {
-                const char* vec = use_quant
+                const char* vec = use_slots
+                    ? reinterpret_cast<const char*>(sbase + filtered[j] * slot_size)
+                    : use_quant
                     ? reinterpret_cast<const char*>(qblob + qrow_off[filtered[j]])
                     : reinterpret_cast<const char*>(vec_base + indptr[filtered[j]]);
                 __builtin_prefetch(vec, 0, 2);
@@ -472,13 +487,16 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
             uint32_t neighbor_id = filtered[j];
 
             if (j + 1 < nfilter && !SPARSE_HNSW_REPLAYING) {
-                const char* next_vec = use_quant
+                const char* next_vec = use_slots
+                    ? reinterpret_cast<const char*>(sbase + filtered[j + 1] * slot_size)
+                    : use_quant
                     ? reinterpret_cast<const char*>(qblob + qrow_off[filtered[j + 1]])
                     : reinterpret_cast<const char*>(vec_base + indptr[filtered[j + 1]]);
+                // Same four lines as before, but never past the end of a slot.
                 __builtin_prefetch(next_vec, 0, 3);
                 __builtin_prefetch(next_vec + 64, 0, 3);
-                __builtin_prefetch(next_vec + 128, 0, 3);
-                __builtin_prefetch(next_vec + 192, 0, 3);
+                if (128 < pf_end) { __builtin_prefetch(next_vec + 128, 0, 3); }
+                if (192 < pf_end) { __builtin_prefetch(next_vec + 192, 0, 3); }
             }
 
 #ifdef SPARSE_HNSW_PROFILE
@@ -486,7 +504,7 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
             if (node_hits_) node_hits_[neighbor_id].fetch_add(1, std::memory_order_relaxed);
             if (!scratch.replay) {
                 scratch.prof_bytes += use_quant
-                    ? static_cast<uint64_t>(quant_.rowBytes(neighbor_id))
+                    ? static_cast<uint64_t>(quantRowBytes(neighbor_id))
                     : static_cast<uint64_t>(
                           indptr[neighbor_id + 1] - indptr[neighbor_id]) * sizeof(IndiceDataPair);
             }
