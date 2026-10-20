@@ -92,6 +92,7 @@ public:
     }
 
     void clear() { rows_.clear(); hashes_ = 0; }
+    bool empty() const { return rows_.empty(); }
     size_t bytes() const { return rows_.size() * sizeof(Row); }
     const Row* row(size_t document) const { return &rows_[document]; }
     uint8_t hashes() const { return hashes_; }

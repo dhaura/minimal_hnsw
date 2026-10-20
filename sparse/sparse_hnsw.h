@@ -5,6 +5,7 @@
 #include "prune.h"
 #include "quant_csr.h"
 #include "inverted_seed.h"
+#include "bloom_bitmap.h"
 #include <vector>
 #include <queue>
 #include <random>
@@ -36,6 +37,7 @@ namespace sparse_hnsw {
 
         std::vector<float> q_dense;
         bool dense_query = false;
+        BloomBitmap::Query bloom_query;  // this query's terms, for the Bloom distance gate
 
         std::vector<std::pair<float, uint32_t>> seed_terms;
         std::vector<uint32_t> seed_ids;
@@ -171,6 +173,16 @@ namespace sparse_hnsw {
         int64_t slotOverflowRows() const { return qslots_.overflow_rows; }
         size_t slotBytes() const { return qslots_.bytes(); }
 
+        // Bloom distance gate: one 64-byte filter row per document, built from the
+        // traversal (pruned) rows with `hashes` positions per term. Once
+        // top_candidates holds ef results, a neighbor's distance is computed only
+        // if more than threshold_pct % of the query's terms look present in its row.
+        void buildBloomFilter(uint8_t hashes = 1);
+        void setBloomThreshold(double threshold_pct) { bloom_threshold_pct_ = threshold_pct; }  // < 0: gate off
+        void disableBloomFilter() { bloom_bitmaps_.clear(); bloom_threshold_pct_ = -1.0; }
+        bool bloomGateOn() const { return bloom_threshold_pct_ >= 0.0 && !bloom_bitmaps_.empty(); }
+        size_t bloomBytes() const { return bloom_bitmaps_.bytes(); }
+
         void buildSeedTable(uint32_t top_k);
         void setSeedParams(int terms, int per_term);
 
@@ -262,6 +274,10 @@ namespace sparse_hnsw {
         QuantCSR quant_;
         bool quantized_ = false;
         
+        // Bloom distance gate (buildBloomFilter / setBloomThreshold).
+        BloomBitmap bloom_bitmaps_;
+        uint8_t bloom_hashes_ = 0;
+        double bloom_threshold_pct_ = -1.0;
         // Slotted and quantized copy of the data matrix for traversal. 
         QuantSlots qslots_;
         bool slotted_ = false;

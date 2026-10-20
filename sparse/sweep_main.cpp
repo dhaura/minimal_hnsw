@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
                      " <results_csv_path> [model_name=SparseHNSW]"
                      " [repeats=5] [warmup=1] [quantize=0]"
                      " [seed_top_k=0] [seed_spec=off] [patience_list=0]"
-                     " [slot_size=-320]"
+                     " [slot_size=-320] [bloom_thresholds=off] [bloom_hashes=1]"
                   << std::endl;
         return 1;
     }
@@ -54,6 +54,13 @@ int main(int argc, char *argv[]) {
                                      : -static_cast<int>(SPARSE_HNSW::kDefaultSlotSize);
     const bool slots_only = slot_arg < 0;
     const int slot_size = slots_only ? 0 : slot_arg;
+    // Bloom distance gate: comma list of thresholds (% of query terms that must
+    // look present), each swept over the whole grid; "off" = no gate.
+    // A negative entry runs that pass with the gate off (same-job baseline).
+    const std::string bloom_arg = (argc > 21) ? argv[21] : "off";
+    const std::vector<double> bloom_thresholds = bloom_arg == "off"
+        ? std::vector<double>{-1.0} : bench::parseList<double>(bloom_arg, [](const std::string& v) { return std::stod(v); });
+    const int bloom_hashes = (argc > 22) ? std::stoi(argv[22]) : 1;
 
     std::vector<std::pair<int, int>> seed_cfgs;
     if (seed_spec == "off" || seed_top_k <= 0) {
@@ -131,14 +138,16 @@ int main(int argc, char *argv[]) {
     index.addPointsBatch(num_points);
 
     auto end_index_time = std::chrono::steady_clock::now();
-    // Includes pruning: it is part of what you pay to get a searchable index,
-    // which is what the "Indexing Time" column means for the other methods.
+    // IndexSec = everything needed before the first query: pruning, graph build,
+    // and (added below) the quantized traversal rows and the seed table. It is
+    // what the "Indexing Time" column means for the other methods. Loading the
+    // base matrix is excluded (LoadSec).
     double indexing_time_sec =
         std::chrono::duration_cast<std::chrono::microseconds>(
             end_index_time - start_index_time).count() / 1e6;
     std::cout << "Built a searchable index over " << num_points
               << " points in " << indexing_time_sec
-              << " seconds (pruning included).\n";
+              << " seconds (pruning + graph build).\n";
 
     index.printInfo();
 
@@ -148,11 +157,13 @@ int main(int argc, char *argv[]) {
         std::cout << "Slots-only quantized traversal: slot_size=" << -slot_arg << " B, overflow rows="
                   << index.slotOverflowRows() << ", " << index.slotBytes() / (1024.0 * 1024.0) << " MiB in "
                   << std::chrono::duration<double>(std::chrono::steady_clock::now() - start_q).count() << " s\n";
+        indexing_time_sec += std::chrono::duration<double>(std::chrono::steady_clock::now() - start_q).count();
     } else if (quantize) {
         std::cout << "Building uint8-quantized traversal copy...\n";
         auto start_q = std::chrono::steady_clock::now();
         index.enableQuantizedTraversal(0);  // packed rows (slot_arg >= 0)
         auto end_q = std::chrono::steady_clock::now();
+        indexing_time_sec += std::chrono::duration<double>(end_q - start_q).count();
         std::cout << "Quantization completed in "
                   << std::chrono::duration_cast<std::chrono::microseconds>(
                          end_q - start_q).count() / 1e6
@@ -165,11 +176,24 @@ int main(int argc, char *argv[]) {
         auto start_seed = std::chrono::steady_clock::now();
         index.buildSeedTable(static_cast<uint32_t>(seed_top_k));
         auto end_seed = std::chrono::steady_clock::now();
+        indexing_time_sec += std::chrono::duration<double>(end_seed - start_seed).count();
         std::cout << "Seed table built in "
                   << std::chrono::duration_cast<std::chrono::microseconds>(
                          end_seed - start_seed).count() / 1e6
                   << " s (" << index.seedTableBytes() / 1024.0 << " KiB)\n";
     }
+
+    if (bloom_arg != "off") {
+        auto start_bloom = std::chrono::steady_clock::now();
+        index.buildBloomFilter(static_cast<uint8_t>(bloom_hashes));
+        const double bloom_sec = std::chrono::duration<double>(std::chrono::steady_clock::now() - start_bloom).count();
+        indexing_time_sec += bloom_sec;
+        std::cout << "Bloom filter built (h=" << bloom_hashes << ", " << index.bloomBytes() / (1024.0 * 1024.0)
+                  << " MiB) in " << bloom_sec << " s\n";
+    }
+
+    std::cout << "IndexSec (pruning + graph + quantized rows + seed table + Bloom filter, loading excluded): "
+              << indexing_time_sec << " s\n";
 
     if (slot_size > 0) {
         if (!quantize) {
@@ -207,6 +231,8 @@ int main(int argc, char *argv[]) {
 
     const bool multi_pat = patience_list.size() > 1;
 
+    for (const double bloom_t : bloom_thresholds) {
+      index.setBloomThreshold(bloom_t);
     for (int patience : patience_list) {
       index.setPatience(patience);
       for (const auto& sc : seed_cfgs) {
@@ -222,6 +248,11 @@ int main(int argc, char *argv[]) {
         }
         if (multi_pat) {
             row_model += "_p" + std::to_string(patience);
+        }
+        if (bloom_t >= 0.0) {
+            std::ostringstream bt;
+            bt << bloom_t;
+            row_model += "_T" + bt.str();
         }
 
         for (int ef : ef_list) {
@@ -279,6 +310,9 @@ int main(int argc, char *argv[]) {
             if (slots_only) {
                 params << " slots=" << -slot_arg;
             }
+            if (bloom_t >= 0.0) {
+                params << " bloom_h=" << bloom_hashes << " T=" << bloom_t;
+            }
 
             bench::printPoint(params.str(), recall, bench::median(times), query_count, rr);
             bench::appendRow(results_csv_path, row_model, params.str(), num_omp_threads,
@@ -294,6 +328,7 @@ int main(int argc, char *argv[]) {
         }
       }
       }
+    }
     }
 
     std::cout << "\nResults appended to " << results_csv_path << "\n";

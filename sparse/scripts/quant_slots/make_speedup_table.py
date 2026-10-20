@@ -7,6 +7,7 @@ original table: recall,ours_qps,<B>_qps,vs_<B>,...
 
 Usage:
   python3 make_speedup_table.py <pareto.csv> <out.csv> [--thresholds 0.90,...,0.99]
+                                [--ours SparseHNSW] [--baselines SEISMIC,kANNolo,...]
 """
 import argparse
 import csv
@@ -20,7 +21,10 @@ def main():
     ap.add_argument("pareto")
     ap.add_argument("out")
     ap.add_argument("--thresholds", default="0.90,0.91,0.92,0.93,0.94,0.95,0.96,0.97,0.98,0.99")
+    ap.add_argument("--ours", default=OURS, help="model whose speedup is reported")
+    ap.add_argument("--baselines", default=",".join(BASELINES), help="comma list of models to compare against")
     args = ap.parse_args()
+    ours_model, baselines = args.ours, args.baselines.split(",")
     rows = list(csv.DictReader(open(args.pareto)))
 
     def best(model, r):
@@ -28,15 +32,15 @@ def main():
         return max(q) if q else None
 
     header = ["recall", "ours_qps"]
-    for b in BASELINES:
+    for b in baselines:
         header += [f"{b}_qps", f"vs_{b}"]
     with open(args.out, "w", newline="") as fh:
         w = csv.writer(fh)
         w.writerow(header)
         for t in [float(x) for x in args.thresholds.split(",")]:
-            ours = best(OURS, t)
+            ours = best(ours_model, t)
             line = [f"{t:g}", round(ours) if ours else ""]
-            for b in BASELINES:
+            for b in baselines:
                 q = best(b, t)
                 line += [round(q) if q else "", round(ours / q, 2) if ours and q else ""]
             w.writerow(line)

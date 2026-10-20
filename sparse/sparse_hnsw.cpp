@@ -381,6 +381,7 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
 
     // Slotted rows: a row's first line is at sbase + id * slot_size, no offset lookup.
     const bool use_slots = use_quant && slotted_;
+    const bool use_bitmap = layer == 0 && !lock_links && scratch.dense_query && bloomGateOn();
     const uint8_t* sbase = qslots_.base;
     const size_t slot_size = qslots_.slot_size;
     const uint32_t pf_end = use_slots ? static_cast<uint32_t>(slot_size) : 256;
@@ -431,6 +432,9 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
         const uint8_t* visited_bytes = scratch.visited_bits.data();
 
         scratch.filtered_neighbors.clear();
+        // Decided once per expansion: the gate starts with the first expansion that
+        // begins with a full top_candidates.
+        const bool gate = use_bitmap && top_candidates.size() >= static_cast<size_t>(ef);
 
         {
             std::unique_lock<std::mutex> link_guard(link_locks_[current_node], std::defer_lock);
@@ -455,7 +459,10 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
                 if (!scratch.isVisited(neighbor_id)) {
                     scratch.markVisited(neighbor_id);
                     scratch.filtered_neighbors.push_back(neighbor_id);
-                    if (use_slots) {
+                    if (gate) {
+                        // Only the filter row now; rows are prefetched for survivors below.
+                        __builtin_prefetch(bloom_bitmaps_.row(neighbor_id), 0, 3);
+                    } else if (use_slots) {
                         __builtin_prefetch(sbase + neighbor_id * slot_size, 0, 3);
                     } else if (!SPARSE_HNSW_REPLAYING) {
                         __builtin_prefetch(use_quant ? static_cast<const void*>(qrow_off + neighbor_id)
@@ -463,6 +470,28 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
                     }
                 }
             }
+        }
+
+        if (gate) {
+            // Check every neighbor's filter row (all in flight from the scan above),
+            // keep the survivors in place and start fetching their rows.
+            uint32_t* ids = scratch.filtered_neighbors.data();
+            const uint32_t n = static_cast<uint32_t>(scratch.filtered_neighbors.size());
+            uint32_t kept = 0;
+            for (uint32_t j = 0; j < n; ++j) {
+                const uint32_t neighbor_id = ids[j];
+                if (!bloom_bitmaps_.passes(neighbor_id, scratch.bloom_query)) {
+                    continue;
+                }
+                if (use_slots) {
+                    __builtin_prefetch(sbase + neighbor_id * slot_size, 0, 3);
+                } else if (!SPARSE_HNSW_REPLAYING) {
+                    __builtin_prefetch(use_quant ? static_cast<const void*>(qrow_off + neighbor_id)
+                                                 : static_cast<const void*>(indptr + neighbor_id), 0, 3);
+                }
+                ids[kept++] = neighbor_id;
+            }
+            scratch.filtered_neighbors.resize(kept);
         }
 
         const uint32_t nfilter = static_cast<uint32_t>(scratch.filtered_neighbors.size());
@@ -783,6 +812,10 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchKNN(uint32_t 
     const IndiceDataPair* q_indices = query_matrix->indices_data + q_start;
     const uint32_t q_num = static_cast<uint32_t>(q_end - q_start);
     scratch.scatterQuery(dim_, q_indices, q_num);
+    if (bloomGateOn()) {
+        scratch.bloom_query.build(q_indices, q_num, bloom_hashes_);
+        scratch.bloom_query.setCutoff(bloom_threshold_pct_ * scratch.bloom_query.nnz);
+    }
 #ifdef SPARSE_HNSW_DIST_LOG
     dist_log::setQuery(query_id, q_num);
 #endif
@@ -936,7 +969,14 @@ void SPARSE_HNSW::searchKNNBatch(CSRMatrix *query_matrix, int num_queries, int k
     }
 }
 
+void SPARSE_HNSW::buildBloomFilter(uint8_t hashes) {
+    BloomBitmap::validateHashes(hashes);
+    bloom_bitmaps_.build(data_matrix_, hashes);  // the traversal (pruned) rows
+    bloom_hashes_ = hashes;
+}
+
 void SPARSE_HNSW::setSearchMatrix(CSRMatrix *search_matrix) {
+    disableBloomFilter();  // built from the previous matrix
     if (!original_data_matrix_) {
         original_data_matrix_ = data_matrix_;
     }
