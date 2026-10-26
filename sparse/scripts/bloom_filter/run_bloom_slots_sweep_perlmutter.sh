@@ -31,6 +31,9 @@
 # rises" question. ALPHAS_LIST (dash list) overrides the alpha preset; BIN
 # overrides the binary (default: $SPKNN_BIN, i.e. build/bin).
 #   sbatch --export=ALL,PRESET=grid,M=32,EFCS=200-400-800-1600,GATE_SET=schedule,STEP=threshold_schedule_msmarco_full run_bloom_slots_sweep_perlmutter.sh
+# GATE_SET=schedule_high: the same with T = off,25,30,35,40,45,50 (adds to a
+# schedule run's folder; each job keeps its own gate-off pass).
+# GATE_SET=schedule_all: both lists in one job (one graph build, one gate-off pass).
 
 set -euo pipefail
 PRESET=${PRESET:?set PRESET: alpha or grid}
@@ -57,7 +60,11 @@ case "$PRESET" in
     *) echo "unknown PRESET=$PRESET" >&2; exit 1 ;;
 esac
 [ -n "${ALPHAS_LIST:-}" ] && ALPHAS=${ALPHAS_LIST//-/ }
-if [ "${GATE_SET:-full}" = schedule ]; then
+if [ "${GATE_SET:-full}" = schedule_all ]; then  # schedule + schedule_high in one job
+    THRESHOLDS=-1,0,1,2,3,4,5,8,10,25,30,35,40,45,50
+elif [ "${GATE_SET:-full}" = schedule_high ]; then
+    THRESHOLDS=-1,25,30,35,40,45,50
+elif [ "${GATE_SET:-full}" = schedule ]; then
     THRESHOLDS=-1,0,1,2,3,4,5,8,10
 fi
 
