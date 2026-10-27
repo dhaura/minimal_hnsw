@@ -2,6 +2,7 @@
 #include "dist_log.h"
 #include <iostream>
 #include <cstring>
+#include <array>
 
 #if defined(__has_include)
 #if __has_include(<mkl.h>)
@@ -351,16 +352,19 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
     std::priority_queue<std::pair<float, uint32_t>> top_candidates;
 
     const bool use_quant = quantized_ && scratch.dense_query;
-    const bool use_patience = patience_ > 0 && layer == 0 &&
-                              scratch.dense_query && scratch.patience_k > 0;
+    const bool stop_rules = layer == 0 && scratch.dense_query && scratch.patience_k > 0;
+    const bool use_patience = patience_ > 0 && stop_rules;
+    const bool use_gap = stop_gap_ >= 0.0 && stop_rules;
+    const float gap_scale = static_cast<float>(1.0 - stop_gap_);
     uint32_t stale_expansions = 0;
-    if (use_patience) {
+    if (use_patience || use_gap) {
         scratch.kbest.clear();
         scratch.kbest.reserve(static_cast<size_t>(scratch.patience_k));
     }
 
+    // Keeps the best patience_k distances (kbest, a max-heap); true if d entered them.
     auto touchTopK = [&](float d) -> bool {
-        if (!use_patience) {
+        if (!use_patience && !use_gap) {
             return false;
         }
         if (static_cast<int>(scratch.kbest.size()) < scratch.patience_k) {
@@ -385,6 +389,9 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
     const uint8_t* sbase = qslots_.base;
     const size_t slot_size = qslots_.slot_size;
     const uint32_t pf_end = use_slots ? static_cast<uint32_t>(slot_size) : 256;
+    const bool use_list = use_bitmap && list_gate_;  // top terms beside each neighbor id.
+    constexpr size_t lwords = kListTerms / 4;  // u64 words (4 terms each) per neighbor.
+    const size_t lblock = (size_neighbor_list_level0_ - 1) * lwords;  // u64 words per node.
 
     for (uint32_t entry_point : entry_points) {
 #ifdef SPARSE_HNSW_PROFILE
@@ -419,6 +426,11 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
         if (top_candidates.size() >= static_cast<size_t>(ef) && current.first > top_candidates.top().first) {
             break;
         }
+        // Score gap: this node scores below (1 - gamma) x the k-th best so far.
+        if (use_gap && scratch.kbest.size() >= static_cast<size_t>(scratch.patience_k) &&
+            1.0f - current.first < gap_scale * (1.0f - scratch.kbest.front())) {
+            break;
+        }
 
         uint32_t current_node = current.second;
 
@@ -434,7 +446,11 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
         scratch.filtered_neighbors.clear();
         // Decided once per expansion: the gate starts with the first expansion that
         // begins with a full top_candidates.
-        const bool gate = use_bitmap && top_candidates.size() >= static_cast<size_t>(ef);
+        bool gate = use_bitmap && top_candidates.size() >= static_cast<size_t>(ef);
+        // List sketch: checked in the scan below, from the block read with the list.
+        const bool lgate = gate && use_list;
+        gate = gate && !use_list;
+        const uint64_t* lsk = use_list ? list_sketch_base_ + static_cast<size_t>(current_node) * lblock : nullptr;
 
         {
             std::unique_lock<std::mutex> link_guard(link_locks_[current_node], std::defer_lock);
@@ -458,6 +474,16 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
                 uint32_t neighbor_id = neighbors[i];
                 if (!scratch.isVisited(neighbor_id)) {
                     scratch.markVisited(neighbor_id);
+                    if (lgate) {  // pass iff one of the neighbor's top terms is a query term
+                        const float* q = scratch.q_dense.data();
+                        uint32_t hits = 0;
+                        for (size_t w = 0; w < lwords; ++w) {
+                            const uint64_t sk = lsk[i * lwords + w];
+                            hits += (q[sk & 0xFFFF] != 0.0f) + (q[(sk >> 16) & 0xFFFF] != 0.0f) +
+                                    (q[(sk >> 32) & 0xFFFF] != 0.0f) + (q[sk >> 48] != 0.0f);
+                        }
+                        if (hits == 0) { continue; }
+                    }
                     scratch.filtered_neighbors.push_back(neighbor_id);
                     if (gate) {
                         // Only the filter row now; rows are prefetched for survivors below.
@@ -567,6 +593,11 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
                     top_candidates.pop();
                 }
             }
+        }
+
+        if (use_list && !candidates.empty()) {  // the next expansion's sketch block.
+            const uint64_t* nb = list_sketch_base_ + static_cast<size_t>(candidates.top().second) * lblock;
+            for (size_t l = 0; l < lblock; l += 8) { __builtin_prefetch(nb + l, 0, 3); }
         }
 
         if (use_patience) {
@@ -969,9 +1000,48 @@ void SPARSE_HNSW::searchKNNBatch(CSRMatrix *query_matrix, int num_queries, int k
     }
 }
 
+void SPARSE_HNSW::buildListSketch() {
+    constexpr int terms = kListTerms;
+    const int64_t n = data_matrix_->nrow;
+    const size_t words = static_cast<size_t>(terms / 4);
+    std::vector<uint64_t> topk(static_cast<size_t>(n) * words, 0);
+    #pragma omp parallel for schedule(dynamic, 4096)
+    for (int64_t r = 0; r < n; ++r) {
+        std::array<std::pair<float, uint16_t>, terms> best{};  // largest weight first.
+        int kept = 0;
+        for (int64_t p = data_matrix_->indptr[r]; p < data_matrix_->indptr[r + 1]; ++p) {
+            const IndiceDataPair& e = data_matrix_->indices_data[p];
+            std::pair<float, uint16_t> c{static_cast<float>(e.data), static_cast<uint16_t>(e.indice)};
+            if (kept == terms && c.first <= best[terms - 1].first) { continue; }
+            int j = std::min(kept, terms - 1);
+            for (; j > 0 && best[j - 1].first < c.first; --j) { best[j] = best[j - 1]; }
+            best[j] = c;
+            kept = std::min(kept + 1, terms);
+        }
+        for (int j = 0; j < terms && kept > 0; ++j) {  // rows with fewer terms repeat their last one.
+            topk[static_cast<size_t>(r) * words + j / 4] |= uint64_t{best[std::min(j, kept - 1)].second} << (16 * (j % 4));
+        }
+    }
+    const size_t slots = (size_neighbor_list_level0_ - 1) * words;
+    list_sketch_.assign(0, 0);
+    list_sketch_.shrink_to_fit();
+    list_sketch_.assign(static_cast<size_t>(n) * slots + 8, 0);
+    const uintptr_t raw = reinterpret_cast<uintptr_t>(list_sketch_.data());
+    list_sketch_base_ = list_sketch_.data() + ((64 - raw % 64) % 64) / sizeof(uint64_t);
+    #pragma omp parallel for schedule(static)
+    for (int64_t u = 0; u < n; ++u) {
+        const uint32_t* ll = get_neighbor_list0(static_cast<uint32_t>(u));
+        for (uint32_t j = 0; j < ll[0]; ++j) {
+            for (size_t w = 0; w < words; ++w) {
+                list_sketch_base_[static_cast<size_t>(u) * slots + j * words + w] = topk[ll[1 + j] * words + w];
+            }
+        }
+    }
+}
+
 void SPARSE_HNSW::buildBloomFilter(uint8_t hashes) {
     BloomBitmap::validateHashes(hashes);
-    bloom_bitmaps_.build(data_matrix_, hashes);  // the traversal (pruned) rows
+    bloom_bitmaps_.build(data_matrix_, hashes);  // the traversal (pruned) rows.
     bloom_hashes_ = hashes;
 }
 

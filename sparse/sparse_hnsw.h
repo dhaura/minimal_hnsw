@@ -182,12 +182,24 @@ namespace sparse_hnsw {
         void disableBloomFilter() { bloom_bitmaps_.clear(); bloom_threshold_pct_ = -1.0; }
         bool bloomGateOn() const { return bloom_threshold_pct_ >= 0.0 && !bloom_bitmaps_.empty(); }
         size_t bloomBytes() const { return bloom_bitmaps_.bytes(); }
+        // List sketch: each layer-0 neighbor slot also holds that neighbor's top
+        // kListTerms terms by weight (exact u16 ids), read with the neighbor list, so
+        // the check needs no filter fetch: pass iff one of them is a query term. While
+        // on, it replaces the Bloom check (the Bloom gate must be on). Build it after
+        // the graph; it does not follow later graph changes.
+        static constexpr int kListTerms = 16;
+        void buildListSketch();
+        void setListSketchGate(bool on) { list_gate_ = on && list_sketch_base_ != nullptr; }
+        size_t listSketchBytes() const { return list_sketch_.size() * sizeof(uint64_t); }
 
         void buildSeedTable(uint32_t top_k);
         void setSeedParams(int terms, int per_term);
 
         void setPatience(int patience) { patience_ = std::max(0, patience); }
         int patience() const { return patience_; }
+        // Score gap stop: stop before expanding a node scoring below (1 - gamma) x
+        // the k-th best score so far (k x beta when pruned rows are reranked). gamma < 0: off.
+        void setStopGap(double gamma) { stop_gap_ = gamma; }
         bool seedingEnabled() const { return seed_terms_ > 0 && !seed_table_.empty(); }
         size_t seedTableBytes() const { return seed_table_.bytes(); }
         uint32_t seedTableTopK() const { return seed_table_.top_k; }
@@ -288,6 +300,7 @@ namespace sparse_hnsw {
         int seed_terms_ = 0;
         int seed_per_term_ = 1;
         int patience_ = 0;
+        double stop_gap_ = -1.0;
 #ifdef SPARSE_HNSW_DIST_LOG
         bool dist_log_use_original_matrix_ = false;
 #endif
@@ -296,6 +309,12 @@ namespace sparse_hnsw {
         // A global mutex for entry_point_ / max_level_.
         mutable std::vector<std::mutex> link_locks_;
         std::mutex global_lock_;
+
+        // List sketch (buildListSketch): per node, its 2M neighbor slots' top terms in
+        // list order, kListTerms / 4 u64 words (4 u16 ids each) per slot.
+        std::vector<uint64_t> list_sketch_;
+        uint64_t* list_sketch_base_ = nullptr;  // 64-byte aligned start of list_sketch_
+        bool list_gate_ = false;
 
 #ifdef SPARSE_HNSW_PROFILE
         mutable std::atomic<uint64_t> prof_ndist_{0};

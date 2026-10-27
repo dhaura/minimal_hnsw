@@ -204,6 +204,8 @@ int main(int argc, char* argv[]) {
     index.addPointsBatch(num_points);
 
     auto end_index_time = std::chrono::steady_clock::now();
+    // Indexing time = everything needed before the first query: pruning and graph
+    // build here, plus quantized rows and the seed table below. Loading excluded.
     auto index_time = std::chrono::duration_cast<std::chrono::microseconds>(end_index_time - start_index_time);
 
     std::cout << "Added " << num_points << " points to the index in " << index_time.count() << " microseconds.\n";
@@ -213,11 +215,12 @@ int main(int argc, char* argv[]) {
         std::cout << "Building uint8-quantized traversal copy...\n";
         auto start_q = std::chrono::steady_clock::now();
         index.enableQuantizedTraversal(layout_ab ? 0 : static_cast<uint32_t>(slot_size));
+        auto end_q = std::chrono::steady_clock::now();
+        auto q_time = std::chrono::duration_cast<std::chrono::microseconds>(end_q - start_q);
+        index_time += q_time;  // the A/B comparison copy below is not part of the index
         if (layout_ab) {
             index.buildRowSlots(static_cast<uint32_t>(slot_size));
         }
-        auto end_q = std::chrono::steady_clock::now();
-        auto q_time = std::chrono::duration_cast<std::chrono::microseconds>(end_q - start_q);
         std::cout << "Quantization completed in " << q_time.count() << " microseconds ("
                   << index.quantizedBytes() / (1024.0 * 1024.0) << " MiB)\n";
         if (slot_size > 0) {
@@ -232,6 +235,7 @@ int main(int argc, char* argv[]) {
         index.buildSeedTable(static_cast<uint32_t>(seed_top_k));
         index.setSeedParams(seed_terms, seed_per_term);
         auto end_seed = std::chrono::steady_clock::now();
+        index_time += std::chrono::duration_cast<std::chrono::microseconds>(end_seed - start_seed);
         std::cout << "Seed table built in "
                   << std::chrono::duration_cast<std::chrono::microseconds>(
                          end_seed - start_seed).count()
@@ -352,6 +356,8 @@ int main(int argc, char* argv[]) {
 
     index.printInfo();
 
+    std::cout << "Indexing time (pruning + graph + quantized rows + seed table, loading excluded): "
+              << index_time.count() << " microseconds\n";
     appendResultsRow(results_csv_path, alpha, beta, num_points, num_omp_threads,
                       prune_time.count() / 1e6, index_time.count() / 1e6,
                       query_time.count() / 1e6, recall);

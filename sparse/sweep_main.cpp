@@ -5,6 +5,7 @@
 #include "csr_matrix.h"
 #include "bench_common.h"
 
+#include <algorithm>
 #include <chrono>
 #include <iomanip>
 #include <iostream>
@@ -23,8 +24,8 @@ int main(int argc, char *argv[]) {
                      " <input_filepath> <query_filepath> <gt_filepath>"
                      " <results_csv_path> [model_name=SparseHNSW]"
                      " [repeats=5] [warmup=1] [quantize=0]"
-                     " [seed_top_k=0] [seed_spec=off] [patience_list=0]"
-                     " [slot_size=-320] [bloom_thresholds=off] [bloom_hashes=1]"
+                     " [seed_top_k=0] [seed_spec=off] [stop_list=0]"
+                     " [slot_size=-320] [bloom_thresholds=off] [bloom_hashes=1] [gate_layouts=sep]"
                   << std::endl;
         return 1;
     }
@@ -47,8 +48,16 @@ int main(int argc, char *argv[]) {
     bool quantize = (argc > 16) && (std::stoi(argv[16]) != 0);
     const int seed_top_k = (argc > 17) ? std::stoi(argv[17]) : 0;
     const std::string seed_spec = (argc > 18) ? argv[18] : "off";
-    const std::vector<int> patience_list =
-        bench::parseList<int>((argc > 19) ? argv[19] : "0", bench::toInt);
+    // Stop rules (comma list): "P" = patience P (0 = none); "gG" = score gap gamma G.
+    struct StopCfg { std::string spec; int P = 0; double gamma = -1.0; };
+    std::vector<StopCfg> stop_list;
+    for (const std::string& spec : bench::parseList<std::string>((argc > 19) ? argv[19] : "0",
+                                                                [](const std::string& v) { return v; })) {
+        StopCfg c;
+        c.spec = spec;
+        if (spec[0] == 'g') { c.gamma = std::stod(spec.substr(1)); } else { c.P = std::stoi(spec); }
+        stop_list.push_back(c);
+    }
     // Default -320: slots only, the library default layout. 0: packed rows only.
     const int slot_arg = (argc > 20) ? std::stoi(argv[20])
                                      : -static_cast<int>(SPARSE_HNSW::kDefaultSlotSize);
@@ -61,6 +70,17 @@ int main(int argc, char *argv[]) {
     const std::vector<double> bloom_thresholds = bloom_arg == "off"
         ? std::vector<double>{-1.0} : bench::parseList<double>(bloom_arg, [](const std::string& v) { return std::stod(v); });
     const int bloom_hashes = (argc > 22) ? std::stoi(argv[22]) : 1;
+    // Gate layouts (comma list), each runs every gate-on threshold: sep = Bloom filter
+    // rows in their own array; list16 = top-16-term sketch beside each layer-0
+    // neighbor id instead (rows labelled _list16; needs bloom_thresholds).
+    const std::vector<std::string> gate_layouts = bench::parseList<std::string>(
+        (argc > 23) ? argv[23] : "sep", [](const std::string& v) { return v; });
+    for (const std::string& layout : gate_layouts) {
+        if (layout != "sep" && layout != "list16") {
+            std::cerr << "unknown gate layout '" << layout << "' (want sep or list16)\n";
+            return 1;
+        }
+    }
 
     std::vector<std::pair<int, int>> seed_cfgs;
     if (seed_spec == "off" || seed_top_k <= 0) {
@@ -191,6 +211,14 @@ int main(int argc, char *argv[]) {
         std::cout << "Bloom filter built (h=" << bloom_hashes << ", " << index.bloomBytes() / (1024.0 * 1024.0)
                   << " MiB) in " << bloom_sec << " s\n";
     }
+    double list_sec = 0.0;  // added to the indexing time of the list16 rows only
+    if (bloom_arg != "off" && std::find(gate_layouts.begin(), gate_layouts.end(), "list16") != gate_layouts.end()) {
+        const auto t0 = std::chrono::steady_clock::now();
+        index.buildListSketch();
+        list_sec = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+        std::cout << "List sketch built: " << index.listSketchBytes() / (1024.0 * 1024.0) << " MiB in "
+                  << list_sec << " s\n";
+    }
 
     std::cout << "IndexSec (pruning + graph + quantized rows + seed table + Bloom filter, loading excluded): "
               << indexing_time_sec << " s\n";
@@ -229,12 +257,21 @@ int main(int argc, char *argv[]) {
 
     const bool multi_seed = seed_cfgs.size() > 1;
 
-    const bool multi_pat = patience_list.size() > 1;
+    const bool multi_pat = stop_list.size() > 1;
 
+    for (const std::string& layout : gate_layouts) {
+      const bool list = layout == "list16";
+      index.setListSketchGate(list);
+      const double row_index_sec = indexing_time_sec + (list ? list_sec : 0.0);
     for (const double bloom_t : bloom_thresholds) {
+      if (list && bloom_t < 0.0) {
+          continue;  // gate off: same search as sep
+      }
       index.setBloomThreshold(bloom_t);
-    for (int patience : patience_list) {
+    for (const StopCfg& stop : stop_list) {
+      const int patience = stop.P;
       index.setPatience(patience);
+      index.setStopGap(stop.gamma);
       for (const auto& sc : seed_cfgs) {
       index.setSeedParams(sc.first, sc.second);
       for (int beta : beta_list) {
@@ -247,12 +284,15 @@ int main(int argc, char *argv[]) {
             row_model += "_s" + std::to_string(sc.first) + "x" + std::to_string(sc.second);
         }
         if (multi_pat) {
-            row_model += "_p" + std::to_string(patience);
+            row_model += "_p" + stop.spec;
         }
         if (bloom_t >= 0.0) {
             std::ostringstream bt;
             bt << bloom_t;
             row_model += "_T" + bt.str();
+        }
+        if (list) {
+            row_model += "_" + layout;
         }
 
         for (int ef : ef_list) {
@@ -307,8 +347,14 @@ int main(int argc, char *argv[]) {
             if (patience > 0) {
                 params << " pat=" << patience;
             }
+            if (stop.gamma >= 0.0) {
+                params << " gap=" << stop.gamma;
+            }
             if (slots_only) {
                 params << " slots=" << -slot_arg;
+            }
+            if (list) {
+                params << " layout=" << layout;
             }
             if (bloom_t >= 0.0) {
                 params << " bloom_h=" << bloom_hashes << " T=" << bloom_t;
@@ -316,18 +362,19 @@ int main(int argc, char *argv[]) {
 
             bench::printPoint(params.str(), recall, bench::median(times), query_count, rr);
             bench::appendRow(results_csv_path, row_model, params.str(), num_omp_threads,
-                             recall, rr, indexing_time_sec, load_time_sec, 0.0,
+                             recall, rr, row_index_sec, load_time_sec, 0.0,
                              times, query_count, k);
             if (slot_size > 0) {
                 const std::string slot_params = params.str() + " slots=" + std::to_string(slot_size);
                 bench::printPoint(slot_params, recall, bench::median(slot_times), query_count, rr);
                 bench::appendRow(results_csv_path, row_model + "_slots", slot_params, num_omp_threads,
-                                 recall, rr, indexing_time_sec, load_time_sec, 0.0,
+                                 recall, rr, row_index_sec, load_time_sec, 0.0,
                                  slot_times, query_count, k);
             }
         }
       }
       }
+    }
     }
     }
 
