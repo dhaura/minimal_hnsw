@@ -2,11 +2,13 @@
 # Comparison with the Bloom gate ON, in a NEW playground folder
 # (results/<dataset>_perlmutter_bloom); existing results are only read.
 #
-#   bash make_bloom_playground_figures.sh [sweep_dir]                  # msmarco_full
+#   bash make_bloom_playground_figures.sh <sweep_dir>                  # msmarco_full
 #   DATASET=nq_splade bash make_bloom_playground_figures.sh <sweep_dir>
+#   OUT_NAME / BLOOM_DATA_NAME pick a different playground folder / data folder
+#   (defaults <dataset>_perlmutter_bloom / sparse_hnsw_bloom).
 #
 # 1. Bloom series: every gate-on, every-row point of the sweep (all thresholds,
-#    patience, ...; gate-off rows are left out) folded into
+#    patience, ...; gate-off and short-row-bypass rows are left out) folded into
 #    one best-QPS-per-recall front named SparseHNSW+Bloom,
 #    built in its own data folder ($DATA_ROOT/sparse_hnsw_bloom).
 # 2. Merge with the existing baselines and the current SparseHNSW (no gate)
@@ -15,12 +17,12 @@
 
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
-SWEEP=${1:-$HERE/../results/bloom_filter/full_sweep_slots_h1}
+SWEEP=${1:?usage: make_bloom_playground_figures.sh <sweep_dir> (e.g. ../results/bloom_filter/threshold_sweeps/perlmutter_msmarco_full)}
 PG=/global/homes/d/dhaura/repos/SpKNN/spknn-playground
 DATASET=${DATASET:-msmarco_full}
-OUT=$PG/results/${DATASET}_perlmutter_bloom
+OUT=$PG/results/${OUT_NAME:-${DATASET}_perlmutter_bloom}
 DATA_ROOT=$SCRATCH/datasets/SpKNN/$DATASET
-BLOOM_DATA=$DATA_ROOT/sparse_hnsw_bloom
+BLOOM_DATA=$DATA_ROOT/${BLOOM_DATA_NAME:-sparse_hnsw_bloom}
 
 module load python/3.11-24.1.0 2>/dev/null || true
 source "$PG/common/bench_env_perlmutter.sh" >/dev/null
@@ -32,7 +34,7 @@ for f in "$SWEEP"/bloom_"$DATASET"_*.csv; do
     python3 - "$f" "$BLOOM_DATA/sparse_hnsw_results_$(basename "$f")" <<'PY'
 import csv, sys
 rows = list(csv.DictReader(open(sys.argv[1])))
-keep = [r for r in rows if " T=" in r["Params"]]
+keep = [r for r in rows if " T=" in r["Params"] and "bypass=" not in r["Params"]]
 with open(sys.argv[2], "w", newline="") as f:
     w = csv.DictWriter(f, fieldnames=rows[0].keys()); w.writeheader(); w.writerows(keep)
 PY

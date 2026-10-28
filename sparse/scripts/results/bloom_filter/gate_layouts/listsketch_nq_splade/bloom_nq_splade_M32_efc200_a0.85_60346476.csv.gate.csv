@@ -1,0 +1,217 @@
+Model,Params,JobID,checked,gate_rej,ideal_rej,false_pass,false_rej,useful,useful_gate_rej,useful_ideal_rej
+SparseHNSW_b2_p0_T10,"M=32 efC=200 ef=20 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,3622479,50038,696514,646476,0,417879,1630,22993
+SparseHNSW_b2_p0_T10,"M=32 efC=200 ef=30 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,3622901,50025,696696,646671,0,416616,1600,22750
+SparseHNSW_b2_p0_T10,"M=32 efC=200 ef=40 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,4174083,58661,825312,766651,0,384342,906,14740
+SparseHNSW_b2_p0_T10,"M=32 efC=200 ef=50 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,5053563,73540,1033118,959578,0,471393,1227,20829
+SparseHNSW_b2_p0_T10,"M=32 efC=200 ef=75 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,7171505,111952,1560500,1448548,0,645448,1802,32817
+SparseHNSW_b2_p0_T10,"M=32 efC=200 ef=100 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,9199312,151582,2095110,1943528,0,791468,2143,41857
+SparseHNSW_b2_p0_T10,"M=32 efC=200 ef=150 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,13221188,236934,3224731,2987797,0,1097301,3127,66385
+SparseHNSW_b2_p0_T10,"M=32 efC=200 ef=200 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,17148254,328049,4393375,4065326,0,1393079,4320,91614
+SparseHNSW_b2_p0_T10,"M=32 efC=200 ef=300 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,24881777,521389,6838185,6316796,0,1988936,6902,150183
+SparseHNSW_b2_p0_T10,"M=32 efC=200 ef=400 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,32409666,722767,9343568,8620801,0,2588109,9629,216257
+SparseHNSW_b2_p0_T10,"M=32 efC=200 ef=600 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,47005436,1149071,14517060,13367989,0,3805553,16236,368636
+SparseHNSW_b2_p0_T10,"M=32 efC=200 ef=800 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,61141078,1597057,19835378,18238321,0,5035635,24015,537225
+SparseHNSW_b3_p0_T10,"M=32 efC=200 ef=20 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,3622901,50025,696696,646671,0,416616,1600,22750
+SparseHNSW_b3_p0_T10,"M=32 efC=200 ef=30 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,3622901,50025,696696,646671,0,416616,1600,22750
+SparseHNSW_b3_p0_T10,"M=32 efC=200 ef=40 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,4174083,58661,825312,766651,0,384342,906,14740
+SparseHNSW_b3_p0_T10,"M=32 efC=200 ef=50 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,5053563,73540,1033118,959578,0,471393,1227,20829
+SparseHNSW_b3_p0_T10,"M=32 efC=200 ef=75 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,7171505,111952,1560500,1448548,0,645448,1802,32817
+SparseHNSW_b3_p0_T10,"M=32 efC=200 ef=100 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,9199312,151582,2095110,1943528,0,791468,2143,41857
+SparseHNSW_b3_p0_T10,"M=32 efC=200 ef=150 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,13221188,236934,3224731,2987797,0,1097301,3127,66385
+SparseHNSW_b3_p0_T10,"M=32 efC=200 ef=200 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,17148254,328049,4393375,4065326,0,1393079,4320,91614
+SparseHNSW_b3_p0_T10,"M=32 efC=200 ef=300 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,24881777,521389,6838185,6316796,0,1988936,6902,150183
+SparseHNSW_b3_p0_T10,"M=32 efC=200 ef=400 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,32409666,722767,9343568,8620801,0,2588109,9629,216257
+SparseHNSW_b3_p0_T10,"M=32 efC=200 ef=600 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,47005436,1149071,14517060,13367989,0,3805553,16236,368636
+SparseHNSW_b3_p0_T10,"M=32 efC=200 ef=800 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,61141078,1597057,19835378,18238321,0,5035635,24015,537225
+SparseHNSW_b4_p0_T10,"M=32 efC=200 ef=20 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,4174083,58661,825312,766651,0,384342,906,14740
+SparseHNSW_b4_p0_T10,"M=32 efC=200 ef=30 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,4174083,58661,825312,766651,0,384342,906,14740
+SparseHNSW_b4_p0_T10,"M=32 efC=200 ef=40 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,4174083,58661,825312,766651,0,384342,906,14740
+SparseHNSW_b4_p0_T10,"M=32 efC=200 ef=50 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,5053563,73540,1033118,959578,0,471393,1227,20829
+SparseHNSW_b4_p0_T10,"M=32 efC=200 ef=75 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,7171505,111952,1560500,1448548,0,645448,1802,32817
+SparseHNSW_b4_p0_T10,"M=32 efC=200 ef=100 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,9199312,151582,2095110,1943528,0,791468,2143,41857
+SparseHNSW_b4_p0_T10,"M=32 efC=200 ef=150 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,13221188,236934,3224731,2987797,0,1097301,3127,66385
+SparseHNSW_b4_p0_T10,"M=32 efC=200 ef=200 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,17148254,328049,4393375,4065326,0,1393079,4320,91614
+SparseHNSW_b4_p0_T10,"M=32 efC=200 ef=300 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,24881777,521389,6838185,6316796,0,1988936,6902,150183
+SparseHNSW_b4_p0_T10,"M=32 efC=200 ef=400 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,32409666,722767,9343568,8620801,0,2588109,9629,216257
+SparseHNSW_b4_p0_T10,"M=32 efC=200 ef=600 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,47005436,1149071,14517060,13367989,0,3805553,16236,368636
+SparseHNSW_b4_p0_T10,"M=32 efC=200 ef=800 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 bloom_h=1 T=10",60346476,61141078,1597057,19835378,18238321,0,5035635,24015,537225
+SparseHNSW_b2_p256_T10,"M=32 efC=200 ef=20 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,3622479,50038,696514,646476,0,417879,1630,22993
+SparseHNSW_b2_p256_T10,"M=32 efC=200 ef=30 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,3622901,50025,696696,646671,0,416616,1600,22750
+SparseHNSW_b2_p256_T10,"M=32 efC=200 ef=40 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,4174083,58661,825312,766651,0,384342,906,14740
+SparseHNSW_b2_p256_T10,"M=32 efC=200 ef=50 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,5053563,73540,1033118,959578,0,471393,1227,20829
+SparseHNSW_b2_p256_T10,"M=32 efC=200 ef=75 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,7171505,111952,1560500,1448548,0,645448,1802,32817
+SparseHNSW_b2_p256_T10,"M=32 efC=200 ef=100 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,9199312,151582,2095110,1943528,0,791468,2143,41857
+SparseHNSW_b2_p256_T10,"M=32 efC=200 ef=150 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,13221188,236934,3224731,2987797,0,1097301,3127,66385
+SparseHNSW_b2_p256_T10,"M=32 efC=200 ef=200 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,17148254,328049,4393375,4065326,0,1393079,4320,91614
+SparseHNSW_b2_p256_T10,"M=32 efC=200 ef=300 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,23857926,495803,6516849,6021046,0,1983289,6887,149798
+SparseHNSW_b2_p256_T10,"M=32 efC=200 ef=400 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,25438765,545272,7127433,6582161,0,2533010,9469,212059
+SparseHNSW_b2_p256_T10,"M=32 efC=200 ef=600 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,26039192,578724,7496634,6917910,0,3538836,15027,342807
+SparseHNSW_b2_p256_T10,"M=32 efC=200 ef=800 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,25610329,577808,7459598,6881790,0,4425381,20675,471338
+SparseHNSW_b3_p256_T10,"M=32 efC=200 ef=20 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,3622901,50025,696696,646671,0,416616,1600,22750
+SparseHNSW_b3_p256_T10,"M=32 efC=200 ef=30 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,3622901,50025,696696,646671,0,416616,1600,22750
+SparseHNSW_b3_p256_T10,"M=32 efC=200 ef=40 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,4174083,58661,825312,766651,0,384342,906,14740
+SparseHNSW_b3_p256_T10,"M=32 efC=200 ef=50 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,5053563,73540,1033118,959578,0,471393,1227,20829
+SparseHNSW_b3_p256_T10,"M=32 efC=200 ef=75 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,7171505,111952,1560500,1448548,0,645448,1802,32817
+SparseHNSW_b3_p256_T10,"M=32 efC=200 ef=100 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,9199312,151582,2095110,1943528,0,791468,2143,41857
+SparseHNSW_b3_p256_T10,"M=32 efC=200 ef=150 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,13221188,236934,3224731,2987797,0,1097301,3127,66385
+SparseHNSW_b3_p256_T10,"M=32 efC=200 ef=200 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,17148254,328049,4393375,4065326,0,1393079,4320,91614
+SparseHNSW_b3_p256_T10,"M=32 efC=200 ef=300 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,24351162,508063,6669792,6161729,0,1986096,6900,150034
+SparseHNSW_b3_p256_T10,"M=32 efC=200 ef=400 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,26958938,585247,7622354,7037107,0,2547413,9531,213382
+SparseHNSW_b3_p256_T10,"M=32 efC=200 ef=600 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,28555629,649870,8371525,7721655,0,3584119,15287,348032
+SparseHNSW_b3_p256_T10,"M=32 efC=200 ef=800 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,28498591,663031,8495282,7832251,0,4506976,21231,481677
+SparseHNSW_b4_p256_T10,"M=32 efC=200 ef=20 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,4174083,58661,825312,766651,0,384342,906,14740
+SparseHNSW_b4_p256_T10,"M=32 efC=200 ef=30 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,4174083,58661,825312,766651,0,384342,906,14740
+SparseHNSW_b4_p256_T10,"M=32 efC=200 ef=40 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,4174083,58661,825312,766651,0,384342,906,14740
+SparseHNSW_b4_p256_T10,"M=32 efC=200 ef=50 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,5053563,73540,1033118,959578,0,471393,1227,20829
+SparseHNSW_b4_p256_T10,"M=32 efC=200 ef=75 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,7171505,111952,1560500,1448548,0,645448,1802,32817
+SparseHNSW_b4_p256_T10,"M=32 efC=200 ef=100 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,9199312,151582,2095110,1943528,0,791468,2143,41857
+SparseHNSW_b4_p256_T10,"M=32 efC=200 ef=150 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,13221188,236934,3224731,2987797,0,1097301,3127,66385
+SparseHNSW_b4_p256_T10,"M=32 efC=200 ef=200 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,17148254,328049,4393375,4065326,0,1393079,4320,91614
+SparseHNSW_b4_p256_T10,"M=32 efC=200 ef=300 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,24635292,515555,6761876,6246321,0,1987553,6902,150125
+SparseHNSW_b4_p256_T10,"M=32 efC=200 ef=400 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,28238370,617627,8030141,7412514,0,2559017,9557,214232
+SparseHNSW_b4_p256_T10,"M=32 efC=200 ef=600 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,30937628,715306,9183158,8467852,0,3624314,15483,351989
+SparseHNSW_b4_p256_T10,"M=32 efC=200 ef=800 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 bloom_h=1 T=10",60346476,31420565,749240,9540366,8791126,0,4581925,21675,490262
+SparseHNSW_b2_p0_T10_list8,"M=32 efC=200 ef=20 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,3567973,1816198,693210,192662,1315650,456546,102702,24497
+SparseHNSW_b2_p0_T10_list8,"M=32 efC=200 ef=30 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,3568284,1816619,693383,192594,1315830,455186,102298,24248
+SparseHNSW_b2_p0_T10_list8,"M=32 efC=200 ef=40 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,4117513,2152795,824709,220678,1548764,416708,79151,15962
+SparseHNSW_b2_p0_T10_list8,"M=32 efC=200 ef=50 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,4982122,2659022,1031552,270743,1898213,518747,109486,23108
+SparseHNSW_b2_p0_T10_list8,"M=32 efC=200 ef=75 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,7057671,3918059,1559692,393385,2751752,729354,175065,38273
+SparseHNSW_b2_p0_T10_list8,"M=32 efC=200 ef=100 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,9044244,5161668,2095665,515083,3581086,908378,227531,50670
+SparseHNSW_b2_p0_T10_list8,"M=32 efC=200 ef=150 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,12957002,7684555,3228304,764321,5220572,1294260,358942,83534
+SparseHNSW_b2_p0_T10_list8,"M=32 efC=200 ef=200 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,16781708,10227885,4408763,1014641,6833763,1678841,500277,118825
+SparseHNSW_b2_p0_T10_list8,"M=32 efC=200 ef=300 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,24268124,15353181,6866876,1515715,10002020,2482530,824056,203532
+SparseHNSW_b2_p0_T10_list8,"M=32 efC=200 ef=400 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,31537091,20467521,9409444,2015849,13073926,3317436,1190160,303098
+SparseHNSW_b2_p0_T10_list8,"M=32 efC=200 ef=600 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,45609872,30637778,14667367,2998600,18969011,5094406,2042179,537434
+SparseHNSW_b2_p0_T10_list8,"M=32 efC=200 ef=800 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,59188878,40698812,20089255,3957492,24567049,6972677,3011254,806223
+SparseHNSW_b3_p0_T10_list8,"M=32 efC=200 ef=20 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,3568284,1816619,693383,192594,1315830,455186,102298,24248
+SparseHNSW_b3_p0_T10_list8,"M=32 efC=200 ef=30 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,3568284,1816619,693383,192594,1315830,455186,102298,24248
+SparseHNSW_b3_p0_T10_list8,"M=32 efC=200 ef=40 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,4117513,2152795,824709,220678,1548764,416708,79151,15962
+SparseHNSW_b3_p0_T10_list8,"M=32 efC=200 ef=50 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,4982122,2659022,1031552,270743,1898213,518747,109486,23108
+SparseHNSW_b3_p0_T10_list8,"M=32 efC=200 ef=75 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,7057671,3918059,1559692,393385,2751752,729354,175065,38273
+SparseHNSW_b3_p0_T10_list8,"M=32 efC=200 ef=100 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,9044244,5161668,2095665,515083,3581086,908378,227531,50670
+SparseHNSW_b3_p0_T10_list8,"M=32 efC=200 ef=150 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,12957002,7684555,3228304,764321,5220572,1294260,358942,83534
+SparseHNSW_b3_p0_T10_list8,"M=32 efC=200 ef=200 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,16781708,10227885,4408763,1014641,6833763,1678841,500277,118825
+SparseHNSW_b3_p0_T10_list8,"M=32 efC=200 ef=300 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,24268124,15353181,6866876,1515715,10002020,2482530,824056,203532
+SparseHNSW_b3_p0_T10_list8,"M=32 efC=200 ef=400 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,31537091,20467521,9409444,2015849,13073926,3317436,1190160,303098
+SparseHNSW_b3_p0_T10_list8,"M=32 efC=200 ef=600 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,45609872,30637778,14667367,2998600,18969011,5094406,2042179,537434
+SparseHNSW_b3_p0_T10_list8,"M=32 efC=200 ef=800 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,59188878,40698812,20089255,3957492,24567049,6972677,3011254,806223
+SparseHNSW_b4_p0_T10_list8,"M=32 efC=200 ef=20 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,4117513,2152795,824709,220678,1548764,416708,79151,15962
+SparseHNSW_b4_p0_T10_list8,"M=32 efC=200 ef=30 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,4117513,2152795,824709,220678,1548764,416708,79151,15962
+SparseHNSW_b4_p0_T10_list8,"M=32 efC=200 ef=40 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,4117513,2152795,824709,220678,1548764,416708,79151,15962
+SparseHNSW_b4_p0_T10_list8,"M=32 efC=200 ef=50 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,4982122,2659022,1031552,270743,1898213,518747,109486,23108
+SparseHNSW_b4_p0_T10_list8,"M=32 efC=200 ef=75 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,7057671,3918059,1559692,393385,2751752,729354,175065,38273
+SparseHNSW_b4_p0_T10_list8,"M=32 efC=200 ef=100 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,9044244,5161668,2095665,515083,3581086,908378,227531,50670
+SparseHNSW_b4_p0_T10_list8,"M=32 efC=200 ef=150 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,12957002,7684555,3228304,764321,5220572,1294260,358942,83534
+SparseHNSW_b4_p0_T10_list8,"M=32 efC=200 ef=200 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,16781708,10227885,4408763,1014641,6833763,1678841,500277,118825
+SparseHNSW_b4_p0_T10_list8,"M=32 efC=200 ef=300 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,24268124,15353181,6866876,1515715,10002020,2482530,824056,203532
+SparseHNSW_b4_p0_T10_list8,"M=32 efC=200 ef=400 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,31537091,20467521,9409444,2015849,13073926,3317436,1190160,303098
+SparseHNSW_b4_p0_T10_list8,"M=32 efC=200 ef=600 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,45609872,30637778,14667367,2998600,18969011,5094406,2042179,537434
+SparseHNSW_b4_p0_T10_list8,"M=32 efC=200 ef=800 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list8 bloom_h=1 T=10",60346476,59188878,40698812,20089255,3957492,24567049,6972677,3011254,806223
+SparseHNSW_b2_p256_T10_list8,"M=32 efC=200 ef=20 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,3567973,1816198,693210,192662,1315650,456546,102702,24497
+SparseHNSW_b2_p256_T10_list8,"M=32 efC=200 ef=30 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,3568284,1816619,693383,192594,1315830,455186,102298,24248
+SparseHNSW_b2_p256_T10_list8,"M=32 efC=200 ef=40 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,4117513,2152795,824709,220678,1548764,416708,79151,15962
+SparseHNSW_b2_p256_T10_list8,"M=32 efC=200 ef=50 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,4982122,2659022,1031552,270743,1898213,518747,109486,23108
+SparseHNSW_b2_p256_T10_list8,"M=32 efC=200 ef=75 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,7057671,3918059,1559692,393385,2751752,729354,175065,38273
+SparseHNSW_b2_p256_T10_list8,"M=32 efC=200 ef=100 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,9044244,5161668,2095665,515083,3581086,908378,227531,50670
+SparseHNSW_b2_p256_T10_list8,"M=32 efC=200 ef=150 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,12957002,7684555,3228304,764321,5220572,1294260,358942,83534
+SparseHNSW_b2_p256_T10_list8,"M=32 efC=200 ef=200 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,16781708,10227885,4408763,1014641,6833763,1678841,500277,118825
+SparseHNSW_b2_p256_T10_list8,"M=32 efC=200 ef=300 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,23259182,14669481,6537454,1447930,9579957,2474211,821844,203032
+SparseHNSW_b2_p256_T10_list8,"M=32 efC=200 ef=400 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,24732473,15800205,7135157,1557112,10222160,3235634,1165715,297328
+SparseHNSW_b2_p256_T10_list8,"M=32 efC=200 ef=600 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,25266397,16386008,7495846,1607059,10497221,4678367,1902099,501705
+SparseHNSW_b2_p256_T10_list8,"M=32 efC=200 ef=800 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,24824631,16239446,7459665,1582476,10362257,5976512,2642250,711263
+SparseHNSW_b3_p256_T10_list8,"M=32 efC=200 ef=20 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,3568284,1816619,693383,192594,1315830,455186,102298,24248
+SparseHNSW_b3_p256_T10_list8,"M=32 efC=200 ef=30 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,3568284,1816619,693383,192594,1315830,455186,102298,24248
+SparseHNSW_b3_p256_T10_list8,"M=32 efC=200 ef=40 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,4117513,2152795,824709,220678,1548764,416708,79151,15962
+SparseHNSW_b3_p256_T10_list8,"M=32 efC=200 ef=50 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,4982122,2659022,1031552,270743,1898213,518747,109486,23108
+SparseHNSW_b3_p256_T10_list8,"M=32 efC=200 ef=75 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,7057671,3918059,1559692,393385,2751752,729354,175065,38273
+SparseHNSW_b3_p256_T10_list8,"M=32 efC=200 ef=100 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,9044244,5161668,2095665,515083,3581086,908378,227531,50670
+SparseHNSW_b3_p256_T10_list8,"M=32 efC=200 ef=150 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,12957002,7684555,3228304,764321,5220572,1294260,358942,83534
+SparseHNSW_b3_p256_T10_list8,"M=32 efC=200 ef=200 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,16781708,10227885,4408763,1014641,6833763,1678841,500277,118825
+SparseHNSW_b3_p256_T10_list8,"M=32 efC=200 ef=300 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,23742085,14997216,6693653,1479700,9783263,2478388,822954,203300
+SparseHNSW_b3_p256_T10_list8,"M=32 efC=200 ef=400 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,26187537,16800892,7644279,1659510,10816123,3256743,1172016,299002
+SparseHNSW_b3_p256_T10_list8,"M=32 efC=200 ef=600 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,27568161,18006303,8370261,1775856,11411898,4745157,1923535,508649
+SparseHNSW_b3_p256_T10_list8,"M=32 efC=200 ef=800 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,27444795,18101296,8486069,1777151,11392378,6100496,2686076,725869
+SparseHNSW_b4_p256_T10_list8,"M=32 efC=200 ef=20 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,4117513,2152795,824709,220678,1548764,416708,79151,15962
+SparseHNSW_b4_p256_T10_list8,"M=32 efC=200 ef=30 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,4117513,2152795,824709,220678,1548764,416708,79151,15962
+SparseHNSW_b4_p256_T10_list8,"M=32 efC=200 ef=40 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,4117513,2152795,824709,220678,1548764,416708,79151,15962
+SparseHNSW_b4_p256_T10_list8,"M=32 efC=200 ef=50 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,4982122,2659022,1031552,270743,1898213,518747,109486,23108
+SparseHNSW_b4_p256_T10_list8,"M=32 efC=200 ef=75 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,7057671,3918059,1559692,393385,2751752,729354,175065,38273
+SparseHNSW_b4_p256_T10_list8,"M=32 efC=200 ef=100 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,9044244,5161668,2095665,515083,3581086,908378,227531,50670
+SparseHNSW_b4_p256_T10_list8,"M=32 efC=200 ef=150 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,12957002,7684555,3228304,764321,5220572,1294260,358942,83534
+SparseHNSW_b4_p256_T10_list8,"M=32 efC=200 ef=200 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,16781708,10227885,4408763,1014641,6833763,1678841,500277,118825
+SparseHNSW_b4_p256_T10_list8,"M=32 efC=200 ef=300 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,24023295,15187886,6784563,1498462,9901785,2480784,823595,203443
+SparseHNSW_b4_p256_T10_list8,"M=32 efC=200 ef=400 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,27439662,17664892,8056196,1741597,11350293,3274381,1177511,300205
+SparseHNSW_b4_p256_T10_list8,"M=32 efC=200 ef=600 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,29819322,19585828,9155195,1927472,12358105,4806805,1945050,513848
+SparseHNSW_b4_p256_T10_list8,"M=32 efC=200 ef=800 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list8 bloom_h=1 T=10",60346476,30061095,19967156,9465883,1960818,12462091,6216495,2728863,737966
+SparseHNSW_b2_p0_T10_list16,"M=32 efC=200 ef=20 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,3613199,1060281,697373,306730,669638,425103,32017,23072
+SparseHNSW_b2_p0_T10_list16,"M=32 efC=200 ef=30 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,3613519,1060606,697536,306693,669763,423831,31887,22836
+SparseHNSW_b2_p0_T10_list16,"M=32 efC=200 ef=40 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,4161674,1263507,826931,355634,792210,389937,20751,14864
+SparseHNSW_b2_p0_T10_list16,"M=32 efC=200 ef=50 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,5033959,1574313,1033063,437943,979193,479564,29856,21161
+SparseHNSW_b2_p0_T10_list16,"M=32 efC=200 ef=75 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,7146609,2371199,1560021,643494,1454672,661661,49742,33965
+SparseHNSW_b2_p0_T10_list16,"M=32 efC=200 ef=100 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,9164868,3162008,2091991,846809,1916826,814531,63349,43973
+SparseHNSW_b2_p0_T10_list16,"M=32 efC=200 ef=150 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,13151328,4808016,3218784,1265817,2855049,1137200,100495,70486
+SparseHNSW_b2_p0_T10_list16,"M=32 efC=200 ef=200 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,17055688,6496699,4389301,1688150,3795548,1453096,140994,98189
+SparseHNSW_b2_p0_T10_list16,"M=32 efC=200 ef=300 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,24690976,9959028,6826320,2543456,5676164,2095967,235027,163776
+SparseHNSW_b2_p0_T10_list16,"M=32 efC=200 ef=400 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,32133216,13470930,9325311,3398761,7544380,2751810,343357,238928
+SparseHNSW_b2_p0_T10_list16,"M=32 efC=200 ef=600 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,46529450,20606923,14493856,5100729,11213796,4107735,603173,413548
+SparseHNSW_b2_p0_T10_list16,"M=32 efC=200 ef=800 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,60448000,27803213,19806957,6785348,14781604,5502984,903329,609871
+SparseHNSW_b3_p0_T10_list16,"M=32 efC=200 ef=20 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,3613519,1060606,697536,306693,669763,423831,31887,22836
+SparseHNSW_b3_p0_T10_list16,"M=32 efC=200 ef=30 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,3613519,1060606,697536,306693,669763,423831,31887,22836
+SparseHNSW_b3_p0_T10_list16,"M=32 efC=200 ef=40 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,4161674,1263507,826931,355634,792210,389937,20751,14864
+SparseHNSW_b3_p0_T10_list16,"M=32 efC=200 ef=50 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,5033959,1574313,1033063,437943,979193,479564,29856,21161
+SparseHNSW_b3_p0_T10_list16,"M=32 efC=200 ef=75 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,7146609,2371199,1560021,643494,1454672,661661,49742,33965
+SparseHNSW_b3_p0_T10_list16,"M=32 efC=200 ef=100 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,9164868,3162008,2091991,846809,1916826,814531,63349,43973
+SparseHNSW_b3_p0_T10_list16,"M=32 efC=200 ef=150 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,13151328,4808016,3218784,1265817,2855049,1137200,100495,70486
+SparseHNSW_b3_p0_T10_list16,"M=32 efC=200 ef=200 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,17055688,6496699,4389301,1688150,3795548,1453096,140994,98189
+SparseHNSW_b3_p0_T10_list16,"M=32 efC=200 ef=300 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,24690976,9959028,6826320,2543456,5676164,2095967,235027,163776
+SparseHNSW_b3_p0_T10_list16,"M=32 efC=200 ef=400 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,32133216,13470930,9325311,3398761,7544380,2751810,343357,238928
+SparseHNSW_b3_p0_T10_list16,"M=32 efC=200 ef=600 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,46529450,20606923,14493856,5100729,11213796,4107735,603173,413548
+SparseHNSW_b3_p0_T10_list16,"M=32 efC=200 ef=800 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,60448000,27803213,19806957,6785348,14781604,5502984,903329,609871
+SparseHNSW_b4_p0_T10_list16,"M=32 efC=200 ef=20 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,4161674,1263507,826931,355634,792210,389937,20751,14864
+SparseHNSW_b4_p0_T10_list16,"M=32 efC=200 ef=30 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,4161674,1263507,826931,355634,792210,389937,20751,14864
+SparseHNSW_b4_p0_T10_list16,"M=32 efC=200 ef=40 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,4161674,1263507,826931,355634,792210,389937,20751,14864
+SparseHNSW_b4_p0_T10_list16,"M=32 efC=200 ef=50 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,5033959,1574313,1033063,437943,979193,479564,29856,21161
+SparseHNSW_b4_p0_T10_list16,"M=32 efC=200 ef=75 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,7146609,2371199,1560021,643494,1454672,661661,49742,33965
+SparseHNSW_b4_p0_T10_list16,"M=32 efC=200 ef=100 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,9164868,3162008,2091991,846809,1916826,814531,63349,43973
+SparseHNSW_b4_p0_T10_list16,"M=32 efC=200 ef=150 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,13151328,4808016,3218784,1265817,2855049,1137200,100495,70486
+SparseHNSW_b4_p0_T10_list16,"M=32 efC=200 ef=200 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,17055688,6496699,4389301,1688150,3795548,1453096,140994,98189
+SparseHNSW_b4_p0_T10_list16,"M=32 efC=200 ef=300 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,24690976,9959028,6826320,2543456,5676164,2095967,235027,163776
+SparseHNSW_b4_p0_T10_list16,"M=32 efC=200 ef=400 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,32133216,13470930,9325311,3398761,7544380,2751810,343357,238928
+SparseHNSW_b4_p0_T10_list16,"M=32 efC=200 ef=600 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,46529450,20606923,14493856,5100729,11213796,4107735,603173,413548
+SparseHNSW_b4_p0_T10_list16,"M=32 efC=200 ef=800 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=list16 bloom_h=1 T=10",60346476,60448000,27803213,19806957,6785348,14781604,5502984,903329,609871
+SparseHNSW_b2_p256_T10_list16,"M=32 efC=200 ef=20 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,3613199,1060281,697373,306730,669638,425103,32017,23072
+SparseHNSW_b2_p256_T10_list16,"M=32 efC=200 ef=30 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,3613519,1060606,697536,306693,669763,423831,31887,22836
+SparseHNSW_b2_p256_T10_list16,"M=32 efC=200 ef=40 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,4161674,1263507,826931,355634,792210,389937,20751,14864
+SparseHNSW_b2_p256_T10_list16,"M=32 efC=200 ef=50 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,5033959,1574313,1033063,437943,979193,479564,29856,21161
+SparseHNSW_b2_p256_T10_list16,"M=32 efC=200 ef=75 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,7146609,2371199,1560021,643494,1454672,661661,49742,33965
+SparseHNSW_b2_p256_T10_list16,"M=32 efC=200 ef=100 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,9164868,3162008,2091991,846809,1916826,814531,63349,43973
+SparseHNSW_b2_p256_T10_list16,"M=32 efC=200 ef=150 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,13151328,4808016,3218784,1265817,2855049,1137200,100495,70486
+SparseHNSW_b2_p256_T10_list16,"M=32 efC=200 ef=200 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,17055688,6496699,4389301,1688150,3795548,1453096,140994,98189
+SparseHNSW_b2_p256_T10_list16,"M=32 efC=200 ef=300 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,23679016,9502783,6506836,2431186,5427133,2089911,234707,163327
+SparseHNSW_b2_p256_T10_list16,"M=32 efC=200 ef=400 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,25216155,10304212,7108720,2628664,5824156,2692463,339470,234468
+SparseHNSW_b2_p256_T10_list16,"M=32 efC=200 ef=600 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,25763277,10737757,7466389,2729164,6000532,3816375,579343,386266
+SparseHNSW_b2_p256_T10_list16,"M=32 efC=200 ef=800 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,25330192,10667601,7429315,2701545,5939831,4826454,838793,539383
+SparseHNSW_b3_p256_T10_list16,"M=32 efC=200 ef=20 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,3613519,1060606,697536,306693,669763,423831,31887,22836
+SparseHNSW_b3_p256_T10_list16,"M=32 efC=200 ef=30 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,3613519,1060606,697536,306693,669763,423831,31887,22836
+SparseHNSW_b3_p256_T10_list16,"M=32 efC=200 ef=40 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,4161674,1263507,826931,355634,792210,389937,20751,14864
+SparseHNSW_b3_p256_T10_list16,"M=32 efC=200 ef=50 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,5033959,1574313,1033063,437943,979193,479564,29856,21161
+SparseHNSW_b3_p256_T10_list16,"M=32 efC=200 ef=75 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,7146609,2371199,1560021,643494,1454672,661661,49742,33965
+SparseHNSW_b3_p256_T10_list16,"M=32 efC=200 ef=100 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,9164868,3162008,2091991,846809,1916826,814531,63349,43973
+SparseHNSW_b3_p256_T10_list16,"M=32 efC=200 ef=150 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,13151328,4808016,3218784,1265817,2855049,1137200,100495,70486
+SparseHNSW_b3_p256_T10_list16,"M=32 efC=200 ef=200 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,17055688,6496699,4389301,1688150,3795548,1453096,140994,98189
+SparseHNSW_b3_p256_T10_list16,"M=32 efC=200 ef=300 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,24165993,9723632,6659690,2484213,5548155,2092927,234863,163594
+SparseHNSW_b3_p256_T10_list16,"M=32 efC=200 ef=400 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,26742268,11010154,7610976,2799566,6198744,2708382,340569,235970
+SparseHNSW_b3_p256_T10_list16,"M=32 efC=200 ef=600 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,28292148,11961190,8356907,3024146,6628429,3866746,583610,391931
+SparseHNSW_b3_p256_T10_list16,"M=32 efC=200 ef=800 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,28229386,12103309,8492784,3046423,6656948,4918387,847752,550803
+SparseHNSW_b4_p256_T10_list16,"M=32 efC=200 ef=20 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,4161674,1263507,826931,355634,792210,389937,20751,14864
+SparseHNSW_b4_p256_T10_list16,"M=32 efC=200 ef=30 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,4161674,1263507,826931,355634,792210,389937,20751,14864
+SparseHNSW_b4_p256_T10_list16,"M=32 efC=200 ef=40 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,4161674,1263507,826931,355634,792210,389937,20751,14864
+SparseHNSW_b4_p256_T10_list16,"M=32 efC=200 ef=50 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,5033959,1574313,1033063,437943,979193,479564,29856,21161
+SparseHNSW_b4_p256_T10_list16,"M=32 efC=200 ef=75 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,7146609,2371199,1560021,643494,1454672,661661,49742,33965
+SparseHNSW_b4_p256_T10_list16,"M=32 efC=200 ef=100 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,9164868,3162008,2091991,846809,1916826,814531,63349,43973
+SparseHNSW_b4_p256_T10_list16,"M=32 efC=200 ef=150 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,13151328,4808016,3218784,1265817,2855049,1137200,100495,70486
+SparseHNSW_b4_p256_T10_list16,"M=32 efC=200 ef=200 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,17055688,6496699,4389301,1688150,3795548,1453096,140994,98189
+SparseHNSW_b4_p256_T10_list16,"M=32 efC=200 ef=300 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,24448848,9850495,6751180,2516620,5615935,2094487,234940,163680
+SparseHNSW_b4_p256_T10_list16,"M=32 efC=200 ef=400 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,27996932,11582778,8015739,2941106,6508145,2720625,341383,236809
+SparseHNSW_b4_p256_T10_list16,"M=32 efC=200 ef=600 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,30590466,13044068,9152492,3296270,7187846,3909686,587119,395973
+SparseHNSW_b4_p256_T10_list16,"M=32 efC=200 ef=800 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 pat=256 slots=448 layout=list16 bloom_h=1 T=10",60346476,30994135,13435255,9477372,3375792,7333675,4999167,855421,559535

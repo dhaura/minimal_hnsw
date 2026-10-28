@@ -93,7 +93,7 @@ esac
 [ -n "${BETAS_OVERRIDE:-}" ] && BETAS=${BETAS_OVERRIDE//-/,}
 [ -n "${PATIENCE_OVERRIDE:-}" ] && PATIENCE_LIST=${PATIENCE_OVERRIDE//-/,}
 
-STEP=${STEP:-grace_bloom_sweep_$SPKNN_DATASET}
+STEP=${STEP:-threshold_sweeps/grace_$SPKNN_DATASET}
 OUT="$SPKNN_HNSW_REPO/sparse/scripts/results/bloom_filter/${STEP}"
 mkdir -p "$OUT"
 echo "### dataset : $SPKNN_DATASET / $QSET   threads=$BENCH_THREADS   launch: $BENCH_LAUNCH"

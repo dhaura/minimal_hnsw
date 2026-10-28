@@ -389,7 +389,7 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
     const uint8_t* sbase = qslots_.base;
     const size_t slot_size = qslots_.slot_size;
     const uint32_t pf_end = use_slots ? static_cast<uint32_t>(slot_size) : 256;
-    const bool use_list = use_bitmap && list_gate_;  // top terms beside each neighbor id.
+    const bool use_list = layer == 0 && !lock_links && scratch.dense_query && list_gate_;  // top terms beside each neighbor id.
     constexpr size_t lwords = kListTerms / 4;  // u64 words (4 terms each) per neighbor.
     const size_t lblock = (size_neighbor_list_level0_ - 1) * lwords;  // u64 words per node.
 
@@ -446,10 +446,10 @@ std::priority_queue<std::pair<float, uint32_t>> SPARSE_HNSW::searchLayer(uint32_
         scratch.filtered_neighbors.clear();
         // Decided once per expansion: the gate starts with the first expansion that
         // begins with a full top_candidates.
-        bool gate = use_bitmap && top_candidates.size() >= static_cast<size_t>(ef);
+        const bool full = top_candidates.size() >= static_cast<size_t>(ef);
         // List sketch: checked in the scan below, from the block read with the list.
-        const bool lgate = gate && use_list;
-        gate = gate && !use_list;
+        const bool lgate = use_list && full;
+        const bool gate = use_bitmap && full && !use_list;
         const uint64_t* lsk = use_list ? list_sketch_base_ + static_cast<size_t>(current_node) * lblock : nullptr;
 
         {

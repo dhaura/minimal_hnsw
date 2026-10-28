@@ -185,7 +185,7 @@ namespace sparse_hnsw {
         // List sketch: each layer-0 neighbor slot also holds that neighbor's top
         // kListTerms terms by weight (exact u16 ids), read with the neighbor list, so
         // the check needs no filter fetch: pass iff one of them is a query term. While
-        // on, it replaces the Bloom check (the Bloom gate must be on). Build it after
+        // on, it replaces the Bloom check (no Bloom filter needed). Build it after
         // the graph; it does not follow later graph changes.
         static constexpr int kListTerms = 16;
         void buildListSketch();

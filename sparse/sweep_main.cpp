@@ -70,9 +70,9 @@ int main(int argc, char *argv[]) {
     const std::vector<double> bloom_thresholds = bloom_arg == "off"
         ? std::vector<double>{-1.0} : bench::parseList<double>(bloom_arg, [](const std::string& v) { return std::stod(v); });
     const int bloom_hashes = (argc > 22) ? std::stoi(argv[22]) : 1;
-    // Gate layouts (comma list), each runs every gate-on threshold: sep = Bloom filter
-    // rows in their own array; list16 = top-16-term sketch beside each layer-0
-    // neighbor id instead (rows labelled _list16; needs bloom_thresholds).
+    // Gate layouts (comma list): sep = Bloom filter rows in their own array, run at
+    // every threshold; list16 = top-16-term sketch beside each layer-0 neighbor id
+    // instead, run once with the Bloom check off (rows labelled _list16).
     const std::vector<std::string> gate_layouts = bench::parseList<std::string>(
         (argc > 23) ? argv[23] : "sep", [](const std::string& v) { return v; });
     for (const std::string& layout : gate_layouts) {
@@ -212,7 +212,7 @@ int main(int argc, char *argv[]) {
                   << " MiB) in " << bloom_sec << " s\n";
     }
     double list_sec = 0.0;  // added to the indexing time of the list16 rows only
-    if (bloom_arg != "off" && std::find(gate_layouts.begin(), gate_layouts.end(), "list16") != gate_layouts.end()) {
+    if (std::find(gate_layouts.begin(), gate_layouts.end(), "list16") != gate_layouts.end()) {
         const auto t0 = std::chrono::steady_clock::now();
         index.buildListSketch();
         list_sec = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
@@ -263,10 +263,11 @@ int main(int argc, char *argv[]) {
       const bool list = layout == "list16";
       index.setListSketchGate(list);
       const double row_index_sec = indexing_time_sec + (list ? list_sec : 0.0);
-    for (const double bloom_t : bloom_thresholds) {
-      if (list && bloom_t < 0.0) {
-          continue;  // gate off: same search as sep
+    for (const double t : bloom_thresholds) {
+      if (list && t != bloom_thresholds.front()) {
+          continue;  // list16 ignores T: one pass
       }
+      const double bloom_t = list ? -1.0 : t;
       index.setBloomThreshold(bloom_t);
     for (const StopCfg& stop : stop_list) {
       const int patience = stop.P;

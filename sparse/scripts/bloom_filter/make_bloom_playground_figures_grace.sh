@@ -26,7 +26,7 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 DATASET=${DATASET:-msmarco_full}
-SWEEP=${1:-$HERE/../results/bloom_filter/grace_bloom_sweep_$DATASET}
+SWEEP=${1:-$HERE/../results/bloom_filter/threshold_sweeps/grace_$DATASET}
 PG=/scratch/user/dhaura/repos/spknn-playground
 OUT=$PG/results/${DATASET}_grace_bloom
 DATA_ROOT=/scratch/user/dhaura/datasets/SpKNN/$DATASET
