@@ -45,7 +45,10 @@ namespace sparse_hnsw
     }
 
     // Quantize row r of m into p; returns the number of negative entries.
-    static int64_t writeRow(const CSRMatrix &m, int64_t r, uint8_t *p);
+    // top_k > 0: the row's top_k heaviest entries (ties in dimension order) come first,
+    // then the rest, each block in dimension order, so its first top_k IDs are its top-K
+    // terms. The distance kernel ignores the order.
+    static int64_t writeRow(const CSRMatrix &m, int64_t r, uint8_t *p, uint32_t top_k = 0);
   };
 
   inline void QuantCSR::build(const CSRMatrix &m)
@@ -93,7 +96,7 @@ namespace sparse_hnsw
     }
   }
 
-  inline int64_t QuantCSR::writeRow(const CSRMatrix &m, int64_t r, uint8_t *p)
+  inline int64_t QuantCSR::writeRow(const CSRMatrix &m, int64_t r, uint8_t *p, uint32_t top_k)
   {
     const int64_t s = m.indptr[r];
     const int64_t e = m.indptr[r + 1];
@@ -114,9 +117,20 @@ namespace sparse_hnsw
     std::memcpy(p + 2, &scale16, sizeof(scale16));
     uint16_t *idx = reinterpret_cast<uint16_t *>(p + kHeader);
     uint8_t *code = p + kHeader + 2 * static_cast<size_t>(n);
+    thread_local std::vector<uint32_t> ord;
+    ord.resize(n);
+    for (uint32_t i = 0; i < n; ++i)
+      ord[i] = i;
+    if (top_k > 0 && top_k < n)
+    {
+      std::stable_sort(ord.begin(), ord.end(), [&](uint32_t a, uint32_t b)
+                       { return static_cast<float>(m.indices_data[s + a].data) > static_cast<float>(m.indices_data[s + b].data); });
+      std::sort(ord.begin(), ord.begin() + top_k); // positions in the row = dimension order
+      std::sort(ord.begin() + top_k, ord.end());
+    }
     for (uint32_t i = 0; i < n; ++i)
     {
-      const IndiceDataPair &src = m.indices_data[s + i];
+      const IndiceDataPair &src = m.indices_data[s + ord[i]];
       idx[i] = src.indice;
       const int q = static_cast<int>(static_cast<float>(src.data) * inv + 0.5f);
       code[i] = static_cast<uint8_t>(std::min(255, std::max(0, q)));
@@ -132,6 +146,7 @@ namespace sparse_hnsw
   {
     static constexpr uint16_t kOverflow = 0xFFFF;
     uint32_t slot_size{0};
+    uint32_t top_k{0}; // rows written top-K first (QuantCSR::writeRow); 0 = dimension order
     int64_t overflow_rows{0};
     std::vector<uint8_t> storage;
     std::vector<uint8_t> overflow;
@@ -141,8 +156,9 @@ namespace sparse_hnsw
     size_t bytes() const { return storage.size() + overflow.size(); }
 
     // Quantize m straight into slots (no QuantCSR copy is ever allocated).
-    void build(const CSRMatrix &m, uint32_t size_bytes)
+    void build(const CSRMatrix &m, uint32_t size_bytes, uint32_t k = 0)
     {
+      top_k = k;
       if (size_bytes < 64 || size_bytes % 64 != 0)
       {
         std::cerr << "QuantSlots: slot_size must be a positive multiple of 64." << std::endl;
@@ -176,11 +192,11 @@ namespace sparse_hnsw
         uint8_t *slot = base + static_cast<size_t>(r) * slot_size;
         if (over_off[r] < 0)
         {
-          neg += QuantCSR::writeRow(m, r, slot);
+          neg += QuantCSR::writeRow(m, r, slot, k);
         }
         else
         {
-          neg += QuantCSR::writeRow(m, r, overflow.data() + over_off[r]);
+          neg += QuantCSR::writeRow(m, r, overflow.data() + over_off[r], k);
           std::memcpy(slot, &kOverflow, sizeof(kOverflow));
           std::memcpy(slot + 8, &over_off[r], sizeof(int64_t));
           over++;

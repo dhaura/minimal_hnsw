@@ -161,7 +161,13 @@ namespace sparse_hnsw {
             return slotted_ ? QuantSlots::rowBytes(qslots_.row(id)) : quant_.rowBytes(id);
         }
 
-        void buildRowSlots(uint32_t slot_size) { qslots_.build(*data_matrix_, slot_size); }
+        void buildRowSlots(uint32_t slot_size, uint32_t top_k = 0) { qslots_.build(*data_matrix_, slot_size, top_k); }
+        uint32_t slotSize() const { return qslots_.slot_size; }
+        uint32_t slotsTopK() const { return qslots_.top_k; }
+        // Inline gate: with slots built top-k first (buildRowSlots(size, k)), a row's first
+        // k IDs are its top-k terms. Once top_candidates
+        // is full, a neighbor is scored only if one of them is a query term. 0 = off.
+        void setInlineGate(int k) { inline_k_ = k > 0 && qslots_.top_k == static_cast<uint32_t>(k) ? qslots_.top_k : 0; }
         void setSlottedRows(bool on) { slotted_ = slots_only_ || (on && quantized_ && !qslots_.empty()); }
         void enableSlottedTraversal(uint32_t slot_size) {
             buildRowSlots(slot_size);
@@ -182,15 +188,6 @@ namespace sparse_hnsw {
         void disableBloomFilter() { bloom_bitmaps_.clear(); bloom_threshold_pct_ = -1.0; }
         bool bloomGateOn() const { return bloom_threshold_pct_ >= 0.0 && !bloom_bitmaps_.empty(); }
         size_t bloomBytes() const { return bloom_bitmaps_.bytes(); }
-        // List sketch: each layer-0 neighbor slot also holds that neighbor's top
-        // kListTerms terms by weight (exact u16 ids), read with the neighbor list, so
-        // the check needs no filter fetch: pass iff one of them is a query term. While
-        // on, it replaces the Bloom check (no Bloom filter needed). Build it after
-        // the graph; it does not follow later graph changes.
-        static constexpr int kListTerms = 16;
-        void buildListSketch();
-        void setListSketchGate(bool on) { list_gate_ = on && list_sketch_base_ != nullptr; }
-        size_t listSketchBytes() const { return list_sketch_.size() * sizeof(uint64_t); }
 
         void buildSeedTable(uint32_t top_k);
         void setSeedParams(int terms, int per_term);
@@ -310,11 +307,8 @@ namespace sparse_hnsw {
         mutable std::vector<std::mutex> link_locks_;
         std::mutex global_lock_;
 
-        // List sketch (buildListSketch): per node, its 2M neighbor slots' top terms in
-        // list order, kListTerms / 4 u64 words (4 u16 ids each) per slot.
-        std::vector<uint64_t> list_sketch_;
-        uint64_t* list_sketch_base_ = nullptr;  // 64-byte aligned start of list_sketch_
-        bool list_gate_ = false;
+        uint32_t inline_k_ = 0;  // setInlineGate
+        bool inlinePasses(uint32_t id, const float* q) const;
 
 #ifdef SPARSE_HNSW_PROFILE
         mutable std::atomic<uint64_t> prof_ndist_{0};

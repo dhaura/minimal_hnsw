@@ -71,13 +71,22 @@ int main(int argc, char *argv[]) {
         ? std::vector<double>{-1.0} : bench::parseList<double>(bloom_arg, [](const std::string& v) { return std::stod(v); });
     const int bloom_hashes = (argc > 22) ? std::stoi(argv[22]) : 1;
     // Gate layouts (comma list): sep = Bloom filter rows in their own array, run at
-    // every threshold; list16 = top-16-term sketch beside each layer-0 neighbor id
-    // instead, run once with the Bloom check off (rows labelled _list16).
+    // every threshold; inline<K> = score a neighbor only if one of the first K IDs of its
+    // row slot is a query term, with the slots rebuilt top-K first (the K heaviest terms,
+    // then the rest, each block in dimension order; slots only), run once with the Bloom
+    // check off (rows labelled _inline<K>).
     const std::vector<std::string> gate_layouts = bench::parseList<std::string>(
         (argc > 23) ? argv[23] : "sep", [](const std::string& v) { return v; });
     for (const std::string& layout : gate_layouts) {
-        if (layout != "sep" && layout != "list16") {
-            std::cerr << "unknown gate layout '" << layout << "' (want sep or list16)\n";
+        if (layout.rfind("inline", 0) == 0) {
+            if (!(quantize && slots_only) || layout.size() == 6 || std::stoi(layout.substr(6)) <= 0) {
+                std::cerr << "gate layout '" << layout << "' needs K >= 1, quantize=1 and slots only (slot_size < 0)\n";
+                return 1;
+            }
+            continue;
+        }
+        if (layout != "sep") {
+            std::cerr << "unknown gate layout '" << layout << "' (want sep or inline<K>)\n";
             return 1;
         }
     }
@@ -171,13 +180,15 @@ int main(int argc, char *argv[]) {
 
     index.printInfo();
 
+    double slot_sec = 0.0;  // inline<K> rows count their top-K-first rebuild instead
     if (quantize && slots_only) {
         auto start_q = std::chrono::steady_clock::now();
         index.enableSlottedTraversal(static_cast<uint32_t>(-slot_arg));
         std::cout << "Slots-only quantized traversal: slot_size=" << -slot_arg << " B, overflow rows="
                   << index.slotOverflowRows() << ", " << index.slotBytes() / (1024.0 * 1024.0) << " MiB in "
                   << std::chrono::duration<double>(std::chrono::steady_clock::now() - start_q).count() << " s\n";
-        indexing_time_sec += std::chrono::duration<double>(std::chrono::steady_clock::now() - start_q).count();
+        slot_sec = std::chrono::duration<double>(std::chrono::steady_clock::now() - start_q).count();
+        indexing_time_sec += slot_sec;
     } else if (quantize) {
         std::cout << "Building uint8-quantized traversal copy...\n";
         auto start_q = std::chrono::steady_clock::now();
@@ -210,14 +221,6 @@ int main(int argc, char *argv[]) {
         indexing_time_sec += bloom_sec;
         std::cout << "Bloom filter built (h=" << bloom_hashes << ", " << index.bloomBytes() / (1024.0 * 1024.0)
                   << " MiB) in " << bloom_sec << " s\n";
-    }
-    double list_sec = 0.0;  // added to the indexing time of the list16 rows only
-    if (std::find(gate_layouts.begin(), gate_layouts.end(), "list16") != gate_layouts.end()) {
-        const auto t0 = std::chrono::steady_clock::now();
-        index.buildListSketch();
-        list_sec = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
-        std::cout << "List sketch built: " << index.listSketchBytes() / (1024.0 * 1024.0) << " MiB in "
-                  << list_sec << " s\n";
     }
 
     std::cout << "IndexSec (pruning + graph + quantized rows + seed table + Bloom filter, loading excluded): "
@@ -259,15 +262,25 @@ int main(int argc, char *argv[]) {
 
     const bool multi_pat = stop_list.size() > 1;
 
+    double inline_sec = 0.0;
     for (const std::string& layout : gate_layouts) {
-      const bool list = layout == "list16";
-      index.setListSketchGate(list);
-      const double row_index_sec = indexing_time_sec + (list ? list_sec : 0.0);
-    for (const double t : bloom_thresholds) {
-      if (list && t != bloom_thresholds.front()) {
-          continue;  // list16 ignores T: one pass
+      const int inline_k = layout.rfind("inline", 0) == 0 ? std::stoi(layout.substr(6)) : 0;
+      const bool inline_on = inline_k > 0;
+      if (slots_only && static_cast<uint32_t>(inline_k) != index.slotsTopK()) {  // rows top-K first
+          const auto t0 = std::chrono::steady_clock::now();
+          index.buildRowSlots(index.slotSize(), static_cast<uint32_t>(inline_k));
+          const double sec = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+          if (inline_on) { inline_sec = sec; }
+          std::cout << "Row slots rebuilt " << (inline_on ? "top-" + std::to_string(inline_k) + " first" : std::string("in dimension order"))
+                    << " in " << sec << " s\n";
       }
-      const double bloom_t = list ? -1.0 : t;
+      index.setInlineGate(inline_k);
+      const double row_index_sec = indexing_time_sec + (inline_on ? inline_sec - slot_sec : 0.0);
+    for (const double t : bloom_thresholds) {
+      if (inline_on && t != bloom_thresholds.front()) {
+          continue;  // inline<K> ignores T: one pass
+      }
+      const double bloom_t = inline_on ? -1.0 : t;
       index.setBloomThreshold(bloom_t);
     for (const StopCfg& stop : stop_list) {
       const int patience = stop.P;
@@ -292,7 +305,7 @@ int main(int argc, char *argv[]) {
             bt << bloom_t;
             row_model += "_T" + bt.str();
         }
-        if (list) {
+        if (inline_on) {
             row_model += "_" + layout;
         }
 
@@ -354,7 +367,7 @@ int main(int argc, char *argv[]) {
             if (slots_only) {
                 params << " slots=" << -slot_arg;
             }
-            if (list) {
+            if (inline_on) {
                 params << " layout=" << layout;
             }
             if (bloom_t >= 0.0) {
