@@ -3,7 +3,6 @@ add_library(sparse_hnsw_lib sparse_hnsw.cpp sparse_hnsw.h)
 
 # Create executables
 add_executable(sparse_hnsw_demo main.cpp)
-add_executable(grassRMA_demo grassRMA_main.cpp)
 add_executable(sparse_hnsw_sweep sweep_main.cpp)
 add_executable(sparse_decouple_sweep decouple_main.cpp)
 
@@ -23,6 +22,13 @@ if(OpenMP_CXX_FOUND)
     target_link_libraries(sparse_hnsw_demo OpenMP::OpenMP_CXX)
     target_link_libraries(sparse_hnsw_sweep OpenMP::OpenMP_CXX)
     target_link_libraries(sparse_decouple_sweep OpenMP::OpenMP_CXX)
+endif()
+
+# ---- Baselines (drivers in baselines/; their source repos stay out of git) ----
+# grassRMA: header-only, needs the GrassRMA repo cloned at sparse/GrassRMA.
+add_executable(grassRMA_demo baselines/grassRMA_main.cpp)
+target_include_directories(grassRMA_demo PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+if(OpenMP_CXX_FOUND)
     target_link_libraries(grassRMA_demo OpenMP::OpenMP_CXX)
 endif()
 
@@ -45,8 +51,8 @@ find_path(VSAG_INCLUDE_DIR NAMES vsag/vsag.h
           ${CMAKE_CURRENT_SOURCE_DIR}/vsag/install/include
     NO_DEFAULT_PATH)
 if(VSAG_LIBRARY AND VSAG_INCLUDE_DIR)
-    add_executable(sindi_demo sindi_main.cpp)
-    add_executable(sindi_sweep sindi_sweep_main.cpp)
+    add_executable(sindi_demo baselines/sindi_main.cpp)
+    add_executable(sindi_sweep baselines/sindi_sweep_main.cpp)
     get_filename_component(VSAG_LIBRARY_DIR ${VSAG_LIBRARY} DIRECTORY)
     foreach(tgt sindi_demo sindi_sweep)
         target_include_directories(${tgt} PRIVATE ${VSAG_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})

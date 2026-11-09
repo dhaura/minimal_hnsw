@@ -5,7 +5,7 @@
 #   bash make_gap_top16_playground_figures.sh                         # msmarco_full
 #   DATASET=nq_splade bash make_gap_top16_playground_figures.sh
 #
-# 1. Fronts from run_gap_top16_sweep_perlmutter.sh, each folded into one
+# 1. Fronts from run_gap_top16_sweep_perlmutter.sh (removed; in git history), each folded into one
 #    best-QPS-per-recall front in its own data folder ($DATA_ROOT/sparse_hnsw_gt16_<series>):
 #      all      every row of the sweep (no filter, gap, top-16, both), as SparseHNSW
 #      gap / top16 / top16gap   SparseHNSW+Gap, SparseHNSW+Top16, SparseHNSW+Top16+Gap

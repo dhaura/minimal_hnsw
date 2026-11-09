@@ -41,7 +41,7 @@ case "$PRESET" in
         ;;
 esac
 
-source /global/homes/d/dhaura/repos/SpKNN/spknn-playground/common/bench_env_perlmutter.sh
+source "${SPKNN_HNSW_REPO:-$SCRATCH/repos/sparse_hnsw/minimal_hnsw}/sparse/scripts/bench_env_perlmutter.sh"
 bench_provenance
 bench_assert_optimized "$SPKNN_BIN/sparse_decouple_sweep"
 
@@ -52,7 +52,7 @@ echo "### preset=$PRESET build_alpha=$BUILD_ALPHA search_alphas=$SEARCH_ALPHAS"
 echo "### betas=$BETAS ef=$EF_LIST pat=$PAT_LIST"
 
 $BENCH_LAUNCH stdbuf -oL "$SPKNN_BIN/sparse_decouple_sweep" \
-    "${M:-32}" "${EFC:-200}" "$EF_LIST" 1 \
+    "${M:-32}" "${EFC:-200}" "$EF_LIST" \
     "$BUILD_ALPHA" "$SEARCH_ALPHAS" "$BETAS" \
     "$SPKNN_BASE" "$SPKNN_QUERIES" "$SPKNN_GT" \
     "$OUT" "$MODEL" "${REPEATS:-3}" "${WARMUP:-1}" \

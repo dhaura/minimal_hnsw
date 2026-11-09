@@ -34,11 +34,13 @@
 // visible in batch mode alone (reported as refine_ndist / refine_bytes).
 //
 // Usage:
-//   sparse_profile <M> <ef_construction> <ef> <use_heuristic> <extend_candidates>
-//                  <keep_pruned> <alpha> <beta>
+//   sparse_profile <M> <ef_construction> <ef> <alpha> <beta>
 //                  <base.csr> <queries.csr> <gt>
 //                  [modes=batch] [num_queries=all] [gate=cold|warm|all] [quantize=0]
 //                  [seed_top_k=0] [seed_terms=0] [seed_per_term=1] [patience=0]
+//                  [slot_size=320] [inline_k=0] [stop_gap=-1]
+//   slot_size 0 = packed rows; inline_k > 0 = inline top-K gate (needs quantize=1 and
+//   slots); stop_gap >= 0 = score-gap stop with that gamma.
 //
 // Env:
 //   PROF_BUILD_THREADS  threads for index construction (default: OMP max).
@@ -59,32 +61,26 @@
 
 using namespace sparse_hnsw;
 
-static void get_gt(const std::string gt_path, uint32_t *&I, uint32_t &n, uint32_t &d)
-{
+static void get_gt(const std::string gt_path, uint32_t*& I, uint32_t& n, uint32_t& d) {
     std::ifstream infile(gt_path, std::ios::binary);
-    if (infile.fail())
-    {
+    if (infile.fail()) {
         std::cerr << std::string("Failed to open file ") + gt_path;
         exit(1);
     }
-    infile.read((char *)&n, sizeof(uint32_t));
-    infile.read((char *)&d, sizeof(uint32_t));
+    infile.read((char*)&n, sizeof(uint32_t));
+    infile.read((char*)&d, sizeof(uint32_t));
     I = new uint32_t[n * d];
-    infile.read((char *)I, n * d * sizeof(uint32_t));
+    infile.read((char*)I, n * d * sizeof(uint32_t));
     infile.close();
 }
 
-static float calculate_recall(const std::vector<uint32_t> &predicted_labels, uint32_t *I,
-                              uint32_t k, uint32_t num_queries)
-{
+static float calculate_recall(const std::vector<uint32_t>& predicted_labels, uint32_t* I, uint32_t k,
+                              uint32_t num_queries) {
     long total_hits = 0;
-    for (uint32_t i = 0; i < num_queries; ++i)
-    {
+    for (uint32_t i = 0; i < num_queries; ++i) {
         std::unordered_set<uint32_t> gt_neighbors(I + (size_t)i * k, I + (size_t)(i + 1) * k);
-        for (uint32_t j = 0; j < k; ++j)
-        {
-            if (gt_neighbors.count(predicted_labels[(size_t)i * k + j]))
-                total_hits++;
+        for (uint32_t j = 0; j < k; ++j) {
+            if (gt_neighbors.count(predicted_labels[(size_t)i * k + j])) total_hits++;
         }
     }
     return static_cast<float>(total_hits) / (static_cast<float>(num_queries) * k);
@@ -97,8 +93,7 @@ struct ModeSpec {
     int nq;
 };
 
-static std::vector<ModeSpec> parse_modes(const std::string& spec, int def_threads, int def_nq)
-{
+static std::vector<ModeSpec> parse_modes(const std::string& spec, int def_threads, int def_nq) {
     std::vector<ModeSpec> out;
     size_t pos = 0;
     while (pos <= spec.size()) {
@@ -125,9 +120,8 @@ static std::vector<ModeSpec> parse_modes(const std::string& spec, int def_thread
 }
 
 // ---------------------------------------------------------------- E1 --------
-static void run_batch(const SPARSE_HNSW& index, CSRMatrix* querymatrix, int query_count,
-                      uint32_t k, int beta, int ef, uint32_t* I, int threads)
-{
+static void run_batch(const SPARSE_HNSW& index, CSRMatrix* querymatrix, int query_count, uint32_t k, int beta, int ef,
+                      uint32_t* I, int threads) {
     index.profReset();
     std::vector<uint32_t> pred_labels;
 
@@ -145,39 +139,52 @@ static void run_batch(const SPARSE_HNSW& index, CSRMatrix* querymatrix, int quer
     uint64_t rbytes = index.profRefineBytes();
     float recall = calculate_recall(pred_labels, I, k, query_count) * 100.0f;
 
-    std::cout << "PROF search_s=" << sec
-              << " qps=" << query_count / sec
-              << " recall=" << recall << "\n";
-    std::cout << "PROF ndist=" << ndist
-              << " bytes=" << bytes
-              << " ndist_per_query=" << (double)ndist / query_count
+    std::cout << "PROF search_s=" << sec << " qps=" << query_count / sec << " recall=" << recall << "\n";
+    std::cout << "PROF ndist=" << ndist << " bytes=" << bytes << " ndist_per_query=" << (double)ndist / query_count
               << " bytes_per_query=" << (double)bytes / query_count << "\n";
-    std::cout << "PROF ns_per_dist=" << sec * 1e9 / ndist
-              << " achieved_GBps=" << bytes / sec / 1e9
+    std::cout << "PROF ns_per_dist=" << sec * 1e9 / ndist << " achieved_GBps=" << bytes / sec / 1e9
               << " GBps_per_thread=" << bytes / sec / 1e9 / threads << "\n";
-    std::cout << "PROF graph_bytes=" << gbytes
-              << " graph_frac_of_bytes=" << (double)gbytes / (bytes + gbytes) << "\n";
+    std::cout << "PROF graph_bytes=" << gbytes << " graph_frac_of_bytes=" << (double)gbytes / (bytes + gbytes) << "\n";
     // The beta-refine pass: exact re-scoring of k*beta candidates against the
     // UNPRUNED rows, using the same dense gather kernel as the traversal
     // (distanceDenseRefine -- its own symbol in this build, so perf can split
     // it out). Its ns/call is not separable from the total here, but its call
     // and byte counts show how much of the work it is.
-    std::cout << "PROF refine_ndist=" << rdist
-              << " refine_bytes=" << rbytes
-              << " refine_frac_of_ndist="
-              << (double)rdist / (ndist + rdist)
-              << " refine_frac_of_bytes="
-              << (double)rbytes / (bytes + rbytes) << "\n";
+    std::cout << "PROF refine_ndist=" << rdist << " refine_bytes=" << rbytes
+              << " refine_frac_of_ndist=" << (double)rdist / (ndist + rdist)
+              << " refine_frac_of_bytes=" << (double)rbytes / (bytes + rbytes) << "\n";
     // Bytes including the graph and the refine pass -- the honest total the
     // memory system actually had to move for this search.
     std::cout << "PROF total_bytes=" << (bytes + gbytes + rbytes)
               << " total_GBps=" << (bytes + gbytes + rbytes) / sec / 1e9 << "\n";
+    // 64 B row lines (traversal rows, plus the line(s) the inline gate read for rejected neighbors).
+    const double nq = query_count;
+    std::cout << "PROF lines_per_query=" << index.profLines() / nq
+              << " gate_checks_per_query=" << index.profGateChecks() / nq
+              << " gate_rejects_per_query=" << index.profGateRejects() / nq << "\n";
+    // Per-query recall distribution (adaptive stops); PROF_PERQ_CSV=<path> also writes query,recall rows.
+    std::vector<double> rq(query_count);
+    for (int i = 0; i < query_count; ++i) {
+        std::unordered_set<uint32_t> gt(I + (size_t)i * k, I + (size_t)(i + 1) * k);
+        int hits = 0;
+        for (uint32_t j = 0; j < k; ++j) hits += gt.count(pred_labels[(size_t)i * k + j]) ? 1 : 0;
+        rq[i] = static_cast<double>(hits) / k;
+    }
+    if (const char* path = getenv("PROF_PERQ_CSV")) {
+        std::ofstream f(path);
+        f << "query,recall\n";
+        for (int i = 0; i < query_count; ++i) f << i << "," << rq[i] << "\n";
+    }
+    std::vector<double> s = rq;
+    std::sort(s.begin(), s.end());
+    auto pct = [&](double p) { return s[std::min<size_t>(s.size() - 1, static_cast<size_t>(p * s.size()))]; };
+    std::cout << "PROF perq_recall_min=" << s.front() << " p5=" << pct(0.05) << " p10=" << pct(0.10)
+              << " share_eq1=" << (s.end() - std::lower_bound(s.begin(), s.end(), 1.0)) / nq << "\n";
 }
 
 // --------------------------------------------------------------- E3b --------
-static void run_repeat(const SPARSE_HNSW& index, CSRMatrix* querymatrix, int query_count,
-                       int num_points, uint32_t k_hat, int ef, const std::string& gate)
-{
+static void run_repeat(const SPARSE_HNSW& index, CSRMatrix* querymatrix, int query_count, int num_points,
+                       uint32_t k_hat, int ef, const std::string& gate) {
     SearchScratch scratch;
     scratch.prepare(num_points);
 
@@ -188,7 +195,7 @@ static void run_repeat(const SPARSE_HNSW& index, CSRMatrix* querymatrix, int que
     uint64_t cold_ndist = 0, warm_ndist = 0, cold_bytes = 0;
     uint64_t max_query_bytes = 0;
     int path_mismatches = 0;
-    volatile uint64_t sink = 0;   // keep the search results observable
+    volatile uint64_t sink = 0; // keep the search results observable
 
     if (gate == "all") perf_ctl::enable();
     for (int i = 0; i < query_count; ++i) {
@@ -222,16 +229,14 @@ static void run_repeat(const SPARSE_HNSW& index, CSRMatrix* querymatrix, int que
     }
     if (gate == "all") perf_ctl::disable();
 
-    std::cout << "PROF cold_s=" << cold_s << " warm_s=" << warm_s
-              << " mem_share=" << (cold_s - warm_s) / cold_s << "\n";
+    std::cout << "PROF cold_s=" << cold_s << " warm_s=" << warm_s << " mem_share=" << (cold_s - warm_s) / cold_s
+              << "\n";
     std::cout << "PROF cold_us_per_query=" << cold_s * 1e6 / query_count
               << " warm_us_per_query=" << warm_s * 1e6 / query_count << "\n";
-    std::cout << "PROF ndist=" << cold_ndist
-              << " cold_ns_per_dist=" << cold_s * 1e9 / cold_ndist
+    std::cout << "PROF ndist=" << cold_ndist << " cold_ns_per_dist=" << cold_s * 1e9 / cold_ndist
               << " warm_ns_per_dist=" << warm_s * 1e9 / warm_ndist << "\n";
     std::cout << "PROF bytes_per_query_avg=" << (double)cold_bytes / query_count
-              << " bytes_per_query_max=" << max_query_bytes
-              << " path_mismatches=" << path_mismatches << "\n";
+              << " bytes_per_query_max=" << max_query_bytes << " path_mismatches=" << path_mismatches << "\n";
     // Warm-pass validity: the per-query footprint must fit in the 36 MiB L3 of
     // one Xeon 6248R socket, else pass 2 was not actually warm.
     if (max_query_bytes > 28ull * 1024 * 1024)
@@ -240,9 +245,8 @@ static void run_repeat(const SPARSE_HNSW& index, CSRMatrix* querymatrix, int que
 }
 
 // ---------------------------------------------------------------- E6 --------
-static void run_replay(const SPARSE_HNSW& index, CSRMatrix* querymatrix, int query_count,
-                       int num_points, uint32_t k_hat, int ef)
-{
+static void run_replay(const SPARSE_HNSW& index, CSRMatrix* querymatrix, int query_count, int num_points,
+                       uint32_t k_hat, int ef) {
     // searchLayer is deterministic given the distance VALUES.
     //   sweep A (untimed)  record every query's distance sequence
     //   sweep B (timed)    normal search           -> T_full
@@ -305,22 +309,16 @@ static void run_replay(const SPARSE_HNSW& index, CSRMatrix* querymatrix, int que
     double dist_s = full_s - ovh_s;
     double share = dist_s / full_s;
 
-    std::cout << "PROF full_s=" << full_s << " overhead_s=" << ovh_s
-              << " distance_s=" << dist_s << "\n";
-    std::cout << "PROF distance_share=" << share
-              << " overhead_share=" << (1.0 - share) << "\n";
-    std::cout << "PROF ndist=" << ndist
-              << " ns_per_dist_true=" << dist_s * 1e9 / ndist
+    std::cout << "PROF full_s=" << full_s << " overhead_s=" << ovh_s << " distance_s=" << dist_s << "\n";
+    std::cout << "PROF distance_share=" << share << " overhead_share=" << (1.0 - share) << "\n";
+    std::cout << "PROF ndist=" << ndist << " ns_per_dist_true=" << dist_s * 1e9 / ndist
               << " ns_per_dist_naive=" << full_s * 1e9 / ndist << "\n";
     // Traffic split: prof_bytes counts only doc rows; the graph is extra and is
     // NOT attributable to the distance kernel.
-    std::cout << "PROF vec_bytes=" << vec_bytes
-              << " graph_bytes=" << graph_bytes
-              << " graph_frac_of_bytes="
-              << (double)graph_bytes / (vec_bytes + graph_bytes) << "\n";
+    std::cout << "PROF vec_bytes=" << vec_bytes << " graph_bytes=" << graph_bytes
+              << " graph_frac_of_bytes=" << (double)graph_bytes / (vec_bytes + graph_bytes) << "\n";
     // Validity: the replay must have reproduced the traversal exactly.
-    std::cout << "PROF replay_ndist=" << replay_ndist
-              << " ndist_match=" << (replay_ndist == ndist ? 1 : 0) << "\n";
+    std::cout << "PROF replay_ndist=" << replay_ndist << " ndist_match=" << (replay_ndist == ndist ? 1 : 0) << "\n";
     if (replay_ndist != ndist) {
         std::cout << "PROF WARNING: replay diverged from the recorded path; "
                      "distance_share is invalid\n";
@@ -331,14 +329,13 @@ static void run_replay(const SPARSE_HNSW& index, CSRMatrix* querymatrix, int que
 }
 
 int main(int argc, char* argv[]) {
-    if (argc < 12)
-    {
+    if (argc < 9) {
         std::cerr << "Usage: " << argv[0]
-                  << " <M> <ef_construction> <ef> <use_heuristic> <extend_candidates>"
-                     " <keep_pruned> <alpha> <beta>"
+                  << " <M> <ef_construction> <ef> <alpha> <beta>"
                      " <input_filepath> <query_filepath> <gt_filepath>"
                      " [modes=batch] [num_queries=all] [gate=cold|warm|all] [quantize=0]"
-                     " [seed_top_k=0] [seed_terms=0] [seed_per_term=1] [patience=0]\n"
+                     " [seed_top_k=0] [seed_terms=0] [seed_per_term=1] [patience=0]"
+                     " [slot_size=320] [inline_k=0] [stop_gap=-1]\n"
                      "   modes: comma-separated <mode>[@threads][:nq], e.g.\n"
                      "          batch@48,batch@1,repeat@1:2000,replay@1:2000\n";
         return 1;
@@ -347,22 +344,26 @@ int main(int argc, char* argv[]) {
     int M = std::stoi(argv[1]);
     int ef_construction = std::stoi(argv[2]);
     int ef = std::stoi(argv[3]);
-    bool use_heuristic = (std::stoi(argv[4]) != 0);
-    bool extend_candidates = (std::stoi(argv[5]) != 0);
-    bool keep_pruned = (std::stoi(argv[6]) != 0);
-    double alpha = std::stod(argv[7]);
-    int beta = std::stoi(argv[8]);
-    std::string input_filepath = argv[9];
-    std::string query_filepath = argv[10];
-    std::string gt_filepath = argv[11];
-    std::string modes_arg = (argc > 12) ? argv[12] : "batch";
-    long nq_arg          = (argc > 13) ? std::stol(argv[13]) : 0;
-    std::string gate     = (argc > 14) ? argv[14] : "cold";
-    bool quantize        = (argc > 15) && (std::stoi(argv[15]) != 0);
-    const int seed_top_k   = (argc > 16) ? std::stoi(argv[16]) : 0;
-    const int seed_terms   = (argc > 17) ? std::stoi(argv[17]) : 0;
-    const int seed_per_term= (argc > 18) ? std::stoi(argv[18]) : 1;
-    const int patience     = (argc > 19) ? std::stoi(argv[19]) : 0;
+    double alpha = std::stod(argv[4]);
+    int beta = std::stoi(argv[5]);
+    std::string input_filepath = argv[6];
+    std::string query_filepath = argv[7];
+    std::string gt_filepath = argv[8];
+    std::string modes_arg = (argc > 9) ? argv[9] : "batch";
+    long nq_arg = (argc > 10) ? std::stol(argv[10]) : 0;
+    std::string gate = (argc > 11) ? argv[11] : "cold";
+    bool quantize = (argc > 12) && (std::stoi(argv[12]) != 0);
+    const int seed_top_k = (argc > 13) ? std::stoi(argv[13]) : 0;
+    const int seed_terms = (argc > 14) ? std::stoi(argv[14]) : 0;
+    const int seed_per_term = (argc > 15) ? std::stoi(argv[15]) : 1;
+    const int patience = (argc > 16) ? std::stoi(argv[16]) : 0;
+    const int slot_size = (argc > 17) ? std::stoi(argv[17]) : static_cast<int>(SPARSE_HNSW::kDefaultSlotSize);
+    const int inline_k = (argc > 18) ? std::stoi(argv[18]) : 0;
+    const double stop_gap = (argc > 19) ? std::stod(argv[19]) : -1.0;
+    if (slot_size < 0 || slot_size % 64 != 0 || (inline_k > 0 && (!quantize || slot_size == 0))) {
+        std::cerr << "slot_size must be 0 or a multiple of 64; inline_k needs quantize=1 and slot_size > 0\n";
+        return 1;
+    }
 
     if (alpha > 1.0 || alpha <= 0.0) {
         std::cerr << "Invalid alpha " << alpha << "; expected (0, 1].\n";
@@ -371,14 +372,14 @@ int main(int argc, char* argv[]) {
 
     perf_ctl::init();
 
-    CSRMatrix *datamatrix = new CSRMatrix(input_filepath, true);
-    CSRMatrix *querymatrix = new CSRMatrix(query_filepath, true);
+    CSRMatrix* datamatrix = new CSRMatrix(input_filepath, true);
+    CSRMatrix* querymatrix = new CSRMatrix(query_filepath, true);
     int dim = datamatrix->ncol;
     int num_points = datamatrix->nrow;
     int all_queries = querymatrix->nrow;
     if (nq_arg > 0 && nq_arg < all_queries) all_queries = static_cast<int>(nq_arg);
 
-    uint32_t *I = nullptr;
+    uint32_t* I = nullptr;
     uint32_t gt_n, k;
     get_gt(gt_filepath, I, gt_n, k);
 
@@ -388,32 +389,25 @@ int main(int argc, char* argv[]) {
 
     std::vector<ModeSpec> modes = parse_modes(modes_arg, default_threads, all_queries);
 
-    std::cout << "PROF config M=" << M << " efC=" << ef_construction << " ef=" << ef
-              << " alpha=" << alpha << " beta=" << beta
-              << " heuristic=" << use_heuristic
-              << " k=" << k << " nq=" << all_queries
-              << " build_threads=" << build_threads
+    std::cout << "PROF config M=" << M << " efC=" << ef_construction << " ef=" << ef << " alpha=" << alpha
+              << " beta=" << beta << " k=" << k << " nq=" << all_queries << " build_threads=" << build_threads
               << " dim=" << dim << " npoints=" << num_points << "\n";
     std::cout << "PROF q_dense_KB=" << dim * 4.0 / 1024
               << " avg_row_bytes=" << (double)datamatrix->nnz / num_points * 4.0 << "\n";
 
     // ---- Index (same recipe as sparse_hnsw_demo) ----
-    SPARSE_HNSW index(dim, datamatrix, M, ef_construction, num_points,
-                      use_heuristic, extend_candidates, keep_pruned,
-                      static_cast<float>(alpha), beta);
+    SPARSE_HNSW index(dim, datamatrix, M, ef_construction, num_points, static_cast<float>(alpha), beta);
 
-    CSRMatrix *pruned_datamatrix = nullptr;
+    CSRMatrix* pruned_datamatrix = nullptr;
     if (alpha < 1.0) {
         auto p0 = std::chrono::steady_clock::now();
         pruned_datamatrix = index.pruneMatrix(datamatrix);
         index.setPrunedDataMatrix(pruned_datamatrix);
         auto p1 = std::chrono::steady_clock::now();
         std::cout << "PROF prune_s=" << std::chrono::duration<double>(p1 - p0).count()
-                  << " nnz_before=" << datamatrix->nnz
-                  << " nnz_after=" << pruned_datamatrix->nnz
+                  << " nnz_before=" << datamatrix->nnz << " nnz_after=" << pruned_datamatrix->nnz
                   << " keep_frac=" << (double)pruned_datamatrix->nnz / datamatrix->nnz
-                  << " avg_row_bytes_pruned="
-                  << (double)pruned_datamatrix->nnz / num_points * 4.0 << "\n";
+                  << " avg_row_bytes_pruned=" << (double)pruned_datamatrix->nnz / num_points * 4.0 << "\n";
     } else {
         std::cout << "PROF prune_s=0 keep_frac=1 (alpha=1, no pruning)\n";
     }
@@ -426,17 +420,17 @@ int main(int argc, char* argv[]) {
 
     if (quantize) {
         auto q0 = std::chrono::steady_clock::now();
-        index.enableQuantizedTraversal();
+        index.enableQuantizedTraversal(static_cast<uint32_t>(slot_size));
+        if (inline_k > 0) {
+            index.enableInlineGate(static_cast<uint32_t>(inline_k)); // rows rebuilt top-K first
+        }
         auto q1 = std::chrono::steady_clock::now();
-        const double fp16_row = (alpha < 1.0 ? (double)pruned_datamatrix->nnz
-                                             : (double)datamatrix->nnz) / num_points * 4.0;
-        const double u8_row = (double)(index.quantizedBytes() - (size_t)(num_points + 1) * 8)
-                              / num_points;
+        const double fp16_row =
+            (alpha < 1.0 ? (double)pruned_datamatrix->nnz : (double)datamatrix->nnz) / num_points * 4.0;
+        const double u8_row = (double)(index.quantizedBytes() - (size_t)(num_points + 1) * 8) / num_points;
         std::cout << "PROF quantize_s=" << std::chrono::duration<double>(q1 - q0).count()
-                  << " quant_MiB=" << index.quantizedBytes() / (1024.0 * 1024.0)
-                  << " fp16_row_bytes=" << fp16_row
-                  << " u8_row_bytes=" << u8_row
-                  << " row_byte_ratio=" << fp16_row / u8_row << "\n";
+                  << " quant_MiB=" << index.quantizedBytes() / (1024.0 * 1024.0) << " fp16_row_bytes=" << fp16_row
+                  << " u8_row_bytes=" << u8_row << " row_byte_ratio=" << fp16_row / u8_row << "\n";
     }
     if (seed_top_k > 0 && seed_terms > 0) {
         auto s0 = std::chrono::steady_clock::now();
@@ -444,15 +438,14 @@ int main(int argc, char* argv[]) {
         index.setSeedParams(seed_terms, seed_per_term);
         auto s1 = std::chrono::steady_clock::now();
         std::cout << "PROF seed_s=" << std::chrono::duration<double>(s1 - s0).count()
-                  << " seed_KiB=" << index.seedTableBytes() / 1024.0
-                  << " seed_top_k=" << seed_top_k
-                  << " seed_terms=" << seed_terms
-                  << " seed_per_term=" << seed_per_term << "\n";
+                  << " seed_KiB=" << index.seedTableBytes() / 1024.0 << " seed_top_k=" << seed_top_k
+                  << " seed_terms=" << seed_terms << " seed_per_term=" << seed_per_term << "\n";
     }
     index.setPatience(patience);
-    std::cout << "PROF quantized=" << (index.quantized() ? 1 : 0)
-              << " seeding=" << (index.seedingEnabled() ? 1 : 0)
-              << " patience=" << index.patience() << "\n";
+    index.setStopGap(stop_gap);
+    std::cout << "PROF quantized=" << (index.quantized() ? 1 : 0) << " seeding=" << (index.seedingEnabled() ? 1 : 0)
+              << " patience=" << index.patience() << " slot_size=" << (quantize ? slot_size : 0)
+              << " inline_k=" << inline_k << " stop_gap=" << stop_gap << "\n";
     std::cout.flush();
 
     // The traversal searches for k*beta candidates before the refine pass trims
@@ -463,10 +456,8 @@ int main(int argc, char* argv[]) {
     for (const ModeSpec& m : modes) {
         int nq = std::min(m.nq, all_queries);
         omp_set_num_threads(m.threads);
-        std::cout << "\nPROF mode=" << m.name
-                  << " search_threads=" << m.threads
-                  << " nq=" << nq << " k=" << k << " k_hat=" << k_hat
-                  << " ef=" << ef << " alpha=" << alpha << " beta=" << beta << "\n";
+        std::cout << "\nPROF mode=" << m.name << " search_threads=" << m.threads << " nq=" << nq << " k=" << k
+                  << " k_hat=" << k_hat << " ef=" << ef << " alpha=" << alpha << " beta=" << beta << "\n";
 
         if (m.name == "batch") {
             run_batch(index, querymatrix, nq, k, beta, ef, I, m.threads);

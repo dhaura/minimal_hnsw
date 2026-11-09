@@ -1,6 +1,6 @@
 #!/bin/bash
-# Parses the recall/timing lines that main.cpp, grassRMA_main.cpp, and
-# sindi_main.cpp all print in the same format --
+# Parses the recall/timing lines that main.cpp, baselines/grassRMA_main.cpp, and
+# baselines/sindi_main.cpp all print in the same format --
 #   "Added N points to the index in T microseconds."
 #   "Total Query time: T microseconds"
 #   "Recall@k: R%"

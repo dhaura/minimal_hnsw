@@ -28,7 +28,7 @@ SLOT_SIZES=${SLOT_SIZES:-320}
 cd "$SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/scripts/quant_slots"
 mkdir -p logs
 
-source /global/homes/d/dhaura/repos/SpKNN/spknn-playground/common/bench_env_perlmutter.sh
+source "${SPKNN_HNSW_REPO:-$SCRATCH/repos/sparse_hnsw/minimal_hnsw}/sparse/scripts/bench_env_perlmutter.sh"
 bench_provenance
 bench_assert_optimized "$SPKNN_BIN/sparse_hnsw_sweep"
 
@@ -47,7 +47,7 @@ for SLOT in ${SLOT_SIZES//-/ }; do
         CSV="$OUT/layout_sweep_${SPKNN_DATASET}_M${M}_efc${EFC}_a${ALPHA}_${SLURM_JOB_ID}.csv"
         echo "########## slot=$SLOT alpha=$ALPHA -> $CSV ##########"
         $BENCH_LAUNCH stdbuf -oL -eL "$SPKNN_BIN/sparse_hnsw_sweep" \
-            "$M" "$EFC" "$EF_LIST" 1 0 0 "$ALPHA" "$BETAS" \
+            "$M" "$EFC" "$EF_LIST" "$ALPHA" "$BETAS" \
             "$SPKNN_BASE" "$SPKNN_QUERIES" "$SPKNN_GT" \
             "$CSV" SparseHNSW 3 1 1 8 8:4 "$PATIENCE_LIST" "$SLOT"
     done

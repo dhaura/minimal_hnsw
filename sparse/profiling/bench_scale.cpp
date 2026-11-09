@@ -34,18 +34,16 @@
 #include <cstdlib>
 #include <omp.h>
 
-__attribute__((always_inline))
-static inline float dense(const float* qd, const IndiceDataPair* p, uint32_t pn) {
+__attribute__((always_inline)) static inline float dense(const float* qd, const IndiceDataPair* p, uint32_t pn) {
     float res = 0.0f;
-    #pragma omp simd reduction(+:res)
+#pragma omp simd reduction(+ : res)
     for (uint32_t i = 0; i < pn; ++i) {
         res += static_cast<float>(p[i].data) * qd[p[i].indice];
     }
     return 1.0f - res;
 }
 
-__attribute__((always_inline))
-static inline uint64_t stream_row(const IndiceDataPair* p, uint32_t pn) {
+__attribute__((always_inline)) static inline uint64_t stream_row(const IndiceDataPair* p, uint32_t pn) {
     uint64_t acc = 0;
     const uint32_t* w = reinterpret_cast<const uint32_t*>(p);
     for (uint32_t i = 0; i < pn; ++i) acc += w[i];
@@ -54,8 +52,10 @@ static inline uint64_t stream_row(const IndiceDataPair* p, uint32_t pn) {
 
 int main(int argc, char** argv) {
     if (argc < 3) {
-        fprintf(stderr, "usage: %s <base.csr> <queries.csr> [ncalls_per_thread=400000] "
-                        "[threads=1,2,4,8,16,24,48] [alpha=1.0]\n", argv[0]);
+        fprintf(stderr,
+                "usage: %s <base.csr> <queries.csr> [ncalls_per_thread=400000] "
+                "[threads=1,2,4,8,16,24,48] [alpha=1.0]\n",
+                argv[0]);
         return 1;
     }
     CSRMatrix* Dp = new CSRMatrix(argv[1], true);
@@ -69,9 +69,9 @@ int main(int argc, char** argv) {
         CSRMatrix* pruned = sparse_hnsw::pruneMatrixWithAlpha(Dp, alpha);
         delete Dp;
         Dp = pruned;
-        printf("pruned alpha=%.3f: nnz %ld -> %ld (keep_frac=%.4f), avg_row %.0f -> %.0f B\n",
-               alpha, (long)nnz_before, (long)Dp->nnz, (double)Dp->nnz / nnz_before,
-               (double)nnz_before / Dp->nrow * 4.0, (double)Dp->nnz / Dp->nrow * 4.0);
+        printf("pruned alpha=%.3f: nnz %ld -> %ld (keep_frac=%.4f), avg_row %.0f -> %.0f B\n", alpha, (long)nnz_before,
+               (long)Dp->nnz, (double)Dp->nnz / nnz_before, (double)nnz_before / Dp->nrow * 4.0,
+               (double)Dp->nnz / Dp->nrow * 4.0);
     } else {
         printf("alpha=1.0: no pruning (NOTE: the real search streams PRUNED rows)\n");
     }
@@ -94,10 +94,9 @@ int main(int argc, char** argv) {
     const int dim = static_cast<int>(D.ncol);
     printf("base nrow=%ld data=%.0f MB  query nnz=%u  dim=%d  q_dense=%.0f KB/thread  "
            "ncalls/thread=%llu\n\n",
-           (long)D.nrow, D.nnz * 4.0 / 1e6, qn, dim, dim * 4.0 / 1024,
-           (unsigned long long)NC);
-    printf("%7s  %14s | %14s %14s %14s %14s\n",
-           "threads", "stream GB/s", "dense ns/call", "dense Mcall/s", "dense GB/s", "GB/s/core");
+           (long)D.nrow, D.nnz * 4.0 / 1e6, qn, dim, dim * 4.0 / 1024, (unsigned long long)NC);
+    printf("%7s  %14s | %14s %14s %14s %14s\n", "threads", "stream GB/s", "dense ns/call", "dense Mcall/s",
+           "dense GB/s", "GB/s/core");
 
     perf_ctl::init();
 
@@ -106,7 +105,7 @@ int main(int argc, char** argv) {
 
         // Per-thread dense query, first-touched by its owner (untimed).
         std::vector<std::vector<float>> qbufs(T);
-        #pragma omp parallel
+#pragma omp parallel
         {
             int t = omp_get_thread_num();
             qbufs[t].assign(static_cast<size_t>(dim), 0.0f);
@@ -119,11 +118,12 @@ int main(int argc, char** argv) {
         double stream_bytes = 0;
         volatile double sink = 0;
         auto s0 = std::chrono::steady_clock::now();
-        #pragma omp parallel reduction(+:stream_bytes)
+#pragma omp parallel reduction(+ : stream_bytes)
         {
             std::mt19937 rng(omp_get_thread_num() * 7919 + 1);
             std::uniform_int_distribution<uint32_t> pick(0, D.nrow - 1);
-            uint64_t acc = 0; double b = 0;
+            uint64_t acc = 0;
+            double b = 0;
             for (uint64_t i = 0; i < NC; ++i) {
                 uint32_t id = pick(rng);
                 int64_t st = D.indptr[id], en = D.indptr[id + 1];
@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
                 b += (en - st) * 4.0;
             }
             stream_bytes += b;
-            #pragma omp atomic
+#pragma omp atomic
             sink += (double)acc;
         }
         auto s1 = std::chrono::steady_clock::now();
@@ -141,7 +141,7 @@ int main(int argc, char** argv) {
         perf_ctl::enable();
         double dense_bytes = 0;
         auto m0 = std::chrono::steady_clock::now();
-        #pragma omp parallel reduction(+:dense_bytes)
+#pragma omp parallel reduction(+ : dense_bytes)
         {
             const float* qd = qbufs[omp_get_thread_num()].data();
             std::mt19937 rng(omp_get_thread_num() * 7919 + 1);
@@ -154,7 +154,7 @@ int main(int argc, char** argv) {
                 s += dense(qd, D.indices_data + st, static_cast<uint32_t>(en - st));
             }
             dense_bytes += b;
-            #pragma omp atomic
+#pragma omp atomic
             sink += s;
         }
         auto m1 = std::chrono::steady_clock::now();
@@ -162,12 +162,8 @@ int main(int argc, char** argv) {
         double dense_sec = std::chrono::duration<double>(m1 - m0).count();
 
         uint64_t total = NC * (uint64_t)T;
-        printf("%7d  %14.2f | %14.1f %14.2f %14.2f %14.3f\n",
-               T,
-               stream_bytes / stream_sec / 1e9,
-               dense_sec * 1e9 / total,
-               total / dense_sec / 1e6,
-               dense_bytes / dense_sec / 1e9,
+        printf("%7d  %14.2f | %14.1f %14.2f %14.2f %14.3f\n", T, stream_bytes / stream_sec / 1e9,
+               dense_sec * 1e9 / total, total / dense_sec / 1e6, dense_bytes / dense_sec / 1e9,
                dense_bytes / dense_sec / 1e9 / T);
         fflush(stdout);
     }

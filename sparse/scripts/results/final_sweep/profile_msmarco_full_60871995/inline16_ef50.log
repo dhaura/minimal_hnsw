@@ -1,0 +1,17 @@
+PROF config M=32 efC=200 ef=50 alpha=0.85 beta=3 k=10 nq=6980 build_threads=64 dim=30109 npoints=8841823
+PROF q_dense_KB=117.613 avg_row_bytes=507.225
+PROF prune_s=59.8979 nnz_before=1121199371 nnz_after=548854418 keep_frac=0.489524 avg_row_bytes_pruned=248.299
+PROF build_s=377.115
+PROF quantize_s=1.07313 quant_MiB=2716.19 fp16_row_bytes=248.299 u8_row_bytes=314.121 row_byte_ratio=0.790458
+PROF seed_s=6.20866 seed_KiB=940.906 seed_top_k=8 seed_terms=8 seed_per_term=4
+PROF quantized=1 seeding=1 patience=0 slot_size=320 inline_k=16 stop_gap=-1
+
+PROF mode=batch search_threads=64 nq=6980 k=10 k_hat=30 ef=50 alpha=0.85 beta=3
+PROF search_s=0.027713 qps=251867 recall=93.6261
+PROF ndist=8207908 bytes=1622898940 ndist_per_query=1175.92 bytes_per_query=232507
+PROF ns_per_dist=3.37638 achieved_GBps=58.5609 GBps_per_thread=0.915014
+PROF graph_bytes=49526788 graph_frac_of_bytes=0.0296137
+PROF refine_ndist=209400 refine_bytes=107610268 refine_frac_of_ndist=0.0248773 refine_frac_of_bytes=0.0621842
+PROF total_bytes=1780035996 total_GBps=64.231
+PROF lines_per_query=4367.19 gate_checks_per_query=1052.54 gate_rejects_per_query=157.644
+PROF perq_recall_min=0 p5=0.6 p10=0.8 share_eq1=0.78467

@@ -32,7 +32,7 @@ set -euo pipefail
 cd "$SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/scripts"
 mkdir -p logs
 
-source /global/homes/d/dhaura/repos/SpKNN/spknn-playground/common/bench_env_perlmutter.sh
+source "${SPKNN_HNSW_REPO:-$SCRATCH/repos/sparse_hnsw/minimal_hnsw}/sparse/scripts/bench_env_perlmutter.sh"
 bench_provenance
 
 BIN="$SPKNN_BIN/sparse_hnsw_demo_distlog"
@@ -67,7 +67,6 @@ free -g | head -2
 
 $BENCH_LAUNCH stdbuf -oL -eL "$BIN" \
     "$M" "$EFC" "$EF" \
-    1 0 0 \
     "$ALPHA" "$BETA" \
     "$SPKNN_BASE" "$SPKNN_QUERIES" "$SPKNN_GT" \
     "$RES" \

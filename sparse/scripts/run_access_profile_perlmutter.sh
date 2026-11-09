@@ -19,7 +19,7 @@ set -euo pipefail
 cd "$SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/scripts"
 
 module load python/3.11-24.1.0
-source /global/homes/d/dhaura/repos/SpKNN/spknn-playground/common/bench_env_perlmutter.sh
+source "${SPKNN_HNSW_REPO:-$SCRATCH/repos/sparse_hnsw/minimal_hnsw}/sparse/scripts/bench_env_perlmutter.sh"
 bench_provenance
 bench_assert_optimized "$SPKNN_BIN/sparse_access_profile"
 

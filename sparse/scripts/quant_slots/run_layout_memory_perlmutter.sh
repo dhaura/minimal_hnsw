@@ -20,7 +20,7 @@ set -euo pipefail
 cd "$SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/scripts/quant_slots"
 mkdir -p logs
 
-source /global/homes/d/dhaura/repos/SpKNN/spknn-playground/common/bench_env_perlmutter.sh
+source "${SPKNN_HNSW_REPO:-$SCRATCH/repos/sparse_hnsw/minimal_hnsw}/sparse/scripts/bench_env_perlmutter.sh"
 bench_provenance
 BIN="$SCRATCH/repos/sparse_hnsw/minimal_hnsw/build/bin/sparse_hnsw_sweep"
 bench_assert_optimized "$BIN"
@@ -35,7 +35,7 @@ for M in 32 48 64; do
     for SLOT in 0 "-$SLOT_SIZE"; do
         echo "########## M=$M slot_arg=$SLOT ##########"
         $BENCH_LAUNCH stdbuf -oL -eL "$BIN" \
-            "$M" 200 100 1 0 0 0.85 3 \
+            "$M" 200 100 0.85 3 \
             "$SPKNN_BASE" "$SPKNN_QUERIES" "$SPKNN_GT" \
             "$CSV" "SparseHNSW_M${M}_slot${SLOT}" 3 1 1 8 8:4 0 "$SLOT"
     done

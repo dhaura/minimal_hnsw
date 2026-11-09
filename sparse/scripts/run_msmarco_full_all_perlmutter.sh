@@ -45,7 +45,7 @@ echo "params: M=$M efC=$EFC ef=$EF | sindi doc=$DOC_PRUNE query=$QUERY_PRUNE nca
 echo "================================================================"
 
 echo; echo "########## sparse_hnsw ##########"
-$LAUNCH stdbuf -oL -eL "$BIN/sparse_hnsw_demo" $M $EFC $EF 1 0 0 1 0 \
+$LAUNCH stdbuf -oL -eL "$BIN/sparse_hnsw_demo" $M $EFC $EF 1 0 \
   "$BASE" "$QUERIES" "$GT" "$SCRIPTS/results/msmarco_full_sparse_hnsw_${SLURM_JOB_ID}.csv"
 
 echo; echo "########## grassRMA ##########"

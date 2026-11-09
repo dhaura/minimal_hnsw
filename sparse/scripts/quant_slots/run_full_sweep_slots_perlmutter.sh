@@ -28,7 +28,7 @@ STEP=${STEP:-step6_full_sweep_${SPKNN_DATASET:-msmarco_full}}
 cd "$SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/scripts/quant_slots"
 mkdir -p logs
 
-source /global/homes/d/dhaura/repos/SpKNN/spknn-playground/common/bench_env_perlmutter.sh
+source "${SPKNN_HNSW_REPO:-$SCRATCH/repos/sparse_hnsw/minimal_hnsw}/sparse/scripts/bench_env_perlmutter.sh"
 bench_provenance
 bench_assert_optimized "$SPKNN_BIN/sparse_hnsw_sweep"
 
@@ -55,7 +55,7 @@ for EFC in $EFCS; do
         CSV="$OUT/slots_${SPKNN_DATASET}_M${M}_efc${EFC}_a${ALPHA}_${SLURM_JOB_ID}.csv"
         echo "########## M=$M efC=$EFC alpha=$ALPHA -> $CSV ##########"
         $BENCH_LAUNCH stdbuf -oL -eL "$SPKNN_BIN/sparse_hnsw_sweep" \
-            "$M" "$EFC" "$EF_LIST" 1 0 0 "$ALPHA" "$BETAS" \
+            "$M" "$EFC" "$EF_LIST" "$ALPHA" "$BETAS" \
             "$SPKNN_BASE" "$SPKNN_QUERIES" "$SPKNN_GT" \
             "$CSV" SparseHNSW 3 1 1 8 "$SEEDS" "$PATIENCE_LIST" "-$SLOT_SIZE"
     done

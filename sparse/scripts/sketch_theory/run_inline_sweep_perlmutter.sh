@@ -11,7 +11,7 @@
 
 # Full SparseHNSW sweep with the inline top-K gate, same grids as the gap_top16 full
 # sweeps, slots only. Each graph runs six series in one job:
-#   SparseHNSW               sep, rows in dimension order, no gate   (same-job baseline)
+#   SparseHNSW               off, rows in dimension order, no gate   (same-job baseline)
 #   SparseHNSW_inline16      rows top-16 first, score a neighbor only if one of its first
 #   SparseHNSW_inline24      16 / 24 slot IDs is a query term (0 B extra memory)
 # each with the patience list and the score-gap stop list (+Gap rows carry gap= in
@@ -34,12 +34,12 @@
 set -euo pipefail
 PRESET=${PRESET:?set PRESET: alpha or grid}
 SLOT_SIZE=${SLOT_SIZE:-320}
-LAYOUTS=sep,inline16,inline24
+LAYOUTS=off,inline16,inline24
 REPO="$SCRATCH/repos/sparse_hnsw/minimal_hnsw"
 cd "$REPO/sparse/scripts/sketch_theory"
 mkdir -p logs
 
-source /global/homes/d/dhaura/repos/SpKNN/spknn-playground/common/bench_env_perlmutter.sh
+source "${SPKNN_HNSW_REPO:-$SCRATCH/repos/sparse_hnsw/minimal_hnsw}/sparse/scripts/bench_env_perlmutter.sh"
 bench_provenance
 BIN=${BIN:-"$REPO/build-inlinesweep/bin/sparse_hnsw_sweep"}
 bench_assert_optimized "$BIN"
@@ -67,9 +67,9 @@ for EFC in $EFCS; do
         CSV="$OUT/inline_${SPKNN_DATASET}_M${M}_efc${EFC}_a${ALPHA}_${SLURM_JOB_ID}.csv"
         echo "########## M=$M efC=$EFC alpha=$ALPHA -> $CSV ##########"
         $BENCH_LAUNCH stdbuf -oL -eL "$BIN" \
-            "$M" "$EFC" "$EF_LIST" 1 0 0 "$ALPHA" "$BETAS" \
+            "$M" "$EFC" "$EF_LIST" "$ALPHA" "$BETAS" \
             "$SPKNN_BASE" "$SPKNN_QUERIES" "$SPKNN_GT" \
-            "$CSV" SparseHNSW 3 1 1 8 "$SEEDS" "$STOPS" "-$SLOT_SIZE" off 1 "$LAYOUTS"
+            "$CSV" SparseHNSW 3 1 1 8 "$SEEDS" "$STOPS" "-$SLOT_SIZE" "$LAYOUTS"
     done
 done
 echo "########## done -> $OUT ##########"

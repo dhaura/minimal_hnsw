@@ -27,7 +27,7 @@ M=${M:-32}; EFC=${EFC:-800}; ALPHA=${ALPHA:-0.85}; BETA=${BETA:-4}
 REPO="$SCRATCH/repos/sparse_hnsw/minimal_hnsw"
 cd "$REPO/sparse/scripts/adaptive_stopping"
 mkdir -p logs
-source /global/homes/d/dhaura/repos/SpKNN/spknn-playground/common/bench_env_perlmutter.sh
+source "${SPKNN_HNSW_REPO:-$SCRATCH/repos/sparse_hnsw/minimal_hnsw}/sparse/scripts/bench_env_perlmutter.sh"
 bench_provenance
 BIN=${BIN:-"$REPO/build/bin/sparse_hnsw_sweep"}  # pass a frozen copy for long runs
 bench_assert_optimized "$BIN"
@@ -41,7 +41,7 @@ CSV="$OUT/stop_${SPKNN_DATASET}_M${M}_efc${EFC}_a${ALPHA}_b${BETA}_${SLURM_JOB_I
 echo "### dataset : $SPKNN_DATASET / $SPKNN_QSET   threads=$BENCH_THREADS   launch: $BENCH_LAUNCH"
 echo "### config  : M=$M efC=$EFC alpha=$ALPHA beta=$BETA rules=$RULES -> $CSV"
 $BENCH_LAUNCH stdbuf -oL -eL "$BIN" \
-    "$M" "$EFC" "$EF_LIST" 1 0 0 "$ALPHA" "$BETA" \
+    "$M" "$EFC" "$EF_LIST" "$ALPHA" "$BETA" \
     "$SPKNN_BASE" "$SPKNN_QUERIES" "$SPKNN_GT" \
     "$CSV" SparseHNSW 3 1 1 8 8:4 "$RULES"
 echo "########## done -> $OUT ##########"

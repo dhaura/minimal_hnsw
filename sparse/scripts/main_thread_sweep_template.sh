@@ -23,7 +23,7 @@ if command -v numactl >/dev/null; then
   fi
 fi
 
-$LAUNCH $SCRATCH/repos/sparse_hnsw/minimal_hnsw/build/bin/sparse_hnsw_demo 16 200 150 1 0 0 1 0 \
+$LAUNCH $SCRATCH/repos/sparse_hnsw/minimal_hnsw/build/bin/sparse_hnsw_demo 16 200 150 1 0 \
   $SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/data/msmarco_full/base_full.csr \
   $SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/data/msmarco_full/queries.dev.csr \
   $SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/data/msmarco_full/base_full.dev.gt

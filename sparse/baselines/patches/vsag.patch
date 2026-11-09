@@ -1,0 +1,14 @@
+diff --git a/extern/openblas/openblas.cmake b/extern/openblas/openblas.cmake
+index e2e2b8e..a15c7f7 100644
+--- a/extern/openblas/openblas.cmake
++++ b/extern/openblas/openblas.cmake
+@@ -190,6 +190,9 @@ if (NOT OPENBLAS_FOUND)
+     string (REPLACE "-ffast-math" "" _openblas_cxx_flags "${_openblas_cxx_flags}")
+     string (STRIP "${_openblas_c_flags}" _openblas_c_flags)
+     string (STRIP "${_openblas_cxx_flags}" _openblas_cxx_flags)
++    # GCC 14 promotes -Wincompatible-pointer-types to a hard error; OpenBLAS
++    # 0.3.23's f2c-converted LAPACK (dmaxloc_ in spstrf/spstf2) trips it.
++    string (APPEND _openblas_c_flags " -Wno-error=incompatible-pointer-types")
+ 
+     ExternalProject_Add (
+         ${name}

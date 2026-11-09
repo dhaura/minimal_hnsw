@@ -45,7 +45,7 @@ echo "### dataset=$DATASET node=$(hostname) alpha=$ALPHA beta=$BETA M=$M efC=$EF
 
 echo; echo "########## 1. diag: traversal-miss vs shortlist-miss at high recall ##########"
 $LAUNCH stdbuf -oL -eL $BIN/sparse_diag_sweep \
-    $M $EFC "200,400,800,1600,3200" 1 0 0 $ALPHA $BETA \
+    $M $EFC "200,400,800,1600,3200" $ALPHA $BETA \
     "$BASE" "$QUERIES" "$GT" \
     "$OUT/diag_${DATASET}_${SLURM_JOB_ID}.csv" \
     "$OUT/diag_${DATASET}_${SLURM_JOB_ID}_decomp.csv" \
@@ -55,7 +55,7 @@ if [ "$RUN_HP" = "1" ]; then
     echo; echo "########## 2. hugepages A/B (bracketed A, B, A) ##########"
     module load craype-hugepages2M 2>/dev/null
     export HUGETLB_MORECORE=yes HUGETLB_VERBOSE=1
-    HP_ARGS="$M $EFC 800 1 0 0 $ALPHA 3 $BASE $QUERIES $GT batch@$THREADS,batch@1 0 cold 1"
+    HP_ARGS="$M $EFC 800 $ALPHA 3 $BASE $QUERIES $GT batch@$THREADS,batch@1 0 cold 1"
     export PROF_BUILD_THREADS=$THREADS
     echo "-------- A: normal build --------"
     $LAUNCH stdbuf -oL -eL $BIN/sparse_profile $HP_ARGS

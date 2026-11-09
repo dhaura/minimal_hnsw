@@ -17,26 +17,36 @@
 
 namespace perf_ctl {
 
-inline int& ctl_fd() { static int fd = -1; return fd; }
-inline int& ack_fd() { static int fd = -1; return fd; }
+    inline int& ctl_fd() {
+        static int fd = -1;
+        return fd;
+    }
+    inline int& ack_fd() {
+        static int fd = -1;
+        return fd;
+    }
 
-inline void init() {
-    const char* c = getenv("PERF_CTL_FIFO");
-    const char* a = getenv("PERF_ACK_FIFO");
-    if (!c || !a) return;
-    ctl_fd() = open(c, O_WRONLY);
-    ack_fd() = open(a, O_RDONLY);
-}
+    inline void init() {
+        const char* c = getenv("PERF_CTL_FIFO");
+        const char* a = getenv("PERF_ACK_FIFO");
+        if (!c || !a) return;
+        ctl_fd() = open(c, O_WRONLY);
+        ack_fd() = open(a, O_RDONLY);
+    }
 
-inline void send(const char* cmd) {
-    if (ctl_fd() < 0) return;
-    if (write(ctl_fd(), cmd, strlen(cmd)) < 0) return;
-    char buf[16];
-    ssize_t n = read(ack_fd(), buf, sizeof(buf));  // wait for perf's "ack\n"
-    (void)n;
-}
+    inline void send(const char* cmd) {
+        if (ctl_fd() < 0) return;
+        if (write(ctl_fd(), cmd, strlen(cmd)) < 0) return;
+        char buf[16];
+        ssize_t n = read(ack_fd(), buf, sizeof(buf)); // wait for perf's "ack\n"
+        (void)n;
+    }
 
-inline void enable()  { send("enable\n"); }
-inline void disable() { send("disable\n"); }
+    inline void enable() {
+        send("enable\n");
+    }
+    inline void disable() {
+        send("disable\n");
+    }
 
 } // namespace perf_ctl

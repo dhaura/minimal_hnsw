@@ -14,11 +14,11 @@ cd "$SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/scripts"
 
 module load python/3.11-24.1.0 2>/dev/null
 
-source /global/homes/d/dhaura/repos/SpKNN/spknn-playground/common/bench_env_perlmutter.sh
+source "${SPKNN_HNSW_REPO:-$SCRATCH/repos/sparse_hnsw/minimal_hnsw}/sparse/scripts/bench_env_perlmutter.sh"
 source "$SPKNN_VENV/bin/activate"
 
 AB="$SPKNN_OUT_ROOT/alpha_beta"
-OUT="$SPKNN_PLAYGROUND/results/${SPKNN_DATASET}_perlmutter/alpha_beta"
+OUT=${OUT:-$SPKNN_HNSW_REPO/sparse/scripts/results/alpha_beta/$SPKNN_DATASET}
 mkdir -p "$OUT"
 
 shopt -s nullglob

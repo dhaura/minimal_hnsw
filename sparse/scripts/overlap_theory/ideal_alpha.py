@@ -3,13 +3,13 @@
 
 alpha(T, ef): share of checked neighbors (checked = after the result list fills) that an
 ideal filter skips, i.e. whose exact query-term overlap is <= T% of the query's terms, from
-the ideal-gate counts (results/bloom_filter/gate_layouts/ideal_threshold_<ds>, beta=3,
+the ideal-gate counts (results/overlap_theory/ideal_gate_<ds>, beta=3,
 M=32 efC=200 alpha=0.85), plus the Bloom T=10 share from the listsketch run of the same
 config. C_i = ceil((3 n_i + 4) / 64) over a row sample of the base pruned like the engine
 (fp16 weights, keep the largest until alpha of the row mass). Writes
 results/overlap_theory/ideal_alpha_<ds>.md and .json.
 
-  python3 ideal_alpha.py <dataset> <base.csr> [slot=320] [sample=200000]
+  python3 ideal_alpha.py <dataset> <base.csr> [slot=320] [sample=200000]   # saved nq_splade summary: slot=448
 """
 import json
 import sys
@@ -46,9 +46,9 @@ def main(ds, base, slot=320, sample=200000):
     n, Cm, Cr, over = lines_sample(base, slot, sample)
     hist = {int(c): float((Cm == c).mean()) for c in np.unique(Cm)}
     a_star, a_ref = 1 / Cm.mean(), 1 / Cr.mean()
-    ideal = pd.read_csv(next((RES / f"bloom_filter/gate_layouts/ideal_threshold_{ds}").glob("*.gate.csv")))
+    ideal = pd.read_csv(next((RES / f"overlap_theory/ideal_gate_{ds}").glob("*.gate.csv")))
     ideal["ef"] = ideal.Params.str.extract(r" ef=(\d+)")[0].astype(int)
-    ls = pd.read_csv(next((RES / f"bloom_filter/gate_layouts/listsketch_{ds}").glob("*.gate.csv")))
+    ls = pd.read_csv(next((RES / f"overlap_theory/list_sketch_gate_{ds}").glob("*.gate.csv")))
     ls = ls[ls.Params.str.contains(r" T=10\b") & ~ls.Params.str.contains("layout=|pat=") & ls.Params.str.contains("beta=3")]
     ls["ef"] = ls.Params.str.extract(r" ef=(\d+)")[0].astype(int)
     out = {"dataset": ds, "slot": slot, "sample": len(n), "nnz_mean": float(n.mean()), "overflow": float(over.mean()),

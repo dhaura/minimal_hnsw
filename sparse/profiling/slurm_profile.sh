@@ -36,7 +36,7 @@ EF=150
 ALPHA=0.8
 BETA=3
 THREADS=48
-HNSW_ARGS="$M $EFC $EF 1 0 0 $ALPHA $BETA $BASE $QUERIES $GT"
+HNSW_ARGS="$M $EFC $EF $ALPHA $BETA $BASE $QUERIES $GT"
 
 # Grace's job environment ships OMP_NUM_THREADS=1, so omp_get_max_threads()
 # reports 1 no matter how many cores are allocated. Every rung here names its

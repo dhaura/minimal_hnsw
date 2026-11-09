@@ -50,7 +50,7 @@ run_ab() {   # run_ab <build> <bin> <label>
   local build=$1 bin=$2 label=$3 out idx qt rc
   case $bin in
     sparse_hnsw_demo)
-      out=$($NUMA "$REPO/$build/bin/$bin" $M $EFC $EF 1 0 0 1 0 \
+      out=$($NUMA "$REPO/$build/bin/$bin" $M $EFC $EF 1 0 \
             "$D1M/base_1M.csr" "$D1M/queries.dev.csr" "$D1M/base_1M.dev.gt" \
             /dev/null 2>&1) ;;
     grassRMA_demo)
@@ -103,7 +103,7 @@ GT=$DFULL/base_full.dev.gt
 mkdir -p "$SCRIPTS/results"
 
 echo; echo "########## sparse_hnsw ##########"
-$NUMA stdbuf -oL -eL "$BIN/sparse_hnsw_demo" $M $EFC $EF 1 0 0 1 0 \
+$NUMA stdbuf -oL -eL "$BIN/sparse_hnsw_demo" $M $EFC $EF 1 0 \
   "$BASE" "$QUERIES" "$GT" "$SCRIPTS/results/msmarco_full_sparse_hnsw_${SLURM_JOB_ID}.csv"
 
 echo; echo "########## grassRMA ##########"

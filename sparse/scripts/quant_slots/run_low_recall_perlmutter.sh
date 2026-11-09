@@ -21,7 +21,7 @@ set -euo pipefail
 cd "$SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/scripts/quant_slots"
 mkdir -p logs
 
-source /global/homes/d/dhaura/repos/SpKNN/spknn-playground/common/bench_env_perlmutter.sh
+source "${SPKNN_HNSW_REPO:-$SCRATCH/repos/sparse_hnsw/minimal_hnsw}/sparse/scripts/bench_env_perlmutter.sh"
 bench_provenance
 bench_assert_optimized "$SPKNN_BIN/sparse_hnsw_sweep"
 
@@ -36,7 +36,7 @@ for ALPHA in 0.75 0.8 0.85 0.9; do
     CSV="$OUT/low_recall_M32_efc200_a${ALPHA}_${SLURM_JOB_ID}.csv"
     echo "########## alpha=$ALPHA -> $CSV ##########"
     $BENCH_LAUNCH stdbuf -oL -eL "$SPKNN_BIN/sparse_hnsw_sweep" \
-        32 200 "$EF_LIST" 1 0 0 "$ALPHA" "$BETAS" \
+        32 200 "$EF_LIST" "$ALPHA" "$BETAS" \
         "$SPKNN_BASE" "$SPKNN_QUERIES" "$SPKNN_GT" \
         "$CSV" SparseHNSW 3 1 1 8 0:1,8:4 0 "-$SLOT_SIZE"
 done

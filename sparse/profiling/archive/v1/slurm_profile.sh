@@ -15,7 +15,7 @@ DATA=$SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/data/msmarco_full
 BASE=$DATA/base_full.csr
 QUERIES=$DATA/queries.dev.csr
 GT=$DATA/base_full.dev.gt
-HNSW_ARGS="16 200 150 1 0 0 1 0 $BASE $QUERIES $GT"
+HNSW_ARGS="16 200 150 1 0 $BASE $QUERIES $GT"
 
 echo "### node=$(hostname)  THP=$(cat /sys/kernel/mm/transparent_hugepage/enabled)"
 echo "### perf_event_paranoid=$(cat /proc/sys/kernel/perf_event_paranoid)"

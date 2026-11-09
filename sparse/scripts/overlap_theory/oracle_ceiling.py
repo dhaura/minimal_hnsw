@@ -48,7 +48,7 @@ def closed_loop(ds):
 def main(ds):
     meta = json.loads((RES / f"overlap_theory/ideal_alpha_{ds}.json").read_text())
     a_star = meta["alpha_star"]
-    ideal = gate_rows(f"bloom_filter/gate_layouts/ideal_threshold_{ds}/*.gate.csv")
+    ideal = gate_rows(f"overlap_theory/ideal_gate_{ds}/*.gate.csv")
     bloom = gate_rows(f"overlap_theory/bloom_skip_{ds}/*.gate.csv")
     pairs = pd.read_csv(next(RES.glob(f"dimension_overlap/*/{ds}_pair_overlaps.csv.gz")))
     gt = [float((100 * pairs.pruned_intersection_nnz <= t * pairs.query_nnz).mean()) for t in TS]

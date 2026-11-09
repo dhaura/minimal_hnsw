@@ -1,0 +1,106 @@
+diff --git a/hnswlib/csr_matrix.h b/hnswlib/csr_matrix.h
+index d378346..9e79fc2 100644
+--- a/hnswlib/csr_matrix.h
++++ b/hnswlib/csr_matrix.h
+@@ -3,6 +3,9 @@
+ #ifndef MATRIX_HPP_
+ #define MATRIX_HPP_
+ #include <cstddef>
++#include <cstdint>
++#include <vector>
++#include <algorithm>
+ #include <iostream>
+ #include <fstream>
+ #include <cmath>
+@@ -61,25 +64,35 @@ public:
+ 
+     if (ori)
+     {
+-      int32_t *indices = new int32_t[nnz]; // 对应data在原矩阵的列
+-      infile.read((char *)indices, nnz * sizeof(int32_t));
+-
+-      for (uint32_t i = 0; i < nnz; ++i)
++      // Chunked staging, and int64 counters. Two reasons, both only visible
++      // past 2^32 nnz (msmarco_v2 SPLADE is 1.7e10):
++      //   - a uint32 loop index never reaches nnz, so the old loops rewrote the
++      //     first 2^32 entries and left the rest of the matrix uninitialised;
++      //   - whole-array staging buffers cost 70 GB (int32) + 70 GB (float) on
++      //     top of the 140 GB pair array, which overruns a 503 GB node.
++      const int64_t kChunk = 1 << 24; // 16.7M entries -> 64 MB per buffer
++      std::vector<int32_t> idx_buf(static_cast<size_t>(std::min<int64_t>(kChunk, nnz)));
++      for (int64_t off = 0; off < nnz; off += kChunk)
+       {
+-        indices_data[i].indice = indices[i];
++        const int64_t n = std::min<int64_t>(kChunk, nnz - off);
++        infile.read((char *)idx_buf.data(), n * sizeof(int32_t));
++        for (int64_t i = 0; i < n; ++i)
++        {
++          indices_data[off + i].indice = idx_buf[i];
++        }
+       }
+-      delete[] indices;
+-
+-      float *data = new float[nnz];
+-      infile.read((char *)data, nnz * sizeof(float));
+-      infile.close();
+ 
+-      for (uint32_t i = 0; i < nnz; ++i)
++      std::vector<float> val_buf(static_cast<size_t>(std::min<int64_t>(kChunk, nnz)));
++      for (int64_t off = 0; off < nnz; off += kChunk)
+       {
+-        indices_data[i].data = data[i];
++        const int64_t n = std::min<int64_t>(kChunk, nnz - off);
++        infile.read((char *)val_buf.data(), n * sizeof(float));
++        for (int64_t i = 0; i < n; ++i)
++        {
++          indices_data[off + i].data = val_buf[i];
++        }
+       }
+-
+-      delete[] data;
++      infile.close();
+     }
+     else
+     {
+@@ -96,7 +109,7 @@ public:
+ 
+     indices_data = new IndiceDataPair[nnz];
+ 
+-    for (uint32_t i = 0; i < nnz; ++i)
++    for (int64_t i = 0; i < nnz; ++i)
+     {
+       indices_data[i].indice = indices_[i];
+       indices_data[i].data = data_[i];
+diff --git a/hnswlib/space_ip.h b/hnswlib/space_ip.h
+index 8b2604f..cec27b8 100644
+--- a/hnswlib/space_ip.h
++++ b/hnswlib/space_ip.h
+@@ -12,11 +12,14 @@ namespace sparse_hnswlib
+         const uint32_t q_idx = *((uint32_t *) pVect1);
+         const uint32_t p_idx = *((uint32_t *) pVect2);
+ 
+-        const uint32_t p_start = csr_matrix->indptr[p_idx];
+-        const uint32_t p_end = csr_matrix->indptr[p_idx + 1];
++        // int64_t, not uint32_t: indptr offsets exceed the uint32 range once a
++        // matrix passes 2^32 nnz (msmarco_v2 SPLADE is 1.7e10), and truncating
++        // them here aliases the tail of the corpus onto the head.
++        const int64_t p_start = csr_matrix->indptr[p_idx];
++        const int64_t p_end = csr_matrix->indptr[p_idx + 1];
+         IndiceDataPair *p_indices = csr_matrix->indices_data + p_start;
+ 
+-        uint32_t q_end, q_start = 0;
++        int64_t q_end, q_start = 0;
+         IndiceDataPair *q_indices;
+         if (other_ptr == nullptr) {
+             q_start = csr_matrix->indptr[q_idx];
+@@ -29,8 +32,8 @@ namespace sparse_hnswlib
+             q_indices = csr_matrix_query->indices_data + q_start;
+         }
+ 
+-        uint32_t p_num = p_end - p_start;
+-        uint32_t q_num = q_end - q_start;
++        uint32_t p_num = static_cast<uint32_t>(p_end - p_start);
++        uint32_t q_num = static_cast<uint32_t>(q_end - q_start);
+         uint32_t i = 0, j = 0; 
+ 
+         // int32_t q_min = q_indices[0], q_max = q_indices[q_num - 1];

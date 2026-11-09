@@ -39,7 +39,7 @@ unset OMP_PLACES
 echo "########## pass 1: benchmark binary (timing + recall) ##########"
 numactl --cpunodebind=0-1 --interleave=0-1 stdbuf -oL -eL \
   "$REPO/build-release/bin/sparse_hnsw_sweep" \
-  16 200 "$EF_LIST" 1 0 0 $ALPHA $BETA \
+  16 200 "$EF_LIST" $ALPHA $BETA \
   "$DATA/base_full.csr" "$DATA/queries.dev.csr" "$DATA/base_full.dev.gt" \
   "$OUT/bench_timing.csv" SparseHNSW 5 1
 
@@ -47,6 +47,6 @@ echo ""
 echo "########## pass 2: profile binary (distance-call counts) ##########"
 numactl --cpunodebind=0-1 --interleave=0-1 stdbuf -oL -eL \
   "$REPO/build-release/bin/sparse_diag_sweep" \
-  16 200 "$EF_LIST" 1 0 0 $ALPHA $BETA \
+  16 200 "$EF_LIST" $ALPHA $BETA \
   "$DATA/base_full.csr" "$DATA/queries.dev.csr" "$DATA/base_full.dev.gt" \
   "$OUT/prof_timing.csv" "$OUT/prof_ndist.csv" SparseHNSW 3 1 10

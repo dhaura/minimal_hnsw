@@ -27,7 +27,7 @@ FLAG=${FLAG:?set FLAG, e.g. --export=ALL,FLAG=--work}
 cd "$SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/scripts/early_stopping"
 mkdir -p logs
 
-source /global/homes/d/dhaura/repos/SpKNN/spknn-playground/common/bench_env_perlmutter.sh
+source "${SPKNN_HNSW_REPO:-$SCRATCH/repos/sparse_hnsw/minimal_hnsw}/sparse/scripts/bench_env_perlmutter.sh"
 bench_provenance
 
 BIN="$SCRATCH/repos/sparse_hnsw/minimal_hnsw/build/sparse/sparse_bloom_sweep"

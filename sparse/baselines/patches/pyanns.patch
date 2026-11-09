@@ -1,0 +1,109 @@
+diff --git a/pyanns/quant/sparse_quant.hpp b/pyanns/quant/sparse_quant.hpp
+index 85c1f76..bd8f321 100644
+--- a/pyanns/quant/sparse_quant.hpp
++++ b/pyanns/quant/sparse_quant.hpp
+@@ -67,7 +67,10 @@ struct SparseQuant {
+     cur += indptr[n] * sizeof(int32_t);
+     this->data = (dtype *)align_alloc(indptr[n] * sizeof(dtype));
+     const float *fcur = (const float *)cur;
+-    for (int i = 0; i < indptr[n]; ++i) {
++    // int64_t, not int: indptr[n] is the total nnz, which is 1.75e10 on
++    // msmarco_v2 SPLADE -- 8.1x the signed 32-bit range. A 32-bit counter
++    // overflows partway and leaves most of `data` unwritten.
++    for (int64_t i = 0; i < indptr[n]; ++i) {
+       this->data[i] = dtype(fcur[i]);
+     }
+   }
+@@ -89,7 +92,7 @@ struct SparseQuant {
+ 
+     dist_type operator()(int32_t u) const {
+       float sum = 0.0f;
+-      for (int i = quant.indptr[u], j = 0; j < nnz; ++j) {
++      for (int64_t i = quant.indptr[u], j = 0; j < nnz; ++j) {
+         while (i < quant.indptr[u + 1] && quant.indices[i] < ids[j]) {
+           i++;
+         }
+@@ -105,7 +108,7 @@ struct SparseQuant {
+ 
+     dist_type operator()(int32_t u, int32_t v) const {
+       float sum = 0.0f;
+-      for (int i = quant.indptr[u], j = quant.indptr[v];
++      for (int64_t i = quant.indptr[u], j = quant.indptr[v];
+            j < quant.indptr[v + 1]; ++j) {
+         while (i < quant.indptr[u + 1] && quant.indices[i] < quant.indices[j]) {
+           i++;
+diff --git a/pyanns/searcher/sparse_searcher.hpp b/pyanns/searcher/sparse_searcher.hpp
+index 3a91182..4491c10 100644
+--- a/pyanns/searcher/sparse_searcher.hpp
++++ b/pyanns/searcher/sparse_searcher.hpp
+@@ -69,12 +69,15 @@ struct IndexSparse {
+     this->data = (dtype *)align_alloc(indptr[n] * sizeof(dtype));
+     float *data_tmp = (float *)cur;
+     float mx = 0.0f;
+-    for (int i = 0; i < indptr[n]; ++i) {
++    // int64_t, not int: indptr[n] is the total nnz, which is 1.75e10 on
++    // msmarco_v2 SPLADE -- 8.1x the signed 32-bit range. A 32-bit counter
++    // overflows partway and leaves most of `data` unwritten.
++    for (int64_t i = 0; i < indptr[n]; ++i) {
+       this->data[i] = dtype(data_tmp[i]);
+       mx = std::max(data_tmp[i], mx);
+     }
+     for (int32_t i = 0; i < n; ++i) {
+-      for (int32_t j = indptr[i]; j < indptr[i + 1]; ++j) {
++      for (int64_t j = indptr[i]; j < indptr[i + 1]; ++j) {
+         auto u = indices[j];
+         auto v = data[j];
+         if (float(v) / mx > drop_ratio) {
+@@ -282,7 +285,7 @@ struct IndexSparse {
+ 
+   float dot_bf(int32_t nnz, const int32_t *ids, const float *vals, int32_t u) {
+     float sum = 0.0f;
+-    for (int i = indptr[u], j = 0; j < nnz; ++j) {
++    for (int64_t i = indptr[u], j = 0; j < nnz; ++j) {
+       while (i < indptr[u + 1] && indices[i] < ids[j]) {
+         i++;
+       }
+diff --git a/third_party/helpa/helpa/platform/x86/dot_impl.hpp b/third_party/helpa/helpa/platform/x86/dot_impl.hpp
+index 7365cce..684ddaa 100644
+--- a/third_party/helpa/helpa/platform/x86/dot_impl.hpp
++++ b/third_party/helpa/helpa/platform/x86/dot_impl.hpp
+@@ -223,6 +223,23 @@ dota_s8_s8(const int8_t* x, const int8_t* y, const int32_t d) {
+     return -reduce_add_i32x8(sum);
+ }
+ 
++inline int32_t
++dota_u8_s8(const uint8_t* x, const int8_t* y, const int32_t d);
++
++// LOCAL PATCH (Perlmutter / AMD Zen3).
++// This function lives inside the `#if defined(__AVX2__)` block at the top of
++// the file but used AVX-512 + VNNI unconditionally -- i.e. it assumed AVX2
++// implies AVX-512. True on Intel Cascade Lake (TAMU Grace), false on AMD Zen3
++// (Perlmutter EPYC 7763/7713), where it fails to compile with
++//   "inlining failed in call to always_inline '_mm512_setzero_si512()':
++//    target specific option mismatch".
++// It is reachable from pyanns/quant/sq8u_quant.hpp, which quant.hpp includes
++// unconditionally, so it has to compile even where it is never called.
++// The AVX2 path forwards to dota_u8_s8(), which already carries a correct
++// non-AVX512 implementation of the same reduction.
++// NOTE: this patch is lost if third_party/helpa is re-cloned or reset.
++#if defined(__AVX512F__)
++
+ inline int32_t
+ dota_u8_s8_256(const uint8_t* x, const int8_t* y) {
+     __m512i sum0 = _mm512_setzero_si512();
+@@ -243,6 +260,15 @@ dota_u8_s8_256(const uint8_t* x, const int8_t* y) {
+     return -_mm512_reduce_add_epi32(sum0);
+ }
+ 
++#else  // no AVX-512: the callers only ever use d == 256
++
++inline int32_t
++dota_u8_s8_256(const uint8_t* x, const int8_t* y) {
++    return dota_u8_s8(x, y, 256);
++}
++
++#endif  // __AVX512F__ -- end LOCAL PATCH
++
+ inline int32_t
+ dota_u8_s8(const uint8_t* x, const int8_t* y, const int32_t d) {
+ #if defined(__AVX512VNNI__)

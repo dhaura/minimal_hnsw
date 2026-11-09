@@ -29,7 +29,7 @@ BETA="${BETA:-3}"
 $BENCH_LAUNCH stdbuf -oL -eL "$SPKNN_BIN/sparse_hnsw_sweep" \
   "${M:-16}" "${EFC:-200}" \
   "${EF_LIST:-10,20,50,100,200,400,800,1600,3200}" \
-  1 0 0 "$ALPHA" "$BETA" \
+  "$ALPHA" "$BETA" \
   "$SPKNN_DATA/base_full.csr" \
   "$SPKNN_DATA/queries.dev.csr" \
   "$SPKNN_DATA/base_full.dev.gt" \

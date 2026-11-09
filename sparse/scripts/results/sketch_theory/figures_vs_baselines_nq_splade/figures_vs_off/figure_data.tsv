@@ -1,0 +1,55 @@
+Model	Params	Recall	RR@10	QPS	SearchSecMedian	IndexSec	PeakRSSGB	Threads
+SparseHNSW+Gap	M=32 efC=200 ef=30 alpha=0.65 beta=2 q=u8 seedT=8 seedH=8 seedS=4 gap=0.05 slots=448	0.8547508691	0.9783	294288.15	0.011730	125.9395	5.07	64
+SparseHNSW+Gap	M=32 efC=200 ef=30 alpha=0.7 beta=2 q=u8 seedT=8 seedH=8 seedS=4 gap=0.05 slots=448	0.8831402086	0.9815	283625.01	0.012171	140.1008	5.07	64
+SparseHNSW+Gap	M=32 efC=200 ef=25 alpha=0.725 beta=2 q=u8 seedT=8 seedH=8 seedS=4 gap=0.05 slots=448	0.8917149479	0.9815	276513.94	0.012484	147.3510	5.07	64
+SparseHNSW+Gap	M=32 efC=200 ef=30 alpha=0.75 beta=2 q=u8 seedT=8 seedH=8 seedS=4 gap=0.05 slots=448	0.9032155272	0.9849	262929.39	0.013129	155.1806	5.06	64
+SparseHNSW+Gap	M=32 efC=200 ef=30 alpha=0.725 beta=3 q=u8 seedT=8 seedH=8 seedS=4 gap=0.05 slots=448	0.9115295481	0.9820	250835.63	0.013762	147.3510	5.07	64
+SparseHNSW+Gap	M=32 efC=200 ef=30 alpha=0.7 beta=4 q=u8 seedT=8 seedH=8 seedS=4 gap=0.05 slots=448	0.9262456547	0.9867	214183.78	0.016117	140.1008	5.07	64
+SparseHNSW+Gap	M=32 efC=200 ef=40 alpha=0.75 beta=3 q=u8 seedT=8 seedH=8 seedS=4 gap=0.05 slots=448	0.9308227115	0.9904	204127.49	0.016911	155.1806	5.06	64
+SparseHNSW+Gap	M=32 efC=200 ef=75 alpha=0.75 beta=3 q=u8 seedT=8 seedH=8 seedS=4 gap=0.05 slots=448	0.9424681344	0.9939	172289.88	0.020036	155.1806	5.06	64
+SparseHNSW+Gap	M=32 efC=200 ef=75 alpha=0.75 beta=4 q=u8 seedT=8 seedH=8 seedS=4 gap=0.05 slots=448	0.9534472769	0.9954	138002.72	0.025014	155.1806	5.06	64
+SparseHNSW+Gap	M=32 efC=800 ef=50 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 gap=0.05 slots=448	0.9629200463	0.9965	102251.18	0.033760	734.8012	5.06	64
+SparseHNSW+Gap	M=32 efC=1600 ef=200 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 gap=0.1 slots=448	0.9717844728	0.9986	76786.19	0.044956	1317.0745	5.06	64
+SparseHNSW+Gap	M=32 efC=1600 ef=100 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 gap=0.1 slots=448	0.9802723059	0.9983	61749.82	0.055903	1317.0745	5.06	64
+SparseHNSW+Gap	M=32 efC=1600 ef=200 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 gap=0.15 slots=448	0.9903244496	0.9994	33503.83	0.103033	1317.0745	5.06	64
+SparseHNSW+Gap	M=64 efC=800 ef=1600 alpha=0.85 beta=8 q=u8 seedT=8 seedH=8 seedS=4 gap=0.3 slots=448	0.9982618772	1.0000	3490.52	0.988964	1097.1079	5.70	64
+SparseHNSW+Inline16	M=32 efC=200 ef=30 alpha=0.65 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=inline16	0.8545480881	0.9786	314819.88	0.010965	125.9489	5.07	64
+SparseHNSW+Inline16	M=32 efC=200 ef=30 alpha=0.65 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=inline16	0.8849942063	0.9786	305135.68	0.011313	125.9489	5.07	64
+SparseHNSW+Inline16	M=32 efC=200 ef=30 alpha=0.7 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=inline16	0.9043163384	0.9817	291136.04	0.011857	140.1263	5.07	64
+SparseHNSW+Inline16	M=32 efC=200 ef=30 alpha=0.75 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=inline16	0.9144843569	0.9835	271811.02	0.012700	155.2361	5.06	64
+SparseHNSW+Inline16	M=32 efC=200 ef=40 alpha=0.7 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=inline16	0.9234936269	0.9864	242876.24	0.014213	140.1263	5.07	64
+SparseHNSW+Inline16	M=32 efC=200 ef=40 alpha=0.75 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=inline16	0.9309965238	0.9899	225444.10	0.015312	155.2361	5.06	64
+SparseHNSW+Inline16	M=32 efC=200 ef=50 alpha=0.75 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=inline16	0.9418597914	0.9925	186282.45	0.018531	155.2361	5.06	64
+SparseHNSW+Inline16	M=32 efC=800 ef=40 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=inline16	0.9518829664	0.9948	141487.01	0.024398	734.9189	5.07	64
+SparseHNSW+Inline16	M=32 efC=800 ef=50 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=inline16	0.9603707995	0.9957	116783.38	0.029559	734.9189	5.07	64
+SparseHNSW+Inline16	M=32 efC=800 ef=10 alpha=0.85 beta=8 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=inline16	0.9741888760	0.9986	76571.58	0.045082	734.9189	5.07	64
+SparseHNSW+Inline16	M=32 efC=1600 ef=100 alpha=0.85 beta=8 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=inline16	0.9801853998	0.9988	60632.67	0.056933	1317.1932	5.07	64
+SparseHNSW+Inline16	M=64 efC=800 ef=200 alpha=0.85 beta=5 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=inline16	0.9904692932	0.9994	23894.07	0.144471	1097.2256	5.71	64
+SparseHNSW+Inline16	M=64 efC=800 ef=1600 alpha=0.85 beta=8 q=u8 seedT=8 seedH=8 seedS=4 slots=448 layout=inline16	0.9966106605	1.0000	4346.22	0.794253	1097.2256	5.71	64
+SparseHNSW+Inline16+Gap	M=32 efC=200 ef=30 alpha=0.65 beta=2 q=u8 seedT=8 seedH=8 seedS=4 gap=0.05 slots=448 layout=inline16	0.8524333720	0.9774	335503.94	0.010289	125.9489	5.07	64
+SparseHNSW+Inline16+Gap	M=32 efC=200 ef=30 alpha=0.7 beta=2 q=u8 seedT=8 seedH=8 seedS=4 gap=0.05 slots=448 layout=inline16	0.8804750869	0.9812	319274.88	0.010812	140.1263	5.07	64
+SparseHNSW+Inline16+Gap	M=32 efC=200 ef=25 alpha=0.75 beta=2 q=u8 seedT=8 seedH=8 seedS=4 gap=0.05 slots=448 layout=inline16	0.8994785632	0.9829	293812.24	0.011749	155.2361	5.06	64
+SparseHNSW+Inline16+Gap	M=32 efC=200 ef=30 alpha=0.7 beta=3 q=u8 seedT=8 seedH=8 seedS=4 gap=0.1 slots=448 layout=inline16	0.9043163384	0.9817	289500.17	0.011924	140.1263	5.07	64
+SparseHNSW+Inline16+Gap	M=32 efC=200 ef=25 alpha=0.75 beta=3 q=u8 seedT=8 seedH=8 seedS=4 gap=0.05 slots=448 layout=inline16	0.9144843569	0.9835	269835.07	0.012793	155.2361	5.06	64
+SparseHNSW+Inline16+Gap	M=32 efC=200 ef=25 alpha=0.7 beta=4 q=u8 seedT=8 seedH=8 seedS=4 gap=0.05 slots=448 layout=inline16	0.9234936269	0.9864	240239.40	0.014369	140.1263	5.07	64
+SparseHNSW+Inline16+Gap	M=32 efC=200 ef=30 alpha=0.75 beta=4 q=u8 seedT=8 seedH=8 seedS=4 gap=0.05 slots=448 layout=inline16	0.9309965238	0.9899	223995.85	0.015411	155.2361	5.06	64
+SparseHNSW+Inline16+Gap	M=32 efC=200 ef=50 alpha=0.75 beta=4 q=u8 seedT=8 seedH=8 seedS=4 gap=0.05 slots=448 layout=inline16	0.9416280417	0.9925	186423.29	0.018517	155.2361	5.06	64
+SparseHNSW+Inline16+Gap	M=32 efC=200 ef=100 alpha=0.75 beta=4 q=u8 seedT=8 seedH=8 seedS=4 gap=0.05 slots=448 layout=inline16	0.9513035921	0.9948	151762.95	0.022746	155.2361	5.06	64
+SparseHNSW+Inline16+Gap	M=32 efC=1600 ef=50 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 gap=0.05 slots=448 layout=inline16	0.9614716107	0.9965	123723.16	0.027901	1317.1932	5.07	64
+SparseHNSW+Inline16+Gap	M=32 efC=800 ef=100 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 gap=0.05 slots=448 layout=inline16	0.9706836616	0.9974	92945.61	0.037140	734.9189	5.07	64
+SparseHNSW+Inline16+Gap	M=32 efC=1600 ef=400 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 gap=0.1 slots=448 layout=inline16	0.9803012746	0.9986	68042.50	0.050733	1317.1932	5.07	64
+SparseHNSW+Inline16+Gap	M=32 efC=1600 ef=1600 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 gap=0.15 slots=448 layout=inline16	0.9903244496	0.9997	33713.24	0.102393	1317.1932	5.07	64
+SparseHNSW+Inline16+Gap	M=64 efC=800 ef=1600 alpha=0.85 beta=8 q=u8 seedT=8 seedH=8 seedS=4 gap=0.3 slots=448 layout=inline16	0.9965816918	1.0000	6006.63	0.574698	1097.2256	5.71	64
+SparseHNSW-off	M=32 efC=200 ef=30 alpha=0.65 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448	0.8570973349	0.9794	270660.19	0.012754	125.9395	5.07	64
+SparseHNSW-off	M=32 efC=200 ef=30 alpha=0.65 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448	0.8881807648	0.9794	263612.07	0.013095	125.9395	5.07	64
+SparseHNSW-off	M=32 efC=200 ef=30 alpha=0.7 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448	0.9072711472	0.9817	257074.77	0.013428	140.1008	5.07	64
+SparseHNSW-off	M=32 efC=200 ef=30 alpha=0.725 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448	0.9115295481	0.9820	250163.06	0.013799	147.3510	5.07	64
+SparseHNSW-off	M=32 efC=200 ef=30 alpha=0.8 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448	0.9204808806	0.9803	214250.25	0.016112	172.3264	5.06	64
+SparseHNSW-off	M=32 efC=200 ef=40 alpha=0.75 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448	0.9348203940	0.9907	200185.57	0.017244	155.1806	5.06	64
+SparseHNSW-off	M=32 efC=200 ef=50 alpha=0.75 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448	0.9460892236	0.9945	164232.36	0.021019	155.1806	5.06	64
+SparseHNSW-off	M=32 efC=200 ef=75 alpha=0.725 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448	0.9516222480	0.9939	118037.27	0.029245	147.3510	5.07	64
+SparseHNSW-off	M=32 efC=800 ef=50 alpha=0.85 beta=2 q=u8 seedT=8 seedH=8 seedS=4 slots=448	0.9611529548	0.9968	92378.51	0.037368	734.8012	5.06	64
+SparseHNSW-off	M=64 efC=400 ef=50 alpha=0.85 beta=3 q=u8 seedT=8 seedH=8 seedS=4 slots=448	0.9715527231	0.9974	69170.04	0.049906	493.4982	5.71	64
+SparseHNSW-off	M=32 efC=1600 ef=10 alpha=0.85 beta=8 q=u8 seedT=8 seedH=8 seedS=4 slots=448	0.9802143685	0.9986	57096.54	0.060459	1317.0745	5.06	64
+SparseHNSW-off	M=32 efC=1600 ef=200 alpha=0.85 beta=4 q=u8 seedT=8 seedH=8 seedS=4 slots=448	0.9911066049	0.9994	25721.84	0.134205	1317.0745	5.06	64
+SparseHNSW-off	M=64 efC=800 ef=1600 alpha=0.85 beta=8 q=u8 seedT=8 seedH=8 seedS=4 slots=448	0.9982908459	1.0000	2459.01	1.403817	1097.1079	5.70	64

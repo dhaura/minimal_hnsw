@@ -66,8 +66,15 @@ Makefile
 **/.vscode
 **/.idea
 
-# Other library files
+# Job logs (sparse/profiling/logs is not ignored: it holds the tracked profile plots)
+/logs/
+sparse/scripts/**/logs/
+sparse/baselines/**/logs/
+
+# Other library files (faiss, GrassRMA, vsag and pyanns are nested git repos, so ignore the folders;
+# sparse/baselines/fetch_baselines.sh clones the baseline ones)
 dense/hnswlib/*
-dense/faiss/*
-sparse/GrassRMA/*
-sparse/vsag/*
+dense/faiss/
+sparse/GrassRMA/
+sparse/vsag/
+sparse/pyanns/

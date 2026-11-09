@@ -1,0 +1,11 @@
+--- a/Cargo.toml	2006-07-23 18:21:28.000000000 -0700
++++ b/Cargo.toml	2026-11-05 11:49:21.751793071 -0800
+@@ -68,7 +68,7 @@
+ [profile.release]
+ opt-level = 3
+ debug = false
+-lto = false
++lto = "fat"
+ codegen-units = 1
+ panic = "abort"
+ strip = "symbols"

@@ -1,0 +1,21 @@
+# Style of sparse_hnsw.cpp: 4-space indent, attached braces, namespace bodies indented.
+BasedOnStyle: LLVM
+IndentWidth: 4
+ContinuationIndentWidth: 4
+ColumnLimit: 120
+BreakBeforeBraces: Attach
+NamespaceIndentation: All
+AccessModifierOffset: -4
+DerivePointerAlignment: true
+PointerAlignment: Left
+AlignAfterOpenBracket: Align
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLoopsOnASingleLine: true
+AllowShortBlocksOnASingleLine: Empty
+MaxEmptyLinesToKeep: 1
+IndentPPDirectives: None
+# Keep the token stream identical: no include reordering, no split string literals, no comment reflow.
+SortIncludes: Never
+BreakStringLiterals: false
+ReflowComments: false

@@ -14,7 +14,7 @@ cd "$SCRATCH/repos/sparse_hnsw/minimal_hnsw/sparse/scripts"
 
 module load python/3.11-24.1.0
 
-source /global/homes/d/dhaura/repos/SpKNN/spknn-playground/common/bench_env_perlmutter.sh
+source "${SPKNN_HNSW_REPO:-$SCRATCH/repos/sparse_hnsw/minimal_hnsw}/sparse/scripts/bench_env_perlmutter.sh"
 bench_provenance
 bench_assert_optimized "$SPKNN_BIN/sparse_hnsw_sweep"
 
@@ -58,7 +58,7 @@ for ALPHA in $ALPHAS; do
   echo
   echo "######## alpha=$ALPHA betas=[$BETA_CSV] (one build) ########"
   $BENCH_LAUNCH stdbuf -oL -eL "$SPKNN_BIN/sparse_hnsw_sweep" \
-    "$M" "$EFC" "$EF_LIST" 1 0 0 "$ALPHA" "$BETA_CSV" \
+    "$M" "$EFC" "$EF_LIST" "$ALPHA" "$BETA_CSV" \
     "$SPKNN_BASE" "$SPKNN_QUERIES" "$SPKNN_GT" \
     "$CSV" "$MODEL" \
     "${REPEATS:-5}" "${WARMUP:-1}" "${QUANTIZE:-0}" \

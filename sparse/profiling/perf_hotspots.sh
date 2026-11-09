@@ -2,7 +2,7 @@
 # E6b: Profile the non-distance time.
 #
 #   ./perf_hotspots.sh <command> [args...]
-#   ./perf_hotspots.sh ../../build-release/bin/sparse_profile 16 200 150 1 0 0 0.8 3 \
+#   ./perf_hotspots.sh ../../build-release/bin/sparse_profile 16 200 150 0.8 3 \
 #        base.csr queries.csr gt batch
 set -u
 

@@ -64,13 +64,12 @@
 #include <cstring>
 #include <string>
 
-static const int HOPS_BATCH = 32;   // ~= level-0 degree (2*M with M=16)
+static const int HOPS_BATCH = 32; // ~= level-0 degree (2*M with M=16)
 
 // The fp16 dense kernel: SPARSE_HNSW::distanceDense(), verbatim.
-__attribute__((always_inline))
-static inline float dense(const float* qd, const IndiceDataPair* p, uint32_t pn) {
+__attribute__((always_inline)) static inline float dense(const float* qd, const IndiceDataPair* p, uint32_t pn) {
     float res = 0.0f;
-    #pragma omp simd reduction(+:res)
+#pragma omp simd reduction(+ : res)
     for (uint32_t i = 0; i < pn; ++i) {
         res += static_cast<float>(p[i].data) * qd[p[i].indice];
     }
@@ -80,9 +79,8 @@ static inline float dense(const float* qd, const IndiceDataPair* p, uint32_t pn)
 // The OLD kernel: branchless sorted-list merge. No longer on any search path
 // (SPARSE_HNSW::distance() is now build-only); kept as the before/after
 // baseline for what the dense rewrite bought.
-__attribute__((always_inline))
-static inline float merge(const IndiceDataPair* q, uint32_t qn,
-                          const IndiceDataPair* p, uint32_t pn) {
+__attribute__((always_inline)) static inline float merge(const IndiceDataPair* q, uint32_t qn, const IndiceDataPair* p,
+                                                         uint32_t pn) {
     const IndiceDataPair* qe = q + qn;
     const IndiceDataPair* pe = p + pn;
     float res = 0;
@@ -97,8 +95,7 @@ static inline float merge(const IndiceDataPair* q, uint32_t qn,
 }
 
 // THE CURRENT PRODUCTION KERNEL: SPARSE_HNSW::distanceQuant()
-__attribute__((always_inline))
-static inline float quant(const float* qd, const uint8_t* p) {
+__attribute__((always_inline)) static inline float quant(const float* qd, const uint8_t* p) {
     uint16_t n16;
     _Float16 scale16;
     std::memcpy(&n16, p, sizeof(n16));
@@ -107,7 +104,7 @@ static inline float quant(const float* qd, const uint8_t* p) {
     const uint16_t* idx = reinterpret_cast<const uint16_t*>(p + sparse_hnsw::QuantCSR::kHeader);
     const uint8_t* code = p + sparse_hnsw::QuantCSR::kHeader + 2 * static_cast<size_t>(pn);
     float res = 0.0f;
-    #pragma omp simd reduction(+:res)
+#pragma omp simd reduction(+ : res)
     for (uint32_t i = 0; i < pn; ++i) {
         res += static_cast<float>(code[i]) * qd[idx[i]];
     }
@@ -115,16 +112,14 @@ static inline float quant(const float* qd, const uint8_t* p) {
 }
 
 // Pure streaming read of a row: no ALU on the values, high ILP. Isolates memory.
-__attribute__((always_inline))
-static inline uint64_t stream_row(const IndiceDataPair* p, uint32_t pn) {
+__attribute__((always_inline)) static inline uint64_t stream_row(const IndiceDataPair* p, uint32_t pn) {
     uint64_t acc = 0;
     const uint32_t* w = reinterpret_cast<const uint32_t*>(p);
     for (uint32_t i = 0; i < pn; ++i) acc += w[i];
     return acc;
 }
 
-template <typename F>
-static void timeit(const char* name, uint64_t ncalls, double bytes, F&& f) {
+template <typename F> static void timeit(const char* name, uint64_t ncalls, double bytes, F&& f) {
     perf_ctl::enable();
     auto t0 = std::chrono::steady_clock::now();
     volatile double sink = f();
@@ -132,20 +127,21 @@ static void timeit(const char* name, uint64_t ncalls, double bytes, F&& f) {
     perf_ctl::disable();
     (void)sink;
     double sec = std::chrono::duration<double>(t1 - t0).count();
-    printf("%-24s %8.1f ns/call   %7.2f GB/s   (%.2f s)\n",
-           name, sec * 1e9 / ncalls, bytes / sec / 1e9, sec);
+    printf("%-24s %8.1f ns/call   %7.2f GB/s   (%.2f s)\n", name, sec * 1e9 / ncalls, bytes / sec / 1e9, sec);
 }
 
 int main(int argc, char** argv) {
     if (argc < 3) {
-        fprintf(stderr, "usage: %s <base.csr> <queries.csr> [ncalls=2000000] "
-                        "[variant=0..7] [maxrow=0[,maxrow...]] [reps=1] [alpha=1.0]\n", argv[0]);
+        fprintf(stderr,
+                "usage: %s <base.csr> <queries.csr> [ncalls=2000000] "
+                "[variant=0..7] [maxrow=0[,maxrow...]] [reps=1] [alpha=1.0]\n",
+                argv[0]);
         return 1;
     }
     uint64_t NCALL = (argc > 3) ? strtoull(argv[3], nullptr, 10) : 2000000ULL;
-    int only       = (argc > 4) ? atoi(argv[4]) : 0;
-    int reps       = (argc > 6) ? atoi(argv[6]) : 1;
-    float alpha    = (argc > 7) ? strtof(argv[7], nullptr) : 1.0f;
+    int only = (argc > 4) ? atoi(argv[4]) : 0;
+    int reps = (argc > 6) ? atoi(argv[6]) : 1;
+    float alpha = (argc > 7) ? strtof(argv[7], nullptr) : 1.0f;
 
     // Working-set sizes to sweep, in order. 0 = the whole base matrix.
     std::vector<long> ws_list;
@@ -164,8 +160,8 @@ int main(int argc, char** argv) {
 
     CSRMatrix* Dp = new CSRMatrix(argv[1], true);
     CSRMatrix Q(argv[2], true);
-    printf("base nrow=%ld nnz=%ld avg_nnz=%.1f  data=%.0f MB\n",
-           (long)Dp->nrow, (long)Dp->nnz, (double)Dp->nnz / Dp->nrow, Dp->nnz * 4.0 / 1e6);
+    printf("base nrow=%ld nnz=%ld avg_nnz=%.1f  data=%.0f MB\n", (long)Dp->nrow, (long)Dp->nnz,
+           (double)Dp->nnz / Dp->nrow, Dp->nnz * 4.0 / 1e6);
 
     // Prune to match the index. Done before any timing, and the unpruned copy is
     // released immediately so it neither inflates the footprint nor pollutes the
@@ -179,10 +175,9 @@ int main(int argc, char** argv) {
         auto p1 = std::chrono::steady_clock::now();
         printf("pruned alpha=%.3f in %.1f s: nnz %ld -> %ld (keep_frac=%.4f), "
                "avg_row %.0f -> %.0f B, data=%.0f MB\n",
-               alpha, std::chrono::duration<double>(p1 - p0).count(),
-               (long)nnz_before, (long)Dp->nnz, (double)Dp->nnz / nnz_before,
-               (double)nnz_before / Dp->nrow * 4.0,
-               (double)Dp->nnz / Dp->nrow * 4.0, Dp->nnz * 4.0 / 1e6);
+               alpha, std::chrono::duration<double>(p1 - p0).count(), (long)nnz_before, (long)Dp->nnz,
+               (double)Dp->nnz / nnz_before, (double)nnz_before / Dp->nrow * 4.0, (double)Dp->nnz / Dp->nrow * 4.0,
+               Dp->nnz * 4.0 / 1e6);
     } else {
         printf("alpha=1.0: no pruning (NOTE: the real search streams PRUNED rows "
                "-- pass the index's alpha to compare)\n");
@@ -208,13 +203,11 @@ int main(int argc, char** argv) {
     QC.build(D);
     printf("quantized copy: %.0f MB (%.1f B/row) vs fp16 %.0f MB (%.1f B/row) "
            "-> %.3fx fewer row bytes\n",
-           QC.blob.size() / 1e6, (double)QC.blob.size() / D.nrow,
-           D.nnz * 4.0 / 1e6, (double)D.nnz * 4.0 / D.nrow,
+           QC.blob.size() / 1e6, (double)QC.blob.size() / D.nrow, D.nnz * 4.0 / 1e6, (double)D.nnz * 4.0 / D.nrow,
            (D.nnz * 4.0 / D.nrow) / ((double)QC.blob.size() / D.nrow));
     long l1b = sysconf(_SC_LEVEL1_DCACHE_SIZE);
     long l2b = sysconf(_SC_LEVEL2_CACHE_SIZE);
-    printf("query nnz=%u  dim=%d  q_dense=%.0f KB (L1=%ld KB, L2=%ld KB)\n",
-           qn, dim, dim * 4.0 / 1024,
+    printf("query nnz=%u  dim=%d  q_dense=%.0f KB (L1=%ld KB, L2=%ld KB)\n", qn, dim, dim * 4.0 / 1024,
            l1b > 0 ? l1b / 1024 : 32, l2b > 0 ? l2b / 1024 : 512);
 
     auto bytes_of = [&](const std::vector<uint32_t>& v, uint64_t n) {
@@ -236,142 +229,147 @@ int main(int argc, char** argv) {
         if (n > maxnnz) maxnnz = n;
     }
     std::vector<IndiceDataPair> gbuf(static_cast<size_t>(HOPS_BATCH) * maxnnz);
-    memset(gbuf.data(), 0, gbuf.size() * sizeof(IndiceDataPair));  // pre-fault pages
+    memset(gbuf.data(), 0, gbuf.size() * sizeof(IndiceDataPair)); // pre-fault pages
 
     for (long maxrow : ws_list) {
-    // Fresh ids per working set; the seed is fixed so the sweep points differ
-    // only in how far the random rows spread, not in which sequence is drawn.
-    std::mt19937 rng(1234);
-    long nr = (maxrow > 0 && maxrow < D.nrow) ? maxrow : D.nrow;
-    std::uniform_int_distribution<uint32_t> pick(0, nr - 1);
-    printf("working set: %ld rows = %.1f MB\n\n", nr, (D.indptr[nr] - D.indptr[0]) * 4.0 / 1e6);
+        // Fresh ids per working set; the seed is fixed so the sweep points differ
+        // only in how far the random rows spread, not in which sequence is drawn.
+        std::mt19937 rng(1234);
+        long nr = (maxrow > 0 && maxrow < D.nrow) ? maxrow : D.nrow;
+        std::uniform_int_distribution<uint32_t> pick(0, nr - 1);
+        printf("working set: %ld rows = %.1f MB\n\n", nr, (D.indptr[nr] - D.indptr[0]) * 4.0 / 1e6);
 
-    // Random doc ids, consumed in HOPS_BATCH-sized "neighbor lists".
-    std::vector<uint32_t> ids(NCALL);
-    for (auto& x : ids) x = pick(rng);
+        // Random doc ids, consumed in HOPS_BATCH-sized "neighbor lists".
+        std::vector<uint32_t> ids(NCALL);
+        for (auto& x : ids) x = pick(rng);
 
-    // Hot set: 16 rows (~8 KB) -> resident in the 32 KiB L1d.
-    std::vector<uint32_t> hot(16);
-    for (auto& x : hot) x = pick(rng);
+        // Hot set: 16 rows (~8 KB) -> resident in the 32 KiB L1d.
+        std::vector<uint32_t> hot(16);
+        for (auto& x : hot) x = pick(rng);
 
-    double cold_bytes = bytes_of(ids, NCALL);
-    double hot_bytes  = bytes_of(hot, NCALL);
+        double cold_bytes = bytes_of(ids, NCALL);
+        double hot_bytes = bytes_of(hot, NCALL);
 
-    for (int rep = 0; rep < reps; ++rep) {
-        if (reps > 1) printf("--- rep %d/%d ---\n", rep + 1, reps);
+        for (int rep = 0; rep < reps; ++rep) {
+            if (reps > 1) printf("--- rep %d/%d ---\n", rep + 1, reps);
 
-        // 1. HOT DENSE: full ALU work + the q_dense gather, zero DRAM pressure
-        //    on the doc rows -> T_compute.
-        if (!only || only == 1) timeit("1 HOT dense", NCALL, hot_bytes, [&] {
-            double s = 0;
-            for (uint64_t i = 0; i < NCALL; ++i) {
-                uint32_t id = hot[i & 15];
-                s += dense(qd, D.indices_data + D.indptr[id], D.indptr[id + 1] - D.indptr[id]);
+            // 1. HOT DENSE: full ALU work + the q_dense gather, zero DRAM pressure
+            //    on the doc rows -> T_compute.
+            if (!only || only == 1)
+                timeit("1 HOT dense", NCALL, hot_bytes, [&] {
+                    double s = 0;
+                    for (uint64_t i = 0; i < NCALL; ++i) {
+                        uint32_t id = hot[i & 15];
+                        s += dense(qd, D.indices_data + D.indptr[id], D.indptr[id + 1] - D.indptr[id]);
+                    }
+                    return s;
+                });
+
+            // 2. COLD STREAM: same bytes, no ALU -> T_load at maximum MLP.
+            if (!only || only == 2)
+                timeit("2 COLD stream (no ALU)", NCALL, cold_bytes, [&] {
+                    uint64_t s = 0;
+                    for (uint64_t i = 0; i < NCALL; ++i) {
+                        uint32_t id = ids[i];
+                        s += stream_row(D.indices_data + D.indptr[id], D.indptr[id + 1] - D.indptr[id]);
+                    }
+                    return (double)s;
+                });
+
+            // 3. COLD DENSE: the production kernel -> T_total.
+            if (!only || only == 3)
+                timeit("3 COLD dense (no pf)", NCALL, cold_bytes, [&] {
+                    double s = 0;
+                    for (uint64_t i = 0; i < NCALL; ++i) {
+                        uint32_t id = ids[i];
+                        s += dense(qd, D.indices_data + D.indptr[id], D.indptr[id + 1] - D.indptr[id]);
+                    }
+                    return s;
+                });
+
+            // 4. COLD DENSE + batched prefetch, mimicking searchLayer's filtered loop.
+            if (!only || only == 4)
+                timeit("4 COLD dense (batch pf)", NCALL, cold_bytes, [&] {
+                    double s = 0;
+                    for (uint64_t b = 0; b + HOPS_BATCH <= NCALL; b += HOPS_BATCH) {
+                        for (int j = 0; j < HOPS_BATCH; ++j) { // prefetch the whole "neighbor list"
+                            const char* v = (const char*)(D.indices_data + D.indptr[ids[b + j]]);
+                            __builtin_prefetch(v, 0, 2);
+                            __builtin_prefetch(v + 64, 0, 2);
+                            __builtin_prefetch(v + 128, 0, 2);
+                            __builtin_prefetch(v + 192, 0, 2);
+                            __builtin_prefetch(v + 256, 0, 2);
+                            __builtin_prefetch(v + 320, 0, 2);
+                            __builtin_prefetch(v + 384, 0, 2);
+                            __builtin_prefetch(v + 448, 0, 2);
+                        }
+                        for (int j = 0; j < HOPS_BATCH; ++j) {
+                            uint32_t id = ids[b + j];
+                            s += dense(qd, D.indices_data + D.indptr[id], D.indptr[id + 1] - D.indptr[id]);
+                        }
+                    }
+                    return s;
+                });
+
+            // 5. COLD GATHER->DENSE: explicit two-phase staging.
+            //    Phase 1 memcpys the batch's rows into a small resident scratch
+            //    (copy addresses known upfront -> full MLP). Phase 2 runs the dense
+            //    kernel out of that scratch.
+            if (!only || only == 5)
+                timeit("5 COLD gather+dense", NCALL, cold_bytes, [&] {
+                    double s = 0;
+                    std::vector<uint32_t> off(HOPS_BATCH + 1);
+                    for (uint64_t b = 0; b + HOPS_BATCH <= NCALL; b += HOPS_BATCH) {
+                        uint32_t o = 0;
+                        for (int j = 0; j < HOPS_BATCH; ++j) { // gather phase
+                            uint32_t id = ids[b + j];
+                            uint32_t st = static_cast<uint32_t>(D.indptr[id]);
+                            uint32_t n = static_cast<uint32_t>(D.indptr[id + 1]) - st;
+                            off[j] = o;
+                            memcpy(gbuf.data() + o, D.indices_data + st, n * sizeof(IndiceDataPair));
+                            o += n;
+                        }
+                        off[HOPS_BATCH] = o;
+                        for (int j = 0; j < HOPS_BATCH; ++j) { // compute phase
+                            s += dense(qd, gbuf.data() + off[j], off[j + 1] - off[j]);
+                        }
+                    }
+                    return s;
+                });
+
+            // 6. COLD MERGE: the pre-rewrite kernel on identical inputs. V6/V3 is
+            //    the speedup the dense rewrite actually bought on this machine.
+            if (!only || only == 6)
+                timeit("6 COLD merge (old)", NCALL, cold_bytes, [&] {
+                    double s = 0;
+                    for (uint64_t i = 0; i < NCALL; ++i) {
+                        uint32_t id = ids[i];
+                        s += merge(qv, qn, D.indices_data + D.indptr[id], D.indptr[id + 1] - D.indptr[id]);
+                    }
+                    return s;
+                });
+
+            // 7. COLD QUANT: the CURRENT production kernel on the same rows, from
+            //    the uint8 layout. V3/V7 is what the byte diet bought; note its
+            //    bytes/call differ from the other variants by construction -- that
+            //    IS the point, so its GB/s is reported against its own traffic.
+            if (!only || only == 7) {
+                double qbytes = 0;
+                for (uint64_t i = 0; i < NCALL; ++i) qbytes += QC.rowBytes(ids[i]);
+                timeit("7 COLD quant u8 (production)", NCALL, qbytes, [&] {
+                    double s = 0;
+                    for (uint64_t i = 0; i < NCALL; ++i) {
+                        s += quant(q_dense.data(), QC.blob.data() + QC.row_off[ids[i]]);
+                    }
+                    return s;
+                });
             }
-            return s;
-        });
-
-        // 2. COLD STREAM: same bytes, no ALU -> T_load at maximum MLP.
-        if (!only || only == 2) timeit("2 COLD stream (no ALU)", NCALL, cold_bytes, [&] {
-            uint64_t s = 0;
-            for (uint64_t i = 0; i < NCALL; ++i) {
-                uint32_t id = ids[i];
-                s += stream_row(D.indices_data + D.indptr[id], D.indptr[id + 1] - D.indptr[id]);
-            }
-            return (double)s;
-        });
-
-        // 3. COLD DENSE: the production kernel -> T_total.
-        if (!only || only == 3) timeit("3 COLD dense (no pf)", NCALL, cold_bytes, [&] {
-            double s = 0;
-            for (uint64_t i = 0; i < NCALL; ++i) {
-                uint32_t id = ids[i];
-                s += dense(qd, D.indices_data + D.indptr[id], D.indptr[id + 1] - D.indptr[id]);
-            }
-            return s;
-        });
-
-        // 4. COLD DENSE + batched prefetch, mimicking searchLayer's filtered loop.
-        if (!only || only == 4) timeit("4 COLD dense (batch pf)", NCALL, cold_bytes, [&] {
-            double s = 0;
-            for (uint64_t b = 0; b + HOPS_BATCH <= NCALL; b += HOPS_BATCH) {
-                for (int j = 0; j < HOPS_BATCH; ++j) {   // prefetch the whole "neighbor list"
-                    const char* v = (const char*)(D.indices_data + D.indptr[ids[b + j]]);
-                    __builtin_prefetch(v, 0, 2);
-                    __builtin_prefetch(v + 64, 0, 2);
-                    __builtin_prefetch(v + 128, 0, 2);
-                    __builtin_prefetch(v + 192, 0, 2);
-                    __builtin_prefetch(v + 256, 0, 2);
-                    __builtin_prefetch(v + 320, 0, 2);
-                    __builtin_prefetch(v + 384, 0, 2);
-                    __builtin_prefetch(v + 448, 0, 2);
-                }
-                for (int j = 0; j < HOPS_BATCH; ++j) {
-                    uint32_t id = ids[b + j];
-                    s += dense(qd, D.indices_data + D.indptr[id], D.indptr[id + 1] - D.indptr[id]);
-                }
-            }
-            return s;
-        });
-
-        // 5. COLD GATHER->DENSE: explicit two-phase staging.
-        //    Phase 1 memcpys the batch's rows into a small resident scratch
-        //    (copy addresses known upfront -> full MLP). Phase 2 runs the dense
-        //    kernel out of that scratch.
-        if (!only || only == 5) timeit("5 COLD gather+dense", NCALL, cold_bytes, [&] {
-            double s = 0;
-            std::vector<uint32_t> off(HOPS_BATCH + 1);
-            for (uint64_t b = 0; b + HOPS_BATCH <= NCALL; b += HOPS_BATCH) {
-                uint32_t o = 0;
-                for (int j = 0; j < HOPS_BATCH; ++j) {           // gather phase
-                    uint32_t id = ids[b + j];
-                    uint32_t st = static_cast<uint32_t>(D.indptr[id]);
-                    uint32_t n  = static_cast<uint32_t>(D.indptr[id + 1]) - st;
-                    off[j] = o;
-                    memcpy(gbuf.data() + o, D.indices_data + st, n * sizeof(IndiceDataPair));
-                    o += n;
-                }
-                off[HOPS_BATCH] = o;
-                for (int j = 0; j < HOPS_BATCH; ++j) {           // compute phase
-                    s += dense(qd, gbuf.data() + off[j], off[j + 1] - off[j]);
-                }
-            }
-            return s;
-        });
-
-        // 6. COLD MERGE: the pre-rewrite kernel on identical inputs. V6/V3 is
-        //    the speedup the dense rewrite actually bought on this machine.
-        if (!only || only == 6) timeit("6 COLD merge (old)", NCALL, cold_bytes, [&] {
-            double s = 0;
-            for (uint64_t i = 0; i < NCALL; ++i) {
-                uint32_t id = ids[i];
-                s += merge(qv, qn, D.indices_data + D.indptr[id], D.indptr[id + 1] - D.indptr[id]);
-            }
-            return s;
-        });
-
-        // 7. COLD QUANT: the CURRENT production kernel on the same rows, from
-        //    the uint8 layout. V3/V7 is what the byte diet bought; note its
-        //    bytes/call differ from the other variants by construction -- that
-        //    IS the point, so its GB/s is reported against its own traffic.
-        if (!only || only == 7) {
-            double qbytes = 0;
-            for (uint64_t i = 0; i < NCALL; ++i) qbytes += QC.rowBytes(ids[i]);
-            timeit("7 COLD quant u8 (production)", NCALL, qbytes, [&] {
-                double s = 0;
-                for (uint64_t i = 0; i < NCALL; ++i) {
-                    s += quant(q_dense.data(), QC.blob.data() + QC.row_off[ids[i]]);
-                }
-                return s;
-            });
         }
-    }
 
-    printf("\navg bytes/call: cold=%.0f hot=%.0f  (v5 scratch max=%zu KB, ~%.0f KB avg/batch)\n\n",
-           cold_bytes / NCALL, hot_bytes / NCALL,
-           gbuf.size() * sizeof(IndiceDataPair) / 1024,
-           HOPS_BATCH * (cold_bytes / NCALL) / 1024);
-    fflush(stdout);
-    }   // working-set sweep
+        printf("\navg bytes/call: cold=%.0f hot=%.0f  (v5 scratch max=%zu KB, ~%.0f KB avg/batch)\n\n",
+               cold_bytes / NCALL, hot_bytes / NCALL, gbuf.size() * sizeof(IndiceDataPair) / 1024,
+               HOPS_BATCH * (cold_bytes / NCALL) / 1024);
+        fflush(stdout);
+    } // working-set sweep
     return 0;
 }

@@ -14,7 +14,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 
 module load python/3.11-24.1.0
 
-source /global/homes/d/dhaura/repos/SpKNN/spknn-playground/common/bench_env_perlmutter.sh
+source "${SPKNN_HNSW_REPO:-$SCRATCH/repos/sparse_hnsw/minimal_hnsw}/sparse/scripts/bench_env_perlmutter.sh"
 bench_provenance
 
 SINDI_BIN=${SINDI_BIN:-$SPKNN_HNSW_REPO/build-gnu/bin/sindi_sweep}
